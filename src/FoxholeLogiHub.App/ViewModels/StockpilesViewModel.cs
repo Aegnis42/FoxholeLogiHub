@@ -55,7 +55,10 @@ public sealed class StockpilesViewModel : ObservableObject
         ItemsView = CollectionViewSource.GetDefaultView(Items);
         ItemsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(StockpileLineViewModel.CategoryLabel)));
         AlertsView = CollectionViewSource.GetDefaultView(Alerts);
-        AlertsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(StockpileAlertViewModel.SeverityGroup)));
+        AlertsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(StockpileAlertViewModel.StockpileGroup)));
+        AlertsView.SortDescriptions.Add(new SortDescription(nameof(StockpileAlertViewModel.StockpileGroup), ListSortDirection.Ascending));
+        AlertsView.SortDescriptions.Add(new SortDescription(nameof(StockpileAlertViewModel.SeverityRank), ListSortDirection.Ascending));
+        AlertsView.SortDescriptions.Add(new SortDescription(nameof(StockpileAlertViewModel.Name), ListSortDirection.Ascending));
     }
 
     public int CriticalCount => Alerts.Count(a => a.IsCritical);

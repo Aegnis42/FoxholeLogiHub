@@ -265,7 +265,17 @@ public sealed class StockpileAlertViewModel : ObservableObject
     public string QuantityText => Quantity.ToString("N0");
     public string CategoryLabel => FoxholeItemCatalog.CategoryOf(Code) ?? ItemCategories.Label(Category);
 
-    // En-tête de groupe (ordre : critiques d'abord via le tri côté serveur/collection).
+    // Regroupement par stockpile (Dashboard) + tri interne par sévérité.
+    public string StockpileGroup
+    {
+        get
+        {
+            string loc = string.IsNullOrEmpty(Town) ? Hex : $"{Hex} · {Town}";
+            string place = string.IsNullOrEmpty(loc) ? StockpileName : $"{StockpileName} — {loc}";
+            return IsOwn ? place : $"{place}  ({RegimentName})";
+        }
+    }
+    public int SeverityRank => IsCritical ? 0 : 1;
     public string SeverityGroup => IsCritical ? "🔴 Critique" : "🟠 Bas";
     public string SeverityLabel => IsCritical ? "Critique" : "Bas";
     public string ThresholdText => IsCritical ? $"seuil critique ≤ {Critical:N0}" : $"seuil bas ≤ {Low:N0}";

@@ -239,11 +239,13 @@ public static class StockpileEndpoints
                 return Results.Ok(new List<StockpileAlertDto>());
             string myRegId = ctx.Value.reg.Id;
 
-            var own = await db.Stockpiles.Where(s => s.RegimentId == myRegId).ToListAsync();
+            // Pas d'alertes sur les stockpiles PUBLICS (dépôts partagés que tous remplissent) :
+            // on ne suit que les réserves privées (les miennes + celles d'alliés partagées avec moi).
+            var own = await db.Stockpiles.Where(s => s.RegimentId == myRegId && !s.IsPublic).ToListAsync();
             var alliedIds = await AlliedIdsAsync(db, myRegId);
             var allied = await db.Stockpiles
-                .Where(s => alliedIds.Contains(s.RegimentId)
-                    && (s.IsPublic || db.StockpileShares.Any(sh => sh.StockpileId == s.Id && sh.RegimentId == myRegId)))
+                .Where(s => alliedIds.Contains(s.RegimentId) && !s.IsPublic
+                    && db.StockpileShares.Any(sh => sh.StockpileId == s.Id && sh.RegimentId == myRegId))
                 .ToListAsync();
             var all = own.Concat(allied).ToList();
             var spById = all.ToDictionary(s => s.Id);
