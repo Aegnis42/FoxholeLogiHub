@@ -28,7 +28,22 @@ public sealed class StockpilesViewModel : ObservableObject
     private bool _formIsPublic;
     private string? _editingId;
 
+    private string? _selectedId;
+    private string _selectedName = "";
+    private bool _selectedCanManage;
+    private string _newItemName = "";
+    private string _newItemQuantity = "";
+
     public ObservableCollection<StockpileItemViewModel> Stockpiles { get; } = new();
+    public ObservableCollection<StockpileLineViewModel> Items { get; } = new();
+    public IReadOnlyList<string> ItemNames { get; } = FoxholeItemCatalog.Names;
+
+    public bool IsStockpileSelected => _selectedId is not null;
+    public string SelectedName { get => _selectedName; private set => Set(ref _selectedName, value); }
+    public bool SelectedCanManage { get => _selectedCanManage; private set => Set(ref _selectedCanManage, value); }
+    public bool HasNoItems => Items.Count == 0;
+    public string NewItemName { get => _newItemName; set => Set(ref _newItemName, value); }
+    public string NewItemQuantity { get => _newItemQuantity; set => Set(ref _newItemQuantity, value); }
 
     public IReadOnlyList<StockpileTypeOption> Types { get; } =
         StockpileCatalog.Types.Select(t => new StockpileTypeOption(t.Value, t.Label)).ToList();
@@ -78,6 +93,7 @@ public sealed class StockpilesViewModel : ObservableObject
         _client = null;
         Authed = false;
         Stockpiles.Clear();
+        CloseDetail();
         Raise(nameof(HasNoStockpiles));
         Status = "Connecte-toi avec Steam (onglet Amis).";
     }
@@ -99,6 +115,8 @@ public sealed class StockpilesViewModel : ObservableObject
             Authed = true;
             RaiseViewFlags();
             ApplyList(await _client.GetListAsync());
+            if (IsStockpileSelected)
+                await LoadItemsAsync();
             Status = HasRegiment ? $"{Stockpiles.Count} stockpile(s)." : "Rejoins un régiment pour gérer des stockpiles.";
         }
         catch (AuthRequiredException) { ClearAuth(); }
@@ -113,6 +131,18 @@ public sealed class StockpilesViewModel : ObservableObject
         foreach (var dto in list)
             Stockpiles.Add(new StockpileItemViewModel(dto, allies));
         Raise(nameof(HasNoStockpiles));
+
+        if (_selectedId is not null)
+        {
+            var sel = list.FirstOrDefault(s => s.Id == _selectedId);
+            if (sel is null)
+                CloseDetail();
+            else
+            {
+                SelectedName = sel.Name;
+                SelectedCanManage = sel.CanManage;
+            }
+        }
     }
 
     public async Task SubmitFormAsync()
@@ -194,5 +224,85 @@ public sealed class StockpilesViewModel : ObservableObject
         catch (FriendException fex) { Status = fex.Message; }
         catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
         finally { Busy = false; }
+    }
+
+    // --- Contenu (items) d'un stockpile ---
+
+    public async Task SelectStockpileAsync(StockpileItemViewModel s)
+    {
+        _selectedId = s.Id;
+        SelectedName = s.Name;
+        SelectedCanManage = s.CanManage;
+        Raise(nameof(IsStockpileSelected));
+        await LoadItemsAsync();
+    }
+
+    public void CloseDetail()
+    {
+        _selectedId = null;
+        Items.Clear();
+        NewItemName = "";
+        NewItemQuantity = "";
+        Raise(nameof(IsStockpileSelected));
+        Raise(nameof(HasNoItems));
+    }
+
+    private async Task LoadItemsAsync()
+    {
+        if (_client is null || _selectedId is null)
+            return;
+        try
+        {
+            ApplyItems(await _client.GetItemsAsync(_selectedId));
+        }
+        catch (Exception ex) { Status = $"Erreur items : {ex.Message}"; }
+    }
+
+    private void ApplyItems(List<StockpileItemDto> items)
+    {
+        Items.Clear();
+        foreach (var i in items)
+            Items.Add(new StockpileLineViewModel(i, SelectedCanManage));
+        Raise(nameof(HasNoItems));
+    }
+
+    public async Task SetItemFromFormAsync()
+    {
+        if (_client is null || _selectedId is null)
+            return;
+        if (string.IsNullOrWhiteSpace(NewItemName)) { Status = "Choisis un item."; return; }
+        if (!int.TryParse(NewItemQuantity.Trim(), out int qty) || qty < 0) { Status = "Quantité invalide."; return; }
+
+        var cat = FoxholeItemCatalog.Resolve(NewItemName);
+        Busy = true;
+        try
+        {
+            ApplyItems(await _client.SetItemAsync(new SetStockpileItemRequest(_selectedId, cat.Code, cat.Name, cat.Category, qty)));
+            Status = qty <= 0 ? $"{cat.Name} retiré." : $"{cat.Name} : {qty}";
+            NewItemName = ""; NewItemQuantity = "";
+        }
+        catch (FriendException fex) { Status = fex.Message; }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
+    }
+
+    public async Task RemoveLineAsync(StockpileLineViewModel line)
+    {
+        if (_client is null || _selectedId is null)
+            return;
+        Busy = true;
+        try
+        {
+            ApplyItems(await _client.SetItemAsync(new SetStockpileItemRequest(_selectedId, line.Code, line.Name, line.Category, 0)));
+            Status = $"{line.Name} retiré.";
+        }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
+    }
+
+    public void EditLine(StockpileLineViewModel line)
+    {
+        NewItemName = line.Name;
+        NewItemQuantity = line.Quantity.ToString();
     }
 }

@@ -107,6 +107,17 @@ public sealed class StockpileShare
     public string RegimentId { get; set; } = "";
 }
 
+/// <summary>Un item (quantité) dans un stockpile.</summary>
+public sealed class StockpileItem
+{
+    public int Id { get; set; }
+    public string StockpileId { get; set; } = "";
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Category { get; set; } = "";
+    public int Quantity { get; set; }
+}
+
 public sealed class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -121,6 +132,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<RegimentAlliance> RegimentAlliances => Set<RegimentAlliance>();
     public DbSet<Stockpile> Stockpiles => Set<Stockpile>();
     public DbSet<StockpileShare> StockpileShares => Set<StockpileShare>();
+    public DbSet<StockpileItem> StockpileItems => Set<StockpileItem>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -174,6 +186,12 @@ public sealed class AppDbContext : DbContext
         {
             e.HasKey(s => s.Id);
             e.HasIndex(s => new { s.StockpileId, s.RegimentId }).IsUnique();
+        });
+
+        b.Entity<StockpileItem>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.HasIndex(s => new { s.StockpileId, s.Code }).IsUnique();
         });
     }
 }

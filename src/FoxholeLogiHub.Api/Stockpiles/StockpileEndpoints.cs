@@ -125,6 +125,81 @@ public static class StockpileEndpoints
             await NotifyAsync(hub, db, req.RegimentId);
             return Results.Ok(await BuildListAsync(db, me));
         }).RequireAuthorization();
+
+        // --- Contenu (items) ---
+
+        app.MapGet("/api/stockpiles/{id}/items", async (string id, ClaimsPrincipal p, AppDbContext db) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null)
+                return Results.Ok(new List<StockpileItemDto>());
+            var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == id);
+            if (sp is null)
+                return Results.NotFound(new ApiError("Stockpile introuvable."));
+            if (!await CanSeeAsync(db, sp, ctx.Value.reg.Id))
+                return Results.Forbid();
+            return Results.Ok(await ItemsAsync(db, id));
+        }).RequireAuthorization();
+
+        app.MapPost("/api/stockpiles/items/set", async (SetStockpileItemRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+                return Results.Forbid();
+            var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
+            if (sp is null)
+                return Results.NotFound(new ApiError("Stockpile introuvable."));
+            string code = (req.Code ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(code))
+                return Results.BadRequest(new ApiError("Item requis."));
+
+            var item = await db.StockpileItems.FirstOrDefaultAsync(i => i.StockpileId == sp.Id && i.Code == code);
+            if (req.Quantity <= 0)
+            {
+                if (item is not null)
+                    db.StockpileItems.Remove(item);
+            }
+            else if (item is null)
+            {
+                db.StockpileItems.Add(new StockpileItem
+                {
+                    StockpileId = sp.Id, Code = code,
+                    Name = string.IsNullOrWhiteSpace(req.Name) ? code : req.Name.Trim(),
+                    Category = (req.Category ?? "").Trim(), Quantity = req.Quantity,
+                });
+            }
+            else
+            {
+                item.Quantity = req.Quantity;
+                item.Name = string.IsNullOrWhiteSpace(req.Name) ? code : req.Name.Trim();
+                item.Category = (req.Category ?? "").Trim();
+            }
+
+            sp.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync();
+            await NotifyAsync(hub, db, sp.RegimentId);
+            return Results.Ok(await ItemsAsync(db, sp.Id));
+        }).RequireAuthorization();
+    }
+
+    private static async Task<List<StockpileItemDto>> ItemsAsync(AppDbContext db, string stockpileId) =>
+        await db.StockpileItems.Where(i => i.StockpileId == stockpileId)
+            .OrderBy(i => i.Category).ThenBy(i => i.Name)
+            .Select(i => new StockpileItemDto(i.Code, i.Name, i.Category, i.Quantity))
+            .ToListAsync();
+
+    private static async Task<bool> CanSeeAsync(AppDbContext db, Stockpile sp, string myRegId)
+    {
+        if (sp.RegimentId == myRegId)
+            return true;
+        var allies = await AlliedIdsAsync(db, myRegId);
+        if (!allies.Contains(sp.RegimentId))
+            return false;
+        if (sp.IsPublic)
+            return true;
+        return await db.StockpileShares.AnyAsync(s => s.StockpileId == sp.Id && s.RegimentId == myRegId);
     }
 
     private static async Task<List<StockpileDto>> BuildListAsync(AppDbContext db, string me)

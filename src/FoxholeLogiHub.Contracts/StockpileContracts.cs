@@ -33,3 +33,9 @@ public sealed record UnshareStockpileRequest(string StockpileId, string Regiment
 public sealed record StockpileDto(
     string Id, string RegimentId, string RegimentName, string Name, string Hex, string Town,
     string Type, string Code, bool IsPublic, bool IsOwn, bool CanManage, List<string> SharedRegimentIds);
+
+/// <summary>Un item d'un stockpile (quantité). Name/Category sont dénormalisés (indépendant d'un catalogue).</summary>
+public sealed record StockpileItemDto(string Code, string Name, string Category, int Quantity);
+
+/// <summary>Définit la quantité d'un item dans un stockpile (upsert ; quantité ≤ 0 = retrait).</summary>
+public sealed record SetStockpileItemRequest(string StockpileId, string Code, string Name, string Category, int Quantity);

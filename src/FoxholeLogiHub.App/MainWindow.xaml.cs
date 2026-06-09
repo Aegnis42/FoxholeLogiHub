@@ -161,4 +161,25 @@ public partial class MainWindow : Window
         if (sender is Button { DataContext: StockpileShareTargetViewModel target })
             await _vm.Stockpiles.ToggleShareAsync(target);
     }
+
+    private async void OnSelectStockpile(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: StockpileItemViewModel s })
+            await _vm.Stockpiles.SelectStockpileAsync(s);
+    }
+
+    private void OnCloseDetail(object sender, RoutedEventArgs e) => _vm.Stockpiles.CloseDetail();
+    private async void OnSetItem(object sender, RoutedEventArgs e) => await _vm.Stockpiles.SetItemFromFormAsync();
+
+    private async void OnRemoveItem(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: StockpileLineViewModel line })
+            await _vm.Stockpiles.RemoveLineAsync(line);
+    }
+
+    private void OnEditItem(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: StockpileLineViewModel line })
+            _vm.Stockpiles.EditLine(line);
+    }
 }

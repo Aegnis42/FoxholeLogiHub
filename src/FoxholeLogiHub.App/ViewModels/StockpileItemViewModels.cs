@@ -101,3 +101,25 @@ public sealed class StockpileItemViewModel : ObservableObject
     public bool ShowShareSection => IsOwn && CanManage && !IsPublic && ShareTargets.Count > 0;
     public bool ShowForeignRegiment => !IsOwn;
 }
+
+/// <summary>Une ligne d'item dans le détail d'un stockpile.</summary>
+public sealed class StockpileLineViewModel : ObservableObject
+{
+    public StockpileLineViewModel(StockpileItemDto dto, bool canManage)
+    {
+        Code = dto.Code;
+        Name = dto.Name;
+        Category = dto.Category;
+        Quantity = dto.Quantity;
+        CanManage = canManage;
+    }
+
+    public string Code { get; }
+    public string Name { get; }
+    public string Category { get; }
+    public int Quantity { get; }
+    public bool CanManage { get; }
+
+    public string QuantityText => Quantity.ToString("N0");
+    public string CategoryLabel => string.IsNullOrEmpty(Category) ? "Autres" : Category;
+}

@@ -829,6 +829,9 @@
                                                                         Padding="8,3" VerticalAlignment="Top">
                                                                     <TextBlock Text="{Binding VisibilityLabel}" Foreground="White" FontSize="11"/>
                                                                 </Border>
+                                                                <Button DockPanel.Dock="Right" Content="Items" Style="{StaticResource FlatButton}"
+                                                                        Background="#FF333A45" Padding="10,4" Margin="0,0,8,0" VerticalAlignment="Top"
+                                                                        Click="OnSelectStockpile"/>
                                                                 <StackPanel>
                                                                     <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold"/>
                                                                     <StackPanel Orientation="Horizontal">
@@ -874,6 +877,57 @@
                                                                 </ItemsControl>
                                                             </StackPanel>
                                                         </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Détail : contenu (items) du stockpile sélectionné -->
+                                <Border Style="{StaticResource Card}"
+                                        Visibility="{Binding IsStockpileSelected, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,10">
+                                            <Button DockPanel.Dock="Right" Content="Fermer" Style="{StaticResource FlatButton}"
+                                                    Background="#FF333A45" Padding="10,4" Click="OnCloseDetail"/>
+                                            <TextBlock Text="{Binding SelectedName, StringFormat='Contenu — {0}'}"
+                                                       FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        </DockPanel>
+
+                                        <DockPanel Margin="0,0,0,10"
+                                                   Visibility="{Binding SelectedCanManage, Converter={StaticResource BoolToVis}}">
+                                            <Button DockPanel.Dock="Right" Content="Définir" Style="{StaticResource FlatButton}"
+                                                    Background="#FF2A475E" Padding="14,6" Margin="8,0,0,0" Click="OnSetItem"/>
+                                            <TextBox DockPanel.Dock="Right" Width="90" Margin="8,0,0,0"
+                                                     Text="{Binding NewItemQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                                     FontSize="14" Padding="6" Background="#FF1B1E24" Foreground="White"
+                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                     VerticalContentAlignment="Center" ToolTip="Quantité (0 = retirer)"/>
+                                            <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
+                                                      Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"/>
+                                        </DockPanel>
+
+                                        <TextBlock Text="Aucun item. Ajoute-en ci-dessus." Foreground="#FF6B7280" FontSize="13"
+                                                   Visibility="{Binding HasNoItems, Converter={StaticResource BoolToVis}}"/>
+                                        <ItemsControl ItemsSource="{Binding Items}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="8,6" Margin="0,0,0,5">
+                                                        <DockPanel>
+                                                            <Button DockPanel.Dock="Right" Content="×" Style="{StaticResource FlatButton}"
+                                                                    Background="#FF3A3030" Padding="9,2" Margin="6,0,0,0" Click="OnRemoveItem"
+                                                                    Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
+                                                            <Button DockPanel.Dock="Right" Content="✎" Style="{StaticResource FlatButton}"
+                                                                    Background="#FF333A45" Padding="9,2" Margin="6,0,0,0" Click="OnEditItem"
+                                                                    Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
+                                                            <TextBlock DockPanel.Dock="Right" Text="{Binding QuantityText}" FontWeight="Bold"
+                                                                       Foreground="#FF7FA8D9" FontSize="14" VerticalAlignment="Center"
+                                                                       MinWidth="60" TextAlignment="Right"/>
+                                                            <TextBlock DockPanel.Dock="Left" Text="{Binding CategoryLabel}" Foreground="#FF6B7280"
+                                                                       FontSize="10" VerticalAlignment="Center" MinWidth="95"/>
+                                                            <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"/>
+                                                        </DockPanel>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
