@@ -64,13 +64,21 @@ public partial class MainWindow : Window
     private void OnNavRegiment(object sender, RoutedEventArgs e) => _vm.ShowRegiment();
     private void OnNavStockpiles(object sender, RoutedEventArgs e) => _vm.ShowStockpiles();
     private void OnNavResupply(object sender, RoutedEventArgs e) => _vm.ShowResupply();
+    private void OnNavTaken(object sender, RoutedEventArgs e) => _vm.ShowTaken();
 
     private async void OnCreateResupply(object sender, RoutedEventArgs e) => await _vm.Resupply.CreateFromFormAsync();
+    private void OnAddDraftItem(object sender, RoutedEventArgs e) => _vm.Resupply.AddDraftItem();
 
-    private async void OnCreateFromNeed(object sender, RoutedEventArgs e)
+    private void OnRemoveDraftItem(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: ResupplyItemLineViewModel item })
+            _vm.Resupply.RemoveDraftItem(item);
+    }
+
+    private void OnCreateFromNeed(object sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: ResupplyNeedViewModel need })
-            await _vm.Resupply.CreateFromNeedAsync(need);
+            _vm.Resupply.AddDraftFromNeed(need);
     }
 
     private async void OnClaimResupply(object sender, RoutedEventArgs e)

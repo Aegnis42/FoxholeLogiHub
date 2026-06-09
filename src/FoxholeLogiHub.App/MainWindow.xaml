@@ -162,8 +162,27 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🚚  Ravitaillement" VerticalAlignment="Center"/>
                             <Border Background="#FF2A6E8F" CornerRadius="9" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
-                                    Visibility="{Binding Resupply.HasRequests, Converter={StaticResource BoolToVis}}">
+                                    Visibility="{Binding Resupply.HasOpen, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding Resupply.OpenCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                            </Border>
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OnNavTaken">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsTakenActive}" Value="True">
+                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🛠  Prises en charge" VerticalAlignment="Center"/>
+                            <Border Background="#FF2F6B43" CornerRadius="9" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding Resupply.HasTaken, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding Resupply.TakenActiveCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
                             </Border>
                         </StackPanel>
                     </Button>
@@ -1216,32 +1235,63 @@
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding ShowResupply, Converter={StaticResource BoolToVis}}">
                     <StackPanel>
-                        <!-- Nouvelle demande -->
+                        <!-- Nouvelle demande (multi-items) -->
                         <Border Background="#FF1B1E24" CornerRadius="8" Padding="14" Margin="0,0,0,14">
                             <StackPanel>
-                                <TextBlock Text="NOUVELLE DEMANDE (item · quantité · stockpile cible · priorité)"
+                                <TextBlock Text="NOUVELLE DEMANDE (nom · hexagone · coordonnées · priorité, puis ajoute des items)"
                                            Style="{StaticResource Label}" Margin="0,0,0,8"/>
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="Créer" Style="{StaticResource FlatButton}"
-                                            Background="#FF2A475E" Padding="14,6" Margin="6,0,0,0" Click="OnCreateResupply"/>
+                                <DockPanel Margin="0,0,0,8">
                                     <ComboBox DockPanel.Dock="Right" Width="110" Margin="6,0,0,0" SelectedValuePath="Value"
                                               DisplayMemberPath="Label" SelectedValue="{Binding NewPriority}"
                                               ItemsSource="{Binding Priorities}" FontSize="14" Padding="6" ToolTip="Priorité"/>
-                                    <ComboBox DockPanel.Dock="Right" Width="180" Margin="6,0,0,0" SelectedValuePath="Id"
-                                              DisplayMemberPath="Label" SelectedValue="{Binding NewTargetId}"
-                                              ItemsSource="{Binding Targets}" FontSize="14" Padding="6" ToolTip="Stockpile cible"/>
+                                    <TextBox DockPanel.Dock="Right" Width="120" Margin="6,0,0,0"
+                                             Text="{Binding NewCoords, UpdateSourceTrigger=PropertyChanged}"
+                                             FontSize="14" Padding="6" Background="#FF15181E" Foreground="White"
+                                             BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                             VerticalContentAlignment="Center" ToolTip="Coordonnées (ex. E5, 123x456)"/>
+                                    <ComboBox DockPanel.Dock="Right" Width="180" Margin="6,0,0,0" IsEditable="True"
+                                              ItemsSource="{Binding Hexes}" Text="{Binding NewHex, UpdateSourceTrigger=PropertyChanged}"
+                                              FontSize="14" Padding="6" ToolTip="Hexagone"/>
+                                    <TextBox Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Padding="6"
+                                             Background="#FF15181E" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                             CaretBrush="White" VerticalContentAlignment="Center" ToolTip="Nom de la demande"/>
+                                </DockPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <Button DockPanel.Dock="Right" Content="+ Ajouter l'item" Style="{StaticResource FlatButton}"
+                                            Background="#FF333A45" Padding="12,6" Margin="6,0,0,0" Click="OnAddDraftItem"/>
                                     <TextBox DockPanel.Dock="Right" Width="80" Margin="6,0,0,0"
-                                             Text="{Binding NewQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding DraftItemQuantity, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="14" Padding="6" Background="#FF15181E" Foreground="White"
                                              BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
                                              VerticalContentAlignment="Center" ToolTip="Quantité"/>
                                     <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
-                                              Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"/>
+                                              Text="{Binding DraftItemName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Item à ajouter"/>
                                 </DockPanel>
-                                <TextBox Margin="0,8,0,0" Text="{Binding NewNote, UpdateSourceTrigger=PropertyChanged}"
-                                         FontSize="13" Padding="6" Background="#FF15181E" Foreground="White"
-                                         BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
-                                         VerticalContentAlignment="Center" ToolTip="Note (optionnel) — ex. à apporter de l'arrière"/>
+                                <ItemsControl ItemsSource="{Binding DraftItems}" Margin="0,0,0,8"
+                                              Visibility="{Binding HasDraft, Converter={StaticResource BoolToVis}}">
+                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#FF2A3038" CornerRadius="6" Margin="0,0,6,6" Padding="6,3">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding QtyText}" Foreground="#FF7FA8D9" FontSize="12" FontWeight="Bold"
+                                                               Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                                    <Button Content="×" Style="{StaticResource FlatButton}" Background="#FF3A3030"
+                                                            Padding="6,0" Margin="8,0,0,0" FontSize="11" Click="OnRemoveDraftItem"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Créer la demande" Style="{StaticResource FlatButton}"
+                                            Background="#FF2A475E" Padding="14,6" Margin="6,0,0,0" Click="OnCreateResupply"/>
+                                    <TextBox Text="{Binding NewNote, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="6"
+                                             Background="#FF15181E" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                             CaretBrush="White" VerticalContentAlignment="Center" ToolTip="Note (optionnel)"/>
+                                </DockPanel>
                             </StackPanel>
                         </Border>
 
@@ -1254,9 +1304,10 @@
                                     <DataTemplate>
                                         <Border Background="#FF20242C" CornerRadius="6" Margin="0,0,0,5" Padding="8,5">
                                             <DockPanel>
-                                                <Button DockPanel.Dock="Right" Content="+ Demande" Style="{StaticResource FlatButton}"
+                                                <Button DockPanel.Dock="Right" Content="+ Brouillon" Style="{StaticResource FlatButton}"
                                                         Background="#FF2A475E" Padding="10,3" Margin="6,0,0,0" FontSize="11"
-                                                        Click="OnCreateFromNeed" VerticalAlignment="Center"/>
+                                                        Click="OnCreateFromNeed" VerticalAlignment="Center"
+                                                        ToolTip="Ajouter ce manque à la demande en cours de création"/>
                                                 <TextBlock DockPanel.Dock="Right" Text="{Binding DeficitText}" Foreground="{Binding DeficitBrush}"
                                                            FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="6,0,0,0"/>
                                                 <Grid Width="30" Height="30" DockPanel.Dock="Left" Margin="0,0,10,0">
@@ -1276,75 +1327,61 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <!-- Demandes -->
-                        <TextBlock Text="DEMANDES EN COURS" Style="{StaticResource Label}" Margin="0,0,0,6"
-                                   Visibility="{Binding HasRequests, Converter={StaticResource BoolToVis}}"/>
-                        <TextBlock Text="Aucune demande. Crée-en une ci-dessus ou depuis un manque détecté."
+                        <!-- Demandes ouvertes -->
+                        <TextBlock Text="DEMANDES OUVERTES" Style="{StaticResource Label}" Margin="0,0,0,6"
+                                   Visibility="{Binding HasOpen, Converter={StaticResource BoolToVis}}"/>
+                        <TextBlock Text="Aucune demande ouverte. Crée-en une ci-dessus, ou ajoute des manques au brouillon (+ Brouillon)."
                                    Foreground="#FF6B7280" FontSize="13"
-                                   Visibility="{Binding NoRequests, Converter={StaticResource BoolToVis}}"/>
-                        <ItemsControl ItemsSource="{Binding Requests}">
+                                   Visibility="{Binding NoOpen, Converter={StaticResource BoolToVis}}"/>
+                        <ItemsControl ItemsSource="{Binding OpenRequests}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Background="#FF20242C" CornerRadius="8" Margin="0,0,0,8">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsDone}" Value="True">
-                                                        <Setter Property="Opacity" Value="0.55"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
                                         <Grid>
                                             <Border Width="4" HorizontalAlignment="Left" Background="{Binding StatusBrush}" CornerRadius="8,0,0,8"/>
-                                            <DockPanel Margin="14,10,12,10">
-                                                <Grid Width="40" Height="40" DockPanel.Dock="Left" Margin="0,0,12,0" VerticalAlignment="Top">
-                                                    <Border Background="#FF12151B" CornerRadius="6"/>
-                                                    <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontWeight="Bold"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    <Image Source="{Binding Icon}" Width="38" Height="38" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                </Grid>
-                                                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="10,0,0,0">
-                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
+                                            <StackPanel Margin="14,10,12,10">
+                                                <DockPanel>
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
                                                         <Border Background="{Binding StatusBrush}" CornerRadius="4" Padding="6,1" Margin="0,0,4,0">
-                                                            <TextBlock Text="{Binding StatusLabel}" Foreground="White" FontSize="10"/>
-                                                        </Border>
+                                                            <TextBlock Text="{Binding StatusLabel}" Foreground="White" FontSize="10"/></Border>
                                                         <Border Background="{Binding PriorityBrush}" CornerRadius="4" Padding="6,1"
                                                                 Visibility="{Binding ShowPriority, Converter={StaticResource BoolToVis}}">
-                                                            <TextBlock Text="{Binding PriorityLabel}" Foreground="White" FontSize="10"/>
-                                                        </Border>
+                                                            <TextBlock Text="{Binding PriorityLabel}" Foreground="White" FontSize="10"/></Border>
                                                     </StackPanel>
-                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Title}" Foreground="White" FontSize="15" FontWeight="Bold"/>
+                                                        <TextBlock Text="{Binding LocationLabel, StringFormat='📍 {0}'}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                                <ItemsControl ItemsSource="{Binding Items}" Margin="0,8,0,0">
+                                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="#FF2A3038" CornerRadius="6" Margin="0,0,6,6" Padding="6,3">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,6,0"/>
+                                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding QtyText}" Foreground="#FF7FA8D9" FontSize="12" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Text="{Binding Note}" Foreground="#FFB8C4D0" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                           Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
+                                                <DockPanel Margin="0,8,0,0">
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                                         <Button Content="{Binding ClaimButtonText}" Background="{Binding ClaimButtonBrush}"
-                                                                Style="{StaticResource FlatButton}" Padding="10,4" Margin="0,0,4,0" FontSize="11"
-                                                                Click="OnClaimResupply" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVis}}"/>
+                                                                Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0" FontSize="11" Click="OnClaimResupply"/>
                                                         <Button Content="✓ Livré" Background="#FF2F6B43" Style="{StaticResource FlatButton}"
-                                                                Padding="10,4" Margin="0,0,4,0" FontSize="11" Click="OnDoneResupply"
-                                                                Visibility="{Binding IsOpen, Converter={StaticResource BoolToVis}}"/>
-                                                        <Button Content="Rouvrir" Background="#FF333A45" Style="{StaticResource FlatButton}"
-                                                                Padding="10,4" Margin="0,0,4,0" FontSize="11" Click="OnReopenResupply"
-                                                                Visibility="{Binding IsDone, Converter={StaticResource BoolToVis}}"/>
+                                                                Padding="12,5" Margin="0,0,4,0" FontSize="11" Click="OnDoneResupply"/>
                                                         <Button Content="×" Background="#FF3A3030" Style="{StaticResource FlatButton}"
-                                                                Padding="8,4" FontSize="11" Click="OnDeleteResupply"
+                                                                Padding="9,5" FontSize="11" Click="OnDeleteResupply"
                                                                 Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>
-                                                </StackPanel>
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
-                                                        <TextBlock Text="{Binding QuantityText, StringFormat=' ×{0}'}" Foreground="#FF7FA8D9"
-                                                                   FontSize="14" FontWeight="Bold"/>
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding LocationLabel}" Foreground="#FF9AA4B2" FontSize="11"/>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                        <TextBlock Text="{Binding CreatedInfo}" Foreground="#FF6B7280" FontSize="10"/>
-                                                        <TextBlock Text="{Binding ClaimInfo}" Foreground="#FF6FA8CF" FontSize="10" Margin="10,0,0,0"
-                                                                   Visibility="{Binding HasClaim, Converter={StaticResource BoolToVis}}"/>
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding Note}" Foreground="#FFB8C4D0" FontSize="11" TextWrapping="Wrap"
-                                                               Margin="0,3,0,0" Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
-                                                </StackPanel>
-                                            </DockPanel>
+                                                    <TextBlock Text="{Binding CreatedInfo}" Foreground="#FF6B7280" FontSize="10" VerticalAlignment="Center"/>
+                                                </DockPanel>
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -1352,6 +1389,143 @@
                         </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
+              </Grid>
+            </Grid>
+
+            <!-- ====================== PRISES EN CHARGE ====================== -->
+            <Grid Visibility="{Binding IsTakenActive, Converter={StaticResource BoolToVis}}">
+              <Grid DataContext="{Binding Resupply}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                    <TextBlock Text="Prises en charge" FontSize="22" FontWeight="Bold"/>
+                    <TextBlock Text="Demandes prises par le régiment, avec le plan de production (crafts, récoltes, véhicules)."
+                               Foreground="#FF9AA4B2" FontSize="13" Margin="0,4,0,0"/>
+                </StackPanel>
+                <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam (onglet Amis)." Foreground="#FF6B7280" FontSize="14"
+                           Visibility="{Binding ShowAuthNeeded, Converter={StaticResource BoolToVis}}"/>
+                <Grid Grid.Row="1" Visibility="{Binding ShowResupply, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="Aucune demande prise en charge. Va dans « Ravitaillement » et clique « Prendre en charge »."
+                               Foreground="#FF6B7280" FontSize="13" VerticalAlignment="Top"
+                               Visibility="{Binding NoTaken, Converter={StaticResource BoolToVis}}"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding HasTaken, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl ItemsSource="{Binding TakenRequests}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FF20242C" CornerRadius="8" Margin="0,0,0,10">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDone}" Value="True"><Setter Property="Opacity" Value="0.6"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Border Width="4" HorizontalAlignment="Left" Background="{Binding StatusBrush}" CornerRadius="8,0,0,8"/>
+                                            <StackPanel Margin="14,12,14,12">
+                                                <DockPanel>
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                                        <Border Background="{Binding StatusBrush}" CornerRadius="4" Padding="6,1" Margin="0,0,4,0">
+                                                            <TextBlock Text="{Binding StatusLabel}" Foreground="White" FontSize="10"/></Border>
+                                                        <Border Background="{Binding PriorityBrush}" CornerRadius="4" Padding="6,1"
+                                                                Visibility="{Binding ShowPriority, Converter={StaticResource BoolToVis}}">
+                                                            <TextBlock Text="{Binding PriorityLabel}" Foreground="White" FontSize="10"/></Border>
+                                                    </StackPanel>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Title}" Foreground="White" FontSize="16" FontWeight="Bold"/>
+                                                        <TextBlock Text="{Binding LocationLabel, StringFormat='📍 {0}'}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                        <TextBlock Text="{Binding ClaimInfo}" Foreground="#FF6FA8CF" FontSize="11"
+                                                                   Visibility="{Binding HasClaim, Converter={StaticResource BoolToVis}}"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                                <TextBlock Text="ITEMS DEMANDÉS" Style="{StaticResource Label}" Margin="0,10,0,4"/>
+                                                <ItemsControl ItemsSource="{Binding Items}">
+                                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="#FF2A3038" CornerRadius="6" Margin="0,0,6,6" Padding="6,3">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,6,0"/>
+                                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding QtyText}" Foreground="#FF7FA8D9" FontSize="12" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Border Background="#FF15181E" CornerRadius="6" Margin="0,8,0,0" Padding="10">
+                                                    <StackPanel>
+                                                        <TextBlock Text="🏭 CRAFTS À FAIRE" Style="{StaticResource Label}" Margin="0,0,0,5"
+                                                                   Visibility="{Binding HasCrafts, Converter={StaticResource BoolToVis}}"/>
+                                                        <ItemsControl ItemsSource="{Binding Crafts}"
+                                                                      Visibility="{Binding HasCrafts, Converter={StaticResource BoolToVis}}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Border Background="#FF20242C" CornerRadius="6" Margin="0,0,0,4" Padding="6,4">
+                                                                        <DockPanel>
+                                                                            <Border DockPanel.Dock="Right" Background="#FF2A3340" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                                                                <TextBlock Text="{Binding BuildingText}" Foreground="#FFB8C4D0" FontSize="10"/></Border>
+                                                                            <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FFE6B45A" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" Margin="6,0,6,0"/>
+                                                                            <Grid Width="24" Height="24" DockPanel.Dock="Left" Margin="0,0,8,0">
+                                                                                <Border Background="#FF12151B" CornerRadius="4"/>
+                                                                                <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                                <Image Source="{Binding Icon}" Width="22" Height="22"/>
+                                                                            </Grid>
+                                                                            <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                                                                        </DockPanel>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <TextBlock Text="⛏ RÉCOLTES À FAIRE (ressources brutes)" Style="{StaticResource Label}" Margin="0,8,0,5"
+                                                                   Visibility="{Binding HasHarvests, Converter={StaticResource BoolToVis}}"/>
+                                                        <ItemsControl ItemsSource="{Binding Harvests}"
+                                                                      Visibility="{Binding HasHarvests, Converter={StaticResource BoolToVis}}">
+                                                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Border Background="#FF20242C" CornerRadius="6" Margin="0,0,6,4" Padding="6,4">
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,6,0"/>
+                                                                            <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{Binding QtyText}" Foreground="#FF6FCF8E" FontWeight="Bold" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <Border Background="#FF20242C" CornerRadius="6" Margin="0,8,0,0" Padding="8,5">
+                                                            <TextBlock Text="{Binding VehiclesText, StringFormat='🚚 {0}'}" Foreground="#FFB8C4D0" FontSize="12"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Border>
+                                                <TextBlock Text="{Binding Note}" Foreground="#FFB8C4D0" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                                                           Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
+                                                <DockPanel Margin="0,8,0,0">
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                        <Button Content="{Binding ClaimButtonText}" Background="{Binding ClaimButtonBrush}" Style="{StaticResource FlatButton}"
+                                                                Padding="12,5" Margin="0,0,4,0" FontSize="11" Click="OnClaimResupply"
+                                                                Visibility="{Binding IsOpen, Converter={StaticResource BoolToVis}}"/>
+                                                        <Button Content="✓ Livré" Background="#FF2F6B43" Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0"
+                                                                FontSize="11" Click="OnDoneResupply" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVis}}"/>
+                                                        <Button Content="Rouvrir" Background="#FF333A45" Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0"
+                                                                FontSize="11" Click="OnReopenResupply" Visibility="{Binding IsDone, Converter={StaticResource BoolToVis}}"/>
+                                                        <Button Content="×" Background="#FF3A3030" Style="{StaticResource FlatButton}" Padding="9,5" FontSize="11"
+                                                                Click="OnDeleteResupply" Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding CreatedInfo}" Foreground="#FF6B7280" FontSize="10" VerticalAlignment="Center"/>
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
               </Grid>
             </Grid>
         </Grid>

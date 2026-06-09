@@ -21,27 +21,20 @@ public static class ResupplyEndpoints
             var ctx = await MyRegimentAsync(db, me);
             if (ctx is null)
                 return Results.BadRequest(new ApiError("Rejoins un régiment d'abord."));
-            string code = (req.Code ?? "").Trim();
-            if (string.IsNullOrWhiteSpace(code) || req.Quantity <= 0)
-                return Results.BadRequest(new ApiError("Item et quantité requis."));
+            var items = (req.Items ?? new List<ResupplyItemDto>())
+                .Where(i => !string.IsNullOrWhiteSpace(i.Code) && i.Quantity > 0)
+                .ToList();
+            if (items.Count == 0)
+                return Results.BadRequest(new ApiError("Ajoute au moins un item."));
 
-            string spId = "";
-            if (!string.IsNullOrWhiteSpace(req.StockpileId))
-            {
-                var sp = await db.Stockpiles.FirstOrDefaultAsync(s => s.Id == req.StockpileId && s.RegimentId == ctx.Value.reg.Id);
-                if (sp is not null)
-                    spId = sp.Id;
-            }
-
+            string id = Guid.NewGuid().ToString("N");
             db.ResupplyRequests.Add(new ResupplyRequest
             {
-                Id = Guid.NewGuid().ToString("N"),
+                Id = id,
                 RegimentId = ctx.Value.reg.Id,
-                Code = code,
-                Name = string.IsNullOrWhiteSpace(req.Name) ? code : req.Name.Trim(),
-                Category = (req.Category ?? "").Trim(),
-                Quantity = req.Quantity,
-                StockpileId = spId,
+                Title = string.IsNullOrWhiteSpace(req.Title) ? "Demande" : req.Title.Trim(),
+                Hex = (req.Hex ?? "").Trim(),
+                Coords = (req.Coords ?? "").Trim(),
                 Priority = Math.Clamp(req.Priority, 0, 2),
                 Status = ResupplyStatus.Open,
                 Note = (req.Note ?? "").Trim(),
@@ -49,6 +42,15 @@ public static class ResupplyEndpoints
                 ClaimedBySteamId = "",
                 CreatedAt = DateTimeOffset.UtcNow,
             });
+            foreach (var it in items)
+                db.ResupplyRequestItems.Add(new ResupplyRequestItem
+                {
+                    RequestId = id,
+                    Code = it.Code.Trim(),
+                    Name = string.IsNullOrWhiteSpace(it.Name) ? it.Code.Trim() : it.Name.Trim(),
+                    Category = (it.Category ?? "").Trim(),
+                    Quantity = it.Quantity,
+                });
             await db.SaveChangesAsync();
             await NotifyAsync(hub, db, ctx.Value.reg.Id);
             return Results.Ok(await BuildListAsync(db, me));
@@ -75,7 +77,11 @@ public static class ResupplyEndpoints
 
         // Supprimer (créateur ou droit ManageStockpiles).
         app.MapPost("/api/resupply/delete", async (ResupplyActionRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
-            await MutateAsync(db, hub, Me(p), req.Id, true, r => db.ResupplyRequests.Remove(r))).RequireAuthorization();
+            await MutateAsync(db, hub, Me(p), req.Id, true, r =>
+            {
+                db.ResupplyRequestItems.RemoveRange(db.ResupplyRequestItems.Where(i => i.RequestId == r.Id));
+                db.ResupplyRequests.Remove(r);
+            })).RequireAuthorization();
     }
 
     private static async Task<IResult> MutateAsync(AppDbContext db, IHubContext<PresenceHub> hub, string me, string id, bool needManage, Action<ResupplyRequest> apply)
@@ -105,26 +111,24 @@ public static class ResupplyEndpoints
         bool canManageAll = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles);
 
         var reqs = await db.ResupplyRequests.Where(r => r.RegimentId == regId).ToListAsync();
+        var reqIds = reqs.Select(r => r.Id).ToList();
+        var allItems = await db.ResupplyRequestItems.Where(i => reqIds.Contains(i.RequestId)).ToListAsync();
+        var itemsByReq = allItems.GroupBy(i => i.RequestId)
+            .ToDictionary(g => g.Key, g => g.Select(i => new ResupplyItemDto(i.Code, i.Name, i.Category, i.Quantity)).ToList());
         var ids = reqs.SelectMany(r => new[] { r.CreatedBySteamId, r.ClaimedBySteamId })
             .Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList();
         var names = await db.Users.Where(u => ids.Contains(u.SteamId)).ToDictionaryAsync(u => u.SteamId, u => u.DisplayName);
-        var spIds = reqs.Select(r => r.StockpileId).Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList();
-        var sps = await db.Stockpiles.Where(s => spIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
 
-        return reqs.Select(r =>
-        {
-            sps.TryGetValue(r.StockpileId, out var sp);
-            return new ResupplyRequestDto(
-                r.Id, r.Code, r.Name, r.Category, r.Quantity,
-                r.StockpileId, sp?.Name ?? "", sp?.Hex ?? "", sp?.Town ?? "",
+        return reqs.Select(r => new ResupplyRequestDto(
+                r.Id, r.Title, r.Hex, r.Coords,
+                itemsByReq.GetValueOrDefault(r.Id, new List<ResupplyItemDto>()),
                 r.Priority, r.Status, r.Note,
                 r.CreatedBySteamId, names.GetValueOrDefault(r.CreatedBySteamId, "?"),
                 r.ClaimedBySteamId, names.GetValueOrDefault(r.ClaimedBySteamId, ""),
-                canManageAll || r.CreatedBySteamId == me, r.ClaimedBySteamId == me);
-        })
+                canManageAll || r.CreatedBySteamId == me, r.ClaimedBySteamId == me))
         .OrderBy(d => d.Status == ResupplyStatus.Done ? 1 : 0)
         .ThenByDescending(d => d.Priority)
-        .ThenBy(d => d.Name)
+        .ThenBy(d => d.Title)
         .ToList();
     }
 

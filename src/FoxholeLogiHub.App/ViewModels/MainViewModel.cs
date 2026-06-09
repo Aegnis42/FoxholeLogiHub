@@ -68,6 +68,7 @@ public sealed class MainViewModel : ObservableObject
     public bool IsRegimentActive => _activeTab == "Régiment";
     public bool IsStockpilesActive => _activeTab == "Stockpiles";
     public bool IsResupplyActive => _activeTab == "Ravitaillement";
+    public bool IsTakenActive => _activeTab == "Prises";
 
     public void ShowDashboard() => SetTab("Dashboard");
     public void ShowProfile() => SetTab("Profil");
@@ -75,6 +76,7 @@ public sealed class MainViewModel : ObservableObject
     public void ShowRegiment() => SetTab("Régiment");
     public void ShowStockpiles() => SetTab("Stockpiles");
     public void ShowResupply() => SetTab("Ravitaillement");
+    public void ShowTaken() => SetTab("Prises");
 
     private void SetTab(string tab)
     {
@@ -87,6 +89,7 @@ public sealed class MainViewModel : ObservableObject
         Raise(nameof(IsRegimentActive));
         Raise(nameof(IsStockpilesActive));
         Raise(nameof(IsResupplyActive));
+        Raise(nameof(IsTakenActive));
     }
 
     // --- Profil ---

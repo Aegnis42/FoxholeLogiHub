@@ -120,22 +120,31 @@ public sealed class StockpileItem
     public int CriticalThreshold { get; set; } // sous ce seuil → Critique
 }
 
-/// <summary>Une demande de ravitaillement d'un régiment (item + quantité, stockpile cible optionnel).</summary>
+/// <summary>Une demande de ravitaillement d'un régiment : nom + localisation + plusieurs items.</summary>
 public sealed class ResupplyRequest
 {
     public string Id { get; set; } = "";
     public string RegimentId { get; set; } = "";
-    public string Code { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string Category { get; set; } = "";
-    public int Quantity { get; set; }
-    public string StockpileId { get; set; } = "";   // "" = non précisé
+    public string Title { get; set; } = "";
+    public string Hex { get; set; } = "";
+    public string Coords { get; set; } = "";         // coordonnées libres (ex. "E5", "123x456")
     public int Priority { get; set; }                // 0 normale, 1 haute, 2 urgente
     public string Status { get; set; } = "open";     // open | claimed | done
     public string Note { get; set; } = "";
     public string CreatedBySteamId { get; set; } = "";
     public string ClaimedBySteamId { get; set; } = ""; // "" = personne
     public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>Un item demandé dans une demande de ravitaillement.</summary>
+public sealed class ResupplyRequestItem
+{
+    public int Id { get; set; }
+    public string RequestId { get; set; } = "";
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Category { get; set; } = "";
+    public int Quantity { get; set; }
 }
 
 public sealed class AppDbContext : DbContext
@@ -154,6 +163,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<StockpileShare> StockpileShares => Set<StockpileShare>();
     public DbSet<StockpileItem> StockpileItems => Set<StockpileItem>();
     public DbSet<ResupplyRequest> ResupplyRequests => Set<ResupplyRequest>();
+    public DbSet<ResupplyRequestItem> ResupplyRequestItems => Set<ResupplyRequestItem>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -219,6 +229,12 @@ public sealed class AppDbContext : DbContext
         {
             e.HasKey(r => r.Id);
             e.HasIndex(r => r.RegimentId);
+        });
+
+        b.Entity<ResupplyRequestItem>(e =>
+        {
+            e.HasKey(i => i.Id);
+            e.HasIndex(i => i.RequestId);
         });
     }
 }

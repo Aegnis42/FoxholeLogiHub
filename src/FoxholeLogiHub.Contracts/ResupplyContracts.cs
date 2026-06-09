@@ -16,8 +16,11 @@ public static class ResupplyPriority
     public const int Urgent = 2;
 }
 
-/// <summary>Crée une demande de ravitaillement (item + quantité, stockpile cible optionnel).</summary>
-public sealed record CreateResupplyRequest(string Code, string Name, string Category, int Quantity, string StockpileId, int Priority, string Note);
+/// <summary>Un item demandé dans une demande (plusieurs items par demande).</summary>
+public sealed record ResupplyItemDto(string Code, string Name, string Category, int Quantity);
+
+/// <summary>Crée une demande de ravitaillement : nom + localisation + liste d'items.</summary>
+public sealed record CreateResupplyRequest(string Title, string Hex, string Coords, List<ResupplyItemDto> Items, int Priority, string Note);
 
 /// <summary>Action sur une demande existante (prise en charge / fait / réouverture / suppression).</summary>
 public sealed record ResupplyActionRequest(string Id);
@@ -27,9 +30,8 @@ public sealed record ResupplyActionRequest(string Id);
 /// supprimer (créateur ou droit ManageStockpiles) ; <see cref="MineClaim"/> = c'est moi qui l'ai prise.
 /// </summary>
 public sealed record ResupplyRequestDto(
-    string Id, string Code, string Name, string Category, int Quantity,
-    string StockpileId, string StockpileName, string Hex, string Town,
+    string Id, string Title, string Hex, string Coords,
+    List<ResupplyItemDto> Items,
     int Priority, string Status, string Note,
-    string CreatedBy, string CreatedByName,
-    string ClaimedBy, string ClaimedByName,
+    string CreatedBy, string CreatedByName, string ClaimedBy, string ClaimedByName,
     bool CanManage, bool MineClaim);
