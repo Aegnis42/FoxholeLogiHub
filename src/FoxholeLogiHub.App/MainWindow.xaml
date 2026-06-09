@@ -436,19 +436,10 @@
 
                 <TextBlock Grid.Row="0" Text="Amis" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
 
-                <!-- Mon code d'ami / connexion Steam -->
+                <!-- Mon code d'ami -->
                 <Border Grid.Row="1" Style="{StaticResource Card}">
                     <Grid>
-                        <!-- Connexion requise -->
-                        <StackPanel Visibility="{Binding NeedsLogin, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Connecte-toi avec ton compte Steam pour activer les amis (identité vérifiée — fini l'usurpation)."
-                                       Foreground="#FF9AA4B2" FontSize="13" Margin="0,0,0,12" TextWrapping="Wrap"/>
-                            <Button Content="🎮  Se connecter avec Steam" HorizontalAlignment="Left"
-                                    Style="{StaticResource FlatButton}" Background="#FF2A475E" Padding="18,10"
-                                    FontSize="14" Click="OnSteamLoginClick"/>
-                        </StackPanel>
-                        <!-- Connecté : mon code -->
-                        <DockPanel Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVis}}">
+                        <DockPanel>
                             <Button DockPanel.Dock="Right" Content="Se déconnecter" VerticalAlignment="Top"
                                     HorizontalAlignment="Right" Style="{StaticResource FlatButton}"
                                     Background="#FF3A3030" Padding="10,5" Click="OnLogoutClick"/>
@@ -1532,5 +1523,29 @@
               </Grid>
             </Grid>
         </Grid>
+
+        <!-- ====================== PORTE DE CONNEXION (au lancement) ====================== -->
+        <Border Grid.Column="0" Grid.ColumnSpan="2" Background="#FF0E1014"
+                Visibility="{Binding Friends.NeedsLogin, Converter={StaticResource BoolToVis}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="400">
+                <TextBlock Text="FoxholeLogiHub" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center"/>
+                <TextBlock Text="Gestion logistique pour Foxhole" Foreground="#FF9AA4B2" FontSize="13"
+                           HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                <Border Background="#FF1B1E24" CornerRadius="12" Padding="28,26" Margin="0,30,0,0"
+                        BorderBrush="#FF2A2F38" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Connecte-toi avec Steam pour accéder à toutes les fonctionnalités : amis, régiment, stockpiles et ravitaillement."
+                                   Foreground="#FFB8C4D0" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"/>
+                        <Button Content="🎮  Se connecter avec Steam" HorizontalAlignment="Center" Margin="0,20,0,0"
+                                Style="{StaticResource FlatButton}" Background="#FF2A6E8F" Padding="22,11" FontSize="15"
+                                Click="OnSteamLoginClick"/>
+                        <TextBlock Text="{Binding Friends.Status}" Foreground="#FF9AA4B2" FontSize="11"
+                                   HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,16,0,0"/>
+                    </StackPanel>
+                </Border>
+                <TextBlock Text="La connexion ouvre ton navigateur (OpenID Steam) — aucun mot de passe n'est partagé avec l'app."
+                           Foreground="#FF6B7280" FontSize="10" TextWrapping="Wrap" TextAlignment="Center" Margin="0,16,0,0"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>
