@@ -10,7 +10,7 @@ public sealed record CatalogItem(string Code, string Name, string Category);
 public sealed record ItemIngredient(string Code, int Qty);
 
 /// <summary>Une recette de production (un ou plusieurs bâtiments partageant la même recette).</summary>
-public sealed record ItemRecipe(IReadOnlyList<string> Buildings, int Output, double Time, IReadOnlyList<ItemIngredient> Ingredients);
+public sealed record ItemRecipe(IReadOnlyList<string> Buildings, int Output, double Time, double Power, IReadOnlyList<ItemIngredient> Ingredients);
 
 /// <summary>Fiche complète d'un item (catégorie corrigée, caisse, recettes de craft).</summary>
 public sealed class ItemEntry
@@ -145,7 +145,7 @@ public static class FoxholeItemCatalog
                             if (r.TryGetProperty("ingredients", out var ing) && ing.ValueKind == JsonValueKind.Array)
                                 foreach (var it in ing.EnumerateArray())
                                     ings.Add(new ItemIngredient(Str(it, "code", ""), Int(it, "qty")));
-                            recipes.Add(new ItemRecipe(blds, Int(r, "output"), Dbl(r, "time"), ings));
+                            recipes.Add(new ItemRecipe(blds, Int(r, "output"), Dbl(r, "time"), Dbl(r, "power"), ings));
                         }
 
                     list.Add(new ItemEntry

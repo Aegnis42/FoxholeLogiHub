@@ -313,6 +313,7 @@ public sealed class RecipeViewModel
         Buildings = string.Join(" · ", r.Buildings);
         Output = r.Output;
         Time = r.Time;
+        Power = r.Power;
         IsMpf = r.Buildings.Any(b => b.Contains("MPF"));
         foreach (var ing in r.Ingredients)
             Ingredients.Add(new IngredientViewModel(ing));
@@ -321,14 +322,24 @@ public sealed class RecipeViewModel
     public string Buildings { get; }
     public int Output { get; }
     public double Time { get; }
+    public double Power { get; }
     public bool IsMpf { get; }
     public ObservableCollection<IngredientViewModel> Ingredients { get; } = new();
 
     public string Header => $"🏭 {Buildings}";
     public bool HasOutput => Output > 0;
     public string OutputText => Output > 0 ? $"→ produit {Output:N0}" : "";
-    public bool HasTime => Time > 0;
-    public string TimeText => "⏱ " + FormatTime(Time);
+    public bool HasMeta => Time > 0 || Power > 0;
+    public string MetaText
+    {
+        get
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            if (Time > 0) parts.Add("⏱ " + FormatTime(Time));
+            if (Power > 0) parts.Add($"⚡ {Power:0.##} MW");
+            return string.Join("    ", parts);
+        }
+    }
 
     private static string FormatTime(double s)
     {

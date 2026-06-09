@@ -1155,8 +1155,8 @@
                                                                 </DataTemplate>
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
-                                                        <TextBlock Text="{Binding TimeText}" Foreground="#FF9AA4B2" FontSize="11" Margin="0,2,0,0"
-                                                                   Visibility="{Binding HasTime, Converter={StaticResource BoolToVis}}"/>
+                                                        <TextBlock Text="{Binding MetaText}" Foreground="#FF9AA4B2" FontSize="11" Margin="0,2,0,0"
+                                                                   Visibility="{Binding HasMeta, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>
                                                 </Border>
                                             </DataTemplate>
