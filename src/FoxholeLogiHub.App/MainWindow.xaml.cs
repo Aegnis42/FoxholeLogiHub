@@ -24,6 +24,12 @@ public partial class MainWindow : Window
     private void OnRefreshClick(object sender, RoutedEventArgs e) => _vm.Load();
     private void OnSaveProfileClick(object sender, RoutedEventArgs e) => _vm.SaveProfile();
 
+    private async void OnSteamLoginClick(object sender, RoutedEventArgs e) =>
+        await _vm.Friends.LoginWithSteamAsync();
+
+    private async void OnLogoutClick(object sender, RoutedEventArgs e) =>
+        await _vm.Friends.LogoutAsync();
+
     private async void OnSendRequestClick(object sender, RoutedEventArgs e) =>
         await _vm.Friends.SendRequestAsync();
 

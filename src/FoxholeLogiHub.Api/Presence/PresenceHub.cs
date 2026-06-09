@@ -1,15 +1,17 @@
+using FoxholeLogiHub.Api.Auth;
 using FoxholeLogiHub.Api.Data;
 using FoxholeLogiHub.Contracts;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoxholeLogiHub.Api.Presence;
 
-/// <summary>Identifie l'utilisateur SignalR par le Steam ID passé en query string (?steamId=...).</summary>
+/// <summary>Identifie l'utilisateur SignalR par le Steam ID du JWT vérifié.</summary>
 public sealed class SteamIdUserIdProvider : IUserIdProvider
 {
     public string? GetUserId(HubConnectionContext connection) =>
-        connection.GetHttpContext()?.Request.Query["steamId"].ToString();
+        connection.User?.FindFirst(TokenService.SteamIdClaim)?.Value;
 }
 
 /// <summary>
@@ -17,6 +19,7 @@ public sealed class SteamIdUserIdProvider : IUserIdProvider
 /// à la déconnexion, le marque hors ligne et prévient ses amis. Envoie aussi au client
 /// connectant la liste de ses amis déjà en ligne.
 /// </summary>
+[Authorize]
 public sealed class PresenceHub : Hub
 {
     private readonly ConnectionTracker _tracker;

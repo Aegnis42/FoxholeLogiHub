@@ -113,6 +113,15 @@ Relance l'app : l'onglet **Amis** se connecte alors au serveur en ligne (SignalR
 curl https://foxholelogihub-api.up.railway.app/
 ```
 
+## Authentification Steam (obligatoire)
+
+Le serveur signe les jetons d'identité avec un secret. **Ajoute une variable** sur le service API :
+- `JWT_SECRET` = une longue chaîne aléatoire (≥ 32 caractères), gardée secrète.
+
+Sans elle, un secret de dev (non sûr) est utilisé. La connexion se fait via « Sign in through
+Steam » (OpenID) : aucun mot de passe ne transite par l'app, et le Steam ID devient infalsifiable.
+Aucune clé Steam Web API n'est nécessaire.
+
 ## Notes
 
 - **Ne définis pas `PORT` toi-même** : Railway l'injecte, l'app le lit.

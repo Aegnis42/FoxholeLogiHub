@@ -274,20 +274,33 @@
 
                 <TextBlock Grid.Row="0" Text="Amis" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
 
-                <!-- Mon code d'ami -->
+                <!-- Mon code d'ami / connexion Steam -->
                 <Border Grid.Row="1" Style="{StaticResource Card}">
-                    <DockPanel>
-                        <StackPanel DockPanel.Dock="Left">
-                            <TextBlock Text="MON CODE D'AMI" Style="{StaticResource Label}"/>
-                            <TextBox Text="{Binding MyFriendCode, Mode=OneWay}" IsReadOnly="True"
-                                     FontSize="26" FontWeight="Bold" Foreground="#FF7FA8D9"
-                                     Background="Transparent" BorderThickness="0" Padding="0"
-                                     FontFamily="Consolas"/>
+                    <Grid>
+                        <!-- Connexion requise -->
+                        <StackPanel Visibility="{Binding NeedsLogin, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Connecte-toi avec ton compte Steam pour activer les amis (identité vérifiée — fini l'usurpation)."
+                                       Foreground="#FF9AA4B2" FontSize="13" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                            <Button Content="🎮  Se connecter avec Steam" HorizontalAlignment="Left"
+                                    Style="{StaticResource FlatButton}" Background="#FF2A475E" Padding="18,10"
+                                    FontSize="14" Click="OnSteamLoginClick"/>
                         </StackPanel>
-                        <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" TextAlignment="Right"
-                                   Foreground="#FF9AA4B2" FontSize="11" TextWrapping="Wrap" MaxWidth="220"
-                                   Text="Partage ce code pour qu'on t'ajoute en ami."/>
-                    </DockPanel>
+                        <!-- Connecté : mon code -->
+                        <DockPanel Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVis}}">
+                            <Button DockPanel.Dock="Right" Content="Se déconnecter" VerticalAlignment="Top"
+                                    HorizontalAlignment="Right" Style="{StaticResource FlatButton}"
+                                    Background="#FF3A3030" Padding="10,5" Click="OnLogoutClick"/>
+                            <StackPanel>
+                                <TextBlock Text="MON CODE D'AMI" Style="{StaticResource Label}"/>
+                                <TextBox Text="{Binding MyFriendCode, Mode=OneWay}" IsReadOnly="True"
+                                         FontSize="26" FontWeight="Bold" Foreground="#FF7FA8D9"
+                                         Background="Transparent" BorderThickness="0" Padding="0"
+                                         FontFamily="Consolas"/>
+                                <TextBlock Text="Partage ce code pour qu'on t'ajoute en ami."
+                                           Foreground="#FF9AA4B2" FontSize="11" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Grid>
                 </Border>
 
                 <!-- Ajouter un ami -->

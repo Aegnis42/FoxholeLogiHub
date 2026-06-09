@@ -8,15 +8,18 @@ using FoxholeLogiHub.Core.Services;
 namespace FoxholeLogiHub.App.ViewModels;
 
 /// <summary>
-/// Gère la liste d'amis, les demandes reçues et la présence temps réel.
+/// Gère l'authentification Steam, la liste d'amis, les demandes reçues et la présence temps réel.
 /// </summary>
 public sealed class FriendsViewModel : ObservableObject
 {
     private readonly SettingsStore _settingsStore = new();
+    private readonly TokenStore _tokenStore = new();
+    private readonly SteamAuthService _auth = new();
     private readonly AppSettings _settings;
 
     private Account? _account;
     private FriendsClient? _client;
+    private string? _token;
 
     private string _apiBaseUrl;
     private string _myFriendCode = "—";
@@ -24,6 +27,7 @@ public sealed class FriendsViewModel : ObservableObject
     private string _status = "Non connecté.";
     private bool _connected;
     private bool _busy;
+    private bool _needsLogin = true;
 
     public FriendsViewModel()
     {
@@ -44,18 +48,82 @@ public sealed class FriendsViewModel : ObservableObject
     public bool Connected { get => _connected; private set => Set(ref _connected, value); }
     public bool Busy { get => _busy; private set => Set(ref _busy, value); }
 
+    public bool NeedsLogin
+    {
+        get => _needsLogin;
+        private set { Set(ref _needsLogin, value); Raise(nameof(IsLoggedIn)); }
+    }
+    public bool IsLoggedIn => !_needsLogin;
+
     public string AddCodeInput { get => _addCodeInput; set => Set(ref _addCodeInput, value); }
     public string ApiBaseUrl { get => _apiBaseUrl; set => Set(ref _apiBaseUrl, value); }
 
     public async Task InitializeAsync(Account account)
     {
         _account = account;
+        _token = _tokenStore.Load();
+        if (_token is null)
+        {
+            NeedsLogin = true;
+            Status = "Connecte-toi avec Steam pour activer les amis.";
+            return;
+        }
         await ConnectAsync();
+    }
+
+    /// <summary>Lance « Sign in through Steam » dans le navigateur, puis se connecte.</summary>
+    public async Task LoginWithSteamAsync()
+    {
+        if (Busy)
+            return;
+
+        Busy = true;
+        Status = "Connexion Steam : valide dans le navigateur qui vient de s'ouvrir…";
+        string? token;
+        try
+        {
+            token = await _auth.LoginAsync(ApiBaseUrl.Trim());
+        }
+        catch (Exception ex)
+        {
+            Status = $"Échec de la connexion Steam : {ex.Message}";
+            Busy = false;
+            return;
+        }
+        Busy = false;
+
+        if (token is null)
+        {
+            Status = "Connexion Steam annulée ou expirée.";
+            return;
+        }
+
+        _token = token;
+        _tokenStore.Save(token);
+        NeedsLogin = false;
+        await ConnectAsync();
+    }
+
+    public async Task LogoutAsync()
+    {
+        if (_client is not null)
+        {
+            await _client.DisposeAsync();
+            _client = null;
+        }
+        _token = null;
+        _tokenStore.Clear();
+        Friends.Clear();
+        Requests.Clear();
+        MyFriendCode = "—";
+        Connected = false;
+        NeedsLogin = true;
+        Status = "Déconnecté.";
     }
 
     public async Task ConnectAsync()
     {
-        if (_account is null || Busy)
+        if (_account is null || _token is null || Busy)
             return;
 
         Busy = true;
@@ -69,22 +137,29 @@ public sealed class FriendsViewModel : ObservableObject
 
             if (_client is not null)
                 await _client.DisposeAsync();
-            _client = new FriendsClient(_settings.ApiBaseUrl);
+            _client = new FriendsClient(_settings.ApiBaseUrl, _token);
 
-            UserDto me = await _client.UpsertUserAsync(_account.SteamId, _account.DisplayName, _account.Faction.ToString());
+            UserDto me = await _client.UpsertUserAsync(_account.DisplayName, _account.Faction.ToString());
             MyFriendCode = Format(me.FriendCode);
 
-            // Partage l'avatar Steam local sur le serveur.
-            await _client.UploadAvatarAsync(_account.SteamId, _account.AvatarPath ?? "");
-
+            await _client.UploadAvatarAsync(_account.AvatarPath ?? "");
             await ReloadFriendsAsync();
             await ReloadRequestsAsync();
 
-            await _client.ConnectPresenceAsync(_account.SteamId, new PresenceHandlers(
+            await _client.ConnectPresenceAsync(new PresenceHandlers(
                 OnPresenceChanged, OnOnlineFriends, OnFriendRequestReceived, OnFriendsChanged));
 
             Connected = true;
+            NeedsLogin = false;
             Status = $"Connecté · {Friends.Count} ami(s).";
+        }
+        catch (AuthRequiredException)
+        {
+            _token = null;
+            _tokenStore.Clear();
+            Connected = false;
+            NeedsLogin = true;
+            Status = "Session expirée — reconnecte-toi avec Steam.";
         }
         catch (Exception ex)
         {
@@ -99,9 +174,9 @@ public sealed class FriendsViewModel : ObservableObject
 
     public async Task SendRequestAsync()
     {
-        if (_client is null || _account is null)
+        if (_client is null)
         {
-            Status = "Pas encore connecté au serveur.";
+            Status = "Pas encore connecté.";
             return;
         }
 
@@ -112,44 +187,36 @@ public sealed class FriendsViewModel : ObservableObject
         Busy = true;
         try
         {
-            SendFriendRequestResult result = await _client.SendRequestAsync(_account.SteamId, code);
+            SendFriendRequestResult result = await _client.SendRequestAsync(code);
             AddCodeInput = "";
             if (result.Accepted)
             {
                 await ReloadFriendsAsync();
-                Status = $"{result.DisplayName} ajouté (vous vous étiez demandés mutuellement).";
+                Status = $"{result.DisplayName} ajouté (demande croisée).";
             }
             else
             {
                 Status = $"Demande envoyée à {result.DisplayName}.";
             }
         }
-        catch (FriendException fex)
-        {
-            Status = fex.Message;
-        }
-        catch (Exception ex)
-        {
-            Status = $"Échec : {ex.Message}";
-        }
-        finally
-        {
-            Busy = false;
-        }
+        catch (FriendException fex) { Status = fex.Message; }
+        catch (AuthRequiredException) { await OnAuthLostAsync(); }
+        catch (Exception ex) { Status = $"Échec : {ex.Message}"; }
+        finally { Busy = false; }
     }
 
-    public async Task AcceptRequestAsync(FriendRequestItemViewModel request) => await RespondAsync(request, accept: true);
-    public async Task DeclineRequestAsync(FriendRequestItemViewModel request) => await RespondAsync(request, accept: false);
+    public async Task AcceptRequestAsync(FriendRequestItemViewModel request) => await RespondAsync(request, true);
+    public async Task DeclineRequestAsync(FriendRequestItemViewModel request) => await RespondAsync(request, false);
 
     private async Task RespondAsync(FriendRequestItemViewModel request, bool accept)
     {
-        if (_client is null || _account is null)
+        if (_client is null)
             return;
 
         Busy = true;
         try
         {
-            await _client.RespondAsync(_account.SteamId, request.FromSteamId, accept);
+            await _client.RespondAsync(request.FromSteamId, accept);
             Requests.Remove(request);
             if (accept)
             {
@@ -161,44 +228,40 @@ public sealed class FriendsViewModel : ObservableObject
                 Status = $"Demande de {request.DisplayName} refusée.";
             }
         }
-        catch (Exception ex)
-        {
-            Status = $"Échec : {ex.Message}";
-        }
-        finally
-        {
-            Busy = false;
-        }
+        catch (AuthRequiredException) { await OnAuthLostAsync(); }
+        catch (Exception ex) { Status = $"Échec : {ex.Message}"; }
+        finally { Busy = false; }
     }
 
     public async Task RemoveFriendAsync(FriendItemViewModel friend)
     {
-        if (_client is null || _account is null)
+        if (_client is null)
             return;
 
         Busy = true;
         try
         {
-            await _client.RemoveFriendAsync(_account.SteamId, friend.SteamId);
+            await _client.RemoveFriendAsync(friend.SteamId);
             Friends.Remove(friend);
             Status = $"{friend.DisplayName} retiré.";
         }
-        catch (Exception ex)
-        {
-            Status = $"Échec : {ex.Message}";
-        }
-        finally
-        {
-            Busy = false;
-        }
+        catch (AuthRequiredException) { await OnAuthLostAsync(); }
+        catch (Exception ex) { Status = $"Échec : {ex.Message}"; }
+        finally { Busy = false; }
+    }
+
+    private async Task OnAuthLostAsync()
+    {
+        await LogoutAsync();
+        Status = "Session expirée — reconnecte-toi avec Steam.";
     }
 
     private async Task ReloadFriendsAsync()
     {
-        if (_client is null || _account is null)
+        if (_client is null)
             return;
 
-        List<FriendDto> friends = await _client.GetFriendsAsync(_account.SteamId);
+        List<FriendDto> friends = await _client.GetFriendsAsync();
         Friends.Clear();
         foreach (FriendDto f in friends)
             Friends.Add(new FriendItemViewModel(f, _client.AvatarUrl(f.SteamId)));
@@ -206,16 +269,14 @@ public sealed class FriendsViewModel : ObservableObject
 
     private async Task ReloadRequestsAsync()
     {
-        if (_client is null || _account is null)
+        if (_client is null)
             return;
 
-        List<FriendRequestDto> requests = await _client.GetRequestsAsync(_account.SteamId);
+        List<FriendRequestDto> requests = await _client.GetRequestsAsync();
         Requests.Clear();
         foreach (FriendRequestDto r in requests)
             Requests.Add(new FriendRequestItemViewModel(r, _client.AvatarUrl(r.FromSteamId)));
     }
-
-    // --- Événements temps réel (marshalés sur le thread UI) ---
 
     private void OnOnlineFriends(IReadOnlyList<string> onlineSteamIds)
     {

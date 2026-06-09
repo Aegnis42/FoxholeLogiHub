@@ -1,5 +1,7 @@
 using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FoxholeLogiHub.Contracts;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -12,6 +14,9 @@ public sealed class FriendException : Exception
     public FriendException(string message) : base(message) { }
 }
 
+/// <summary>Le jeton est absent/expiré : une reconnexion Steam est nécessaire.</summary>
+public sealed class AuthRequiredException : Exception { }
+
 /// <summary>Callbacks d'événements temps réel du serveur.</summary>
 public sealed record PresenceHandlers(
     Action<string, bool> OnPresenceChanged,
@@ -20,82 +25,87 @@ public sealed record PresenceHandlers(
     Action OnFriendsChanged);
 
 /// <summary>
-/// Client de l'API d'amis : HTTP pour les opérations CRUD + SignalR pour la présence temps réel.
+/// Client de l'API d'amis, authentifié par JWT (en-tête Bearer pour HTTP, access_token pour SignalR).
+/// L'identité (Steam ID) est portée par le jeton — plus jamais envoyée dans le corps.
 /// </summary>
 public sealed class FriendsClient : IAsyncDisposable
 {
     private readonly HttpClient _http;
     private readonly string _baseUrl;
+    private readonly string _token;
     private HubConnection? _hub;
 
-    public FriendsClient(string baseUrl)
+    public FriendsClient(string baseUrl, string token)
     {
         _baseUrl = baseUrl.TrimEnd('/');
+        _token = token;
         _http = new HttpClient { BaseAddress = new Uri(_baseUrl), Timeout = TimeSpan.FromSeconds(15) };
+        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 
-    public string BaseUrl => _baseUrl;
-
-    /// <summary>URL publique de l'avatar d'un utilisateur.</summary>
     public string AvatarUrl(string steamId) => $"{_baseUrl}/api/users/{steamId}/avatar";
 
-    public async Task<UserDto> UpsertUserAsync(string steamId, string displayName, string faction)
+    public async Task<UserDto> UpsertUserAsync(string displayName, string faction)
     {
-        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/users",
-            new UpsertUserRequest(steamId, displayName, faction));
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/users", new UpsertUserRequest(displayName, faction));
         await EnsureSuccessAsync(resp);
         return (await resp.Content.ReadFromJsonAsync<UserDto>())!;
     }
 
-    public async Task UploadAvatarAsync(string steamId, string filePath)
+    public async Task UploadAvatarAsync(string filePath)
     {
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             return;
 
         byte[] bytes = await File.ReadAllBytesAsync(filePath);
         using var content = new ByteArrayContent(bytes);
-        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
-        // Best-effort : on n'échoue pas la connexion si l'avatar ne passe pas.
-        try { await _http.PostAsync($"/api/users/{steamId}/avatar", content); }
-        catch { /* ignore */ }
+        content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        try { await _http.PostAsync("/api/users/avatar", content); }
+        catch { /* best-effort */ }
     }
 
-    public async Task<List<FriendDto>> GetFriendsAsync(string steamId) =>
-        await _http.GetFromJsonAsync<List<FriendDto>>($"/api/friends/{steamId}") ?? new List<FriendDto>();
-
-    public async Task<List<FriendRequestDto>> GetRequestsAsync(string steamId) =>
-        await _http.GetFromJsonAsync<List<FriendRequestDto>>($"/api/friends/requests/{steamId}") ?? new List<FriendRequestDto>();
-
-    public async Task<SendFriendRequestResult> SendRequestAsync(string steamId, string friendCode)
+    public async Task<List<FriendDto>> GetFriendsAsync()
     {
-        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/friends/request",
-            new SendFriendRequestRequest(steamId, friendCode));
+        HttpResponseMessage resp = await _http.GetAsync("/api/friends");
+        await EnsureSuccessAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<FriendDto>>()) ?? new List<FriendDto>();
+    }
+
+    public async Task<List<FriendRequestDto>> GetRequestsAsync()
+    {
+        HttpResponseMessage resp = await _http.GetAsync("/api/friends/requests");
+        await EnsureSuccessAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<FriendRequestDto>>()) ?? new List<FriendRequestDto>();
+    }
+
+    public async Task<SendFriendRequestResult> SendRequestAsync(string friendCode)
+    {
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/friends/request", new SendFriendRequestRequest(friendCode));
         await EnsureSuccessAsync(resp);
         return (await resp.Content.ReadFromJsonAsync<SendFriendRequestResult>())!;
     }
 
-    public async Task RespondAsync(string steamId, string requesterSteamId, bool accept)
+    public async Task RespondAsync(string requesterSteamId, bool accept)
     {
-        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/friends/respond",
-            new RespondFriendRequestRequest(steamId, requesterSteamId, accept));
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/friends/respond", new RespondFriendRequestRequest(requesterSteamId, accept));
         await EnsureSuccessAsync(resp);
     }
 
-    public async Task RemoveFriendAsync(string steamId, string friendSteamId)
+    public async Task RemoveFriendAsync(string friendSteamId)
     {
-        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/friends/remove",
-            new RemoveFriendRequest(steamId, friendSteamId));
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/friends/remove", new RemoveFriendRequest(friendSteamId));
         await EnsureSuccessAsync(resp);
     }
 
-    public bool IsPresenceConnected => _hub?.State == HubConnectionState.Connected;
-
-    public async Task ConnectPresenceAsync(string steamId, PresenceHandlers handlers)
+    public async Task ConnectPresenceAsync(PresenceHandlers handlers)
     {
         await DisconnectPresenceAsync();
 
         _hub = new HubConnectionBuilder()
-            .WithUrl($"{_baseUrl}/hub/presence?steamId={Uri.EscapeDataString(steamId)}")
+            .WithUrl($"{_baseUrl}/hub/presence", options =>
+            {
+                options.AccessTokenProvider = () => Task.FromResult<string?>(_token);
+            })
             .WithAutomaticReconnect()
             .Build();
 
@@ -120,6 +130,9 @@ public sealed class FriendsClient : IAsyncDisposable
     {
         if (resp.IsSuccessStatusCode)
             return;
+
+        if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            throw new AuthRequiredException();
 
         string message = "Erreur serveur.";
         try

@@ -1,13 +1,15 @@
 namespace FoxholeLogiHub.Contracts;
 
-/// <summary>Données pour créer/mettre à jour l'utilisateur côté serveur (à la connexion de l'app).</summary>
-public sealed record UpsertUserRequest(string SteamId, string DisplayName, string Faction);
+// NB : l'identité de l'appelant (Steam ID) vient désormais du JWT, plus du corps de requête.
+
+/// <summary>Données pour créer/mettre à jour son propre profil côté serveur.</summary>
+public sealed record UpsertUserRequest(string DisplayName, string Faction);
 
 /// <summary>Représentation publique d'un utilisateur (avec son code d'ami).</summary>
 public sealed record UserDto(string SteamId, string DisplayName, string Faction, string FriendCode);
 
 /// <summary>Envoi d'une demande d'ami par code.</summary>
-public sealed record SendFriendRequestRequest(string SteamId, string FriendCode);
+public sealed record SendFriendRequestRequest(string FriendCode);
 
 /// <summary>
 /// Résultat d'un envoi de demande. <see cref="Accepted"/> est vrai si la demande a été
@@ -16,10 +18,10 @@ public sealed record SendFriendRequestRequest(string SteamId, string FriendCode)
 public sealed record SendFriendRequestResult(bool Accepted, string TargetSteamId, string DisplayName);
 
 /// <summary>Réponse à une demande d'ami reçue (accepter / refuser).</summary>
-public sealed record RespondFriendRequestRequest(string SteamId, string RequesterSteamId, bool Accept);
+public sealed record RespondFriendRequestRequest(string RequesterSteamId, bool Accept);
 
 /// <summary>Demande de suppression d'ami.</summary>
-public sealed record RemoveFriendRequest(string SteamId, string FriendSteamId);
+public sealed record RemoveFriendRequest(string FriendSteamId);
 
 /// <summary>Une demande d'ami reçue (en attente).</summary>
 public sealed record FriendRequestDto(string FromSteamId, string DisplayName, string Faction, bool HasAvatar);
