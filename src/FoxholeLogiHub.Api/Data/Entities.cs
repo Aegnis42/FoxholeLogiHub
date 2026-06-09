@@ -83,6 +83,30 @@ public sealed class RegimentAlliance
     public DateTimeOffset CreatedAt { get; set; }
 }
 
+/// <summary>Un stockpile d'un régiment, lié à un hexagone (région) et un type de structure.</summary>
+public sealed class Stockpile
+{
+    public string Id { get; set; } = "";
+    public string RegimentId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Hex { get; set; } = "";
+    public string Town { get; set; } = "";
+    public string Type { get; set; } = "";
+    public string Code { get; set; } = "";   // mot de passe (Port/Dépôt seulement)
+    public bool IsPublic { get; set; }
+    public string CreatedBySteamId { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+/// <summary>Partage d'un stockpile privé avec un régiment allié.</summary>
+public sealed class StockpileShare
+{
+    public int Id { get; set; }
+    public string StockpileId { get; set; } = "";
+    public string RegimentId { get; set; } = "";
+}
+
 public sealed class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -95,6 +119,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<RegimentMember> RegimentMembers => Set<RegimentMember>();
     public DbSet<RegimentInvite> RegimentInvites => Set<RegimentInvite>();
     public DbSet<RegimentAlliance> RegimentAlliances => Set<RegimentAlliance>();
+    public DbSet<Stockpile> Stockpiles => Set<Stockpile>();
+    public DbSet<StockpileShare> StockpileShares => Set<StockpileShare>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -137,5 +163,17 @@ public sealed class AppDbContext : DbContext
         });
 
         b.Entity<RegimentAlliance>(e => e.HasKey(a => a.Id));
+
+        b.Entity<Stockpile>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.HasIndex(s => s.RegimentId);
+        });
+
+        b.Entity<StockpileShare>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.HasIndex(s => new { s.StockpileId, s.RegimentId }).IsUnique();
+        });
     }
 }

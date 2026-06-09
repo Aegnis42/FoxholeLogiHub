@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private void OnNavProfile(object sender, RoutedEventArgs e) => _vm.ShowProfile();
     private void OnNavFriends(object sender, RoutedEventArgs e) => _vm.ShowFriends();
     private void OnNavRegiment(object sender, RoutedEventArgs e) => _vm.ShowRegiment();
+    private void OnNavStockpiles(object sender, RoutedEventArgs e) => _vm.ShowStockpiles();
 
     private void OnRefreshClick(object sender, RoutedEventArgs e) => _vm.Load();
     private void OnSaveProfileClick(object sender, RoutedEventArgs e) => _vm.SaveProfile();
@@ -134,5 +135,30 @@ public partial class MainWindow : Window
     {
         if (sender is Button { DataContext: RegimentAllianceItemViewModel a })
             await _vm.Regiment.RemoveAllianceAsync(a);
+    }
+
+    // --- Stockpiles ---
+
+    private async void OnSubmitStockpile(object sender, RoutedEventArgs e) => await _vm.Stockpiles.SubmitFormAsync();
+    private void OnCancelStockpileEdit(object sender, RoutedEventArgs e) => _vm.Stockpiles.CancelEdit();
+
+    private void OnEditStockpile(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: StockpileItemViewModel s })
+            _vm.Stockpiles.EditStockpile(s);
+    }
+
+    private async void OnDeleteStockpile(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: StockpileItemViewModel s }
+            && MessageBox.Show($"Supprimer le stockpile « {s.Name} » ?", "Confirmer",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            await _vm.Stockpiles.DeleteAsync(s);
+    }
+
+    private async void OnToggleShare(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: StockpileShareTargetViewModel target })
+            await _vm.Stockpiles.ToggleShareAsync(target);
     }
 }

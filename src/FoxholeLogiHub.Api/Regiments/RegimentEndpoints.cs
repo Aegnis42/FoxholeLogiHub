@@ -11,7 +11,8 @@ namespace FoxholeLogiHub.Api.Regiments;
 public static class RegimentEndpoints
 {
     private const int AllPermissions = (int)(RegimentPermission.ManageMembers | RegimentPermission.ManageRoles
-        | RegimentPermission.Invite | RegimentPermission.ManageRegiment | RegimentPermission.ManageAlliances);
+        | RegimentPermission.Invite | RegimentPermission.ManageRegiment | RegimentPermission.ManageAlliances
+        | RegimentPermission.ManageStockpiles);
 
     public static void MapRegimentEndpoints(this WebApplication app)
     {

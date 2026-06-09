@@ -73,7 +73,7 @@ public sealed class RegimentViewModel : ObservableObject
         {
             Set(ref _myPermissions, value);
             Raise(nameof(CanInvite)); Raise(nameof(CanManageMembers)); Raise(nameof(CanManageRoles));
-            Raise(nameof(CanManageRegiment)); Raise(nameof(CanManageAlliances));
+            Raise(nameof(CanManageRegiment)); Raise(nameof(CanManageAlliances)); Raise(nameof(CanManageStockpiles));
         }
     }
 
@@ -83,6 +83,11 @@ public sealed class RegimentViewModel : ObservableObject
     public bool CanManageRoles => Has(RegimentPermission.ManageRoles);
     public bool CanManageRegiment => Has(RegimentPermission.ManageRegiment);
     public bool CanManageAlliances => Has(RegimentPermission.ManageAlliances);
+    public bool CanManageStockpiles => Has(RegimentPermission.ManageStockpiles);
+
+    /// <summary>Régiments alliés (alliances acceptées) — pour le partage de stockpiles.</summary>
+    public IReadOnlyList<(string Id, string Name)> AcceptedAllies =>
+        Alliances.Where(a => a.IsAccepted).Select(a => (a.RegimentId, a.Name)).ToList();
 
     public string NewName { get => _newName; set => Set(ref _newName, value); }
     public string NewTag { get => _newTag; set => Set(ref _newTag, value); }

@@ -116,6 +116,18 @@
                             </Style>
                         </Button.Style>
                     </Button>
+                    <Button Content="📦  Stockpiles" Click="OnNavStockpiles">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsStockpilesActive}" Value="True">
+                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </StackPanel>
 
                 <!-- Présence en bas -->
@@ -713,6 +725,159 @@
                                                      BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
                                                      VerticalContentAlignment="Center" ToolTip="Code d'invitation du régiment à allier"/>
                                         </DockPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </DockPanel>
+              </Grid>
+            </Grid>
+
+            <!-- ====================== STOCKPILES ====================== -->
+            <Grid Visibility="{Binding IsStockpilesActive, Converter={StaticResource BoolToVis}}">
+              <Grid DataContext="{Binding Stockpiles}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Stockpiles" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,8,0,0"/>
+                    <Grid>
+                        <Border Style="{StaticResource Card}" VerticalAlignment="Top"
+                                Visibility="{Binding ShowAuthNeeded, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Connecte-toi avec Steam (onglet Amis) pour gérer les stockpiles."
+                                       Foreground="#FF9AA4B2" FontSize="13" TextWrapping="Wrap"/>
+                        </Border>
+                        <Border Style="{StaticResource Card}" VerticalAlignment="Top"
+                                Visibility="{Binding ShowNoRegiment, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Rejoins ou crée un régiment (onglet Régiment) : les stockpiles appartiennent au régiment."
+                                       Foreground="#FF9AA4B2" FontSize="13" TextWrapping="Wrap"/>
+                        </Border>
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding ShowStockpiles, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <!-- Formulaire création / édition -->
+                                <Border Style="{StaticResource Card}" Visibility="{Binding ShowForm, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding SubmitLabel}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                                <TextBlock Text="NOM" Style="{StaticResource Label}"/>
+                                                <TextBox Text="{Binding FormName, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="14" Padding="7" Background="#FF1B1E24" Foreground="White"
+                                                         BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="TYPE" Style="{StaticResource Label}"/>
+                                                <ComboBox ItemsSource="{Binding Types}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                                          SelectedValue="{Binding FormType}" Padding="6" FontSize="14"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                                <TextBlock Text="HEXAGONE" Style="{StaticResource Label}"/>
+                                                <ComboBox IsEditable="True" Text="{Binding FormHex, UpdateSourceTrigger=PropertyChanged}"
+                                                          ItemsSource="{Binding Hexes}" Padding="6" FontSize="14"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="LIEU (optionnel)" Style="{StaticResource Label}"/>
+                                                <TextBox Text="{Binding FormTown, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="14" Padding="7" Background="#FF1B1E24" Foreground="White"
+                                                         BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <StackPanel Margin="0,0,0,8"
+                                                    Visibility="{Binding FormUsesCode, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="CODE (mot de passe du Port/Dépôt)" Style="{StaticResource Label}"/>
+                                            <TextBox Text="{Binding FormCode, UpdateSourceTrigger=PropertyChanged}" MaxLength="8" Width="160"
+                                                     HorizontalAlignment="Left" FontFamily="Consolas" FontSize="15" Padding="7"
+                                                     Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"/>
+                                        </StackPanel>
+                                        <DockPanel>
+                                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                                <Button Content="Annuler" Style="{StaticResource FlatButton}" Background="#FF3A3030"
+                                                        Padding="12,7" Margin="0,0,8,0" Click="OnCancelStockpileEdit"
+                                                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
+                                                <Button Content="{Binding SubmitLabel}" Style="{StaticResource FlatButton}"
+                                                        Background="#FF2A475E" Padding="16,7" Click="OnSubmitStockpile"/>
+                                            </StackPanel>
+                                            <CheckBox Content="Public (visible par les alliés)" IsChecked="{Binding FormIsPublic}" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Liste -->
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="Stockpiles (les miens + ceux des alliés)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                        <TextBlock Text="Aucun stockpile pour l'instant." Foreground="#FF6B7280" FontSize="13"
+                                                   Visibility="{Binding HasNoStockpiles, Converter={StaticResource BoolToVis}}"/>
+                                        <ItemsControl ItemsSource="{Binding Stockpiles}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                                        <StackPanel>
+                                                            <DockPanel>
+                                                                <Border DockPanel.Dock="Right" Background="{Binding VisibilityBrush}" CornerRadius="4"
+                                                                        Padding="8,3" VerticalAlignment="Top">
+                                                                    <TextBlock Text="{Binding VisibilityLabel}" Foreground="White" FontSize="11"/>
+                                                                </Border>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold"/>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="{Binding TypeLabel}" Foreground="#FF7FA8D9" FontSize="12"/>
+                                                                        <TextBlock Text="  ·  " Foreground="#FF6B7280" FontSize="12"/>
+                                                                        <TextBlock Text="{Binding LocationLabel}" Foreground="#FF9AA4B2" FontSize="12"/>
+                                                                    </StackPanel>
+                                                                </StackPanel>
+                                                            </DockPanel>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
+                                                                        Visibility="{Binding HasCode, Converter={StaticResource BoolToVis}}">
+                                                                <TextBlock Text="Code : " Foreground="#FF9AA4B2" FontSize="12" VerticalAlignment="Center"/>
+                                                                <TextBox Text="{Binding Code, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas"
+                                                                         FontSize="14" FontWeight="Bold" Foreground="#FF7FA8D9" Background="Transparent"
+                                                                         BorderThickness="0" Padding="0"/>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding RegimentName, StringFormat='Régiment allié : {0}'}"
+                                                                       Foreground="#FF8AA37A" FontSize="11" Margin="0,4,0,0"
+                                                                       Visibility="{Binding ShowForeignRegiment, Converter={StaticResource BoolToVis}}"/>
+
+                                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                                                                        Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}">
+                                                                <Button Content="Modifier" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                                                        Padding="10,4" Margin="0,0,6,0" Click="OnEditStockpile"/>
+                                                                <Button Content="Supprimer" Style="{StaticResource FlatButton}" Background="#FF3A3030"
+                                                                        Padding="10,4" Click="OnDeleteStockpile"/>
+                                                            </StackPanel>
+
+                                                            <StackPanel Margin="0,8,0,0"
+                                                                        Visibility="{Binding ShowShareSection, Converter={StaticResource BoolToVis}}">
+                                                                <TextBlock Text="Partager avec un allié :" Foreground="#FF9AA4B2" FontSize="11" Margin="0,0,0,4"/>
+                                                                <ItemsControl ItemsSource="{Binding ShareTargets}">
+                                                                    <ItemsControl.ItemsPanel>
+                                                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                                    </ItemsControl.ItemsPanel>
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <Button Content="{Binding ButtonText}" Background="{Binding ButtonBrush}"
+                                                                                    Style="{StaticResource FlatButton}" Padding="10,4" Margin="0,0,6,6"
+                                                                                    Click="OnToggleShare"/>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

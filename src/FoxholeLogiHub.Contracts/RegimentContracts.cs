@@ -8,8 +8,9 @@ public enum RegimentPermission
     ManageMembers = 1,    // changer le rôle des membres, exclure
     ManageRoles = 2,      // créer/modifier/supprimer des rôles
     Invite = 4,           // inviter des amis, voir/régénérer le code
-    ManageRegiment = 8,   // éditer le régiment, le supprimer
-    ManageAlliances = 16, // proposer/accepter/rompre des alliances
+    ManageRegiment = 8,    // éditer le régiment, le supprimer
+    ManageAlliances = 16,  // proposer/accepter/rompre des alliances
+    ManageStockpiles = 32, // créer/éditer/partager les stockpiles
 }
 
 public sealed record CreateRegimentRequest(string Name, string Tag, string Faction);

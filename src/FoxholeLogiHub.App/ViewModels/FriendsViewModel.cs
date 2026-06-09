@@ -42,6 +42,7 @@ public sealed class FriendsViewModel : ObservableObject
     public event Action? LoggedOut;
     public event Action? RegimentChanged;
     public event Action? RegimentInviteReceived;
+    public event Action? StockpilesChanged;
 
     public ObservableCollection<FriendItemViewModel> Friends { get; } = new();
     public ObservableCollection<FriendRequestItemViewModel> Requests { get; } = new();
@@ -156,7 +157,8 @@ public sealed class FriendsViewModel : ObservableObject
             await _client.ConnectPresenceAsync(new PresenceHandlers(
                 OnPresenceChanged, OnOnlineFriends, OnFriendRequestReceived, OnFriendsChanged,
                 () => OnUi(() => RegimentChanged?.Invoke()),
-                () => OnUi(() => RegimentInviteReceived?.Invoke())));
+                () => OnUi(() => RegimentInviteReceived?.Invoke()),
+                () => OnUi(() => StockpilesChanged?.Invoke())));
 
             Connected = true;
             NeedsLogin = false;

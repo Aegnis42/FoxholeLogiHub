@@ -301,6 +301,7 @@ app.MapPost("/api/friends/remove", async (RemoveFriendRequest req, ClaimsPrincip
 }).RequireAuthorization();
 
 FoxholeLogiHub.Api.Regiments.RegimentEndpoints.MapRegimentEndpoints(app);
+FoxholeLogiHub.Api.Stockpiles.StockpileEndpoints.MapStockpileEndpoints(app);
 
 app.MapHub<PresenceHub>("/hub/presence");
 

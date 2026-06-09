@@ -55,4 +55,7 @@ public static class PresenceEvents
 
     /// <summary>Serveur → client : le régiment a changé (membre, rôle, alliance…) — recharger.</summary>
     public const string RegimentChanged = "RegimentChanged";
+
+    /// <summary>Serveur → client : les stockpiles ont changé — recharger.</summary>
+    public const string StockpilesChanged = "StockpilesChanged";
 }
