@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows.Data;
 using FoxholeLogiHub.App.Services;
 using FoxholeLogiHub.Contracts;
 using FoxholeLogiHub.Core.Services;
@@ -36,10 +38,22 @@ public sealed class StockpilesViewModel : ObservableObject
     private bool _selectedCanManage;
     private string _newItemName = "";
     private string _newItemQuantity = "";
+    private string _newItemLow = "";
+    private string _newItemCritical = "";
+    private string? _editingCode;   // si édition d'un item existant : on garde son code/nom/catégorie
+    private string _editingName = "";
+    private string _editingCategory = "";
 
     public ObservableCollection<StockpileItemViewModel> Stockpiles { get; } = new();
     public ObservableCollection<StockpileLineViewModel> Items { get; } = new();
+    public ICollectionView ItemsView { get; }
     public IReadOnlyList<string> ItemNames { get; } = FoxholeItemCatalog.Names;
+
+    public StockpilesViewModel()
+    {
+        ItemsView = CollectionViewSource.GetDefaultView(Items);
+        ItemsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(StockpileLineViewModel.CategoryLabel)));
+    }
 
     public bool IsStockpileSelected => _selectedId is not null;
     public string SelectedName { get => _selectedName; private set => Set(ref _selectedName, value); }
@@ -47,6 +61,8 @@ public sealed class StockpilesViewModel : ObservableObject
     public bool HasNoItems => Items.Count == 0;
     public string NewItemName { get => _newItemName; set => Set(ref _newItemName, value); }
     public string NewItemQuantity { get => _newItemQuantity; set => Set(ref _newItemQuantity, value); }
+    public string NewItemLow { get => _newItemLow; set => Set(ref _newItemLow, value); }
+    public string NewItemCritical { get => _newItemCritical; set => Set(ref _newItemCritical, value); }
 
     public IReadOnlyList<StockpileTypeOption> Types { get; } =
         StockpileCatalog.Types.Select(t => new StockpileTypeOption(t.Value, t.Label)).ToList();
@@ -129,7 +145,7 @@ public sealed class StockpilesViewModel : ObservableObject
                 // Distingue caisse / à l'unité (codes distincts → pas de collision, contenu plus exact).
                 string code = r.IsCrated ? r.Code + "@crate" : r.Code;
                 string displayName = r.IsCrated ? $"{name} (caisse)" : name;
-                return new StockpileItemDto(code, displayName, category, r.Quantity);
+                return new StockpileItemDto(code, displayName, category, r.Quantity, 0, 0);
             }).ToList();
 
             ApplyItems(await _client.ImportItemsAsync(_selectedId, items));
@@ -295,8 +311,8 @@ public sealed class StockpilesViewModel : ObservableObject
     {
         _selectedId = null;
         Items.Clear();
-        NewItemName = "";
-        NewItemQuantity = "";
+        NewItemName = ""; NewItemQuantity = ""; NewItemLow = ""; NewItemCritical = "";
+        _editingCode = null;
         Raise(nameof(IsStockpileSelected));
         Raise(nameof(HasNoItems));
     }
@@ -327,13 +343,26 @@ public sealed class StockpilesViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(NewItemName)) { Status = "Choisis un item."; return; }
         if (!int.TryParse(NewItemQuantity.Trim(), out int qty) || qty < 0) { Status = "Quantité invalide."; return; }
 
-        var cat = FoxholeItemCatalog.Resolve(NewItemName);
+        // En édition : on garde le code/nom/catégorie d'origine (sinon ré-résoudre changerait le code).
+        string code, name, category;
+        if (_editingCode is not null)
+        {
+            code = _editingCode; name = _editingName; category = _editingCategory;
+        }
+        else
+        {
+            var cat = FoxholeItemCatalog.Resolve(NewItemName);
+            code = cat.Code; name = cat.Name; category = cat.Category;
+        }
+        int.TryParse(NewItemLow.Trim(), out int low);
+        int.TryParse(NewItemCritical.Trim(), out int crit);
         Busy = true;
         try
         {
-            ApplyItems(await _client.SetItemAsync(new SetStockpileItemRequest(_selectedId, cat.Code, cat.Name, cat.Category, qty)));
-            Status = qty <= 0 ? $"{cat.Name} retiré." : $"{cat.Name} : {qty}";
-            NewItemName = ""; NewItemQuantity = "";
+            ApplyItems(await _client.SetItemAsync(new SetStockpileItemRequest(_selectedId, code, name, category, qty, Math.Max(0, low), Math.Max(0, crit))));
+            Status = qty <= 0 ? $"{name} retiré." : $"{name} : {qty}";
+            NewItemName = ""; NewItemQuantity = ""; NewItemLow = ""; NewItemCritical = "";
+            _editingCode = null;
         }
         catch (FriendException fex) { Status = fex.Message; }
         catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
@@ -347,7 +376,7 @@ public sealed class StockpilesViewModel : ObservableObject
         Busy = true;
         try
         {
-            ApplyItems(await _client.SetItemAsync(new SetStockpileItemRequest(_selectedId, line.Code, line.Name, line.Category, 0)));
+            ApplyItems(await _client.SetItemAsync(new SetStockpileItemRequest(_selectedId, line.Code, line.Name, line.Category, 0, 0, 0)));
             Status = $"{line.Name} retiré.";
         }
         catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
@@ -356,7 +385,13 @@ public sealed class StockpilesViewModel : ObservableObject
 
     public void EditLine(StockpileLineViewModel line)
     {
+        _editingCode = line.Code;
+        _editingName = line.Name;
+        _editingCategory = line.Category;
         NewItemName = line.Name;
         NewItemQuantity = line.Quantity.ToString();
+        NewItemLow = line.Low > 0 ? line.Low.ToString() : "";
+        NewItemCritical = line.Critical > 0 ? line.Critical.ToString() : "";
+        Status = $"Édition de « {line.Name} » (modifie quantité/seuils puis Définir).";
     }
 }

@@ -11,9 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Companion FIR (reconnaissance) + table de noms d'items, copiés à côté de l'exe -->
+    <!-- Companion FIR (reconnaissance) + table de noms + icônes d'items, copiés à côté de l'exe -->
     <None Include="fic.exe" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Data\fir-catalog.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Data\icons\**\*.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>

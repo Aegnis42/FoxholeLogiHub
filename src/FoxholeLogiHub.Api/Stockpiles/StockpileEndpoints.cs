@@ -168,6 +168,7 @@ public static class StockpileEndpoints
                     StockpileId = sp.Id, Code = code,
                     Name = string.IsNullOrWhiteSpace(req.Name) ? code : req.Name.Trim(),
                     Category = (req.Category ?? "").Trim(), Quantity = req.Quantity,
+                    LowThreshold = Math.Max(0, req.LowThreshold), CriticalThreshold = Math.Max(0, req.CriticalThreshold),
                 });
             }
             else
@@ -175,6 +176,8 @@ public static class StockpileEndpoints
                 item.Quantity = req.Quantity;
                 item.Name = string.IsNullOrWhiteSpace(req.Name) ? code : req.Name.Trim();
                 item.Category = (req.Category ?? "").Trim();
+                item.LowThreshold = Math.Max(0, req.LowThreshold);
+                item.CriticalThreshold = Math.Max(0, req.CriticalThreshold);
             }
 
             sp.UpdatedAt = DateTimeOffset.UtcNow;
@@ -194,7 +197,13 @@ public static class StockpileEndpoints
             if (sp is null)
                 return Results.NotFound(new ApiError("Stockpile introuvable."));
 
-            db.StockpileItems.RemoveRange(db.StockpileItems.Where(i => i.StockpileId == sp.Id));
+            // Préserve les seuils d'alerte existants (par code) — un ré-import ne doit pas les effacer.
+            var existingItems = await db.StockpileItems.Where(i => i.StockpileId == sp.Id).ToListAsync();
+            var thresholds = existingItems
+                .GroupBy(i => i.Code, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => (g.First().LowThreshold, g.First().CriticalThreshold), StringComparer.OrdinalIgnoreCase);
+            db.StockpileItems.RemoveRange(existingItems);
+
             // Dédoublonne par code (FIR peut renvoyer le même item plusieurs fois) → somme.
             var deduped = req.Items
                 .Where(i => !string.IsNullOrWhiteSpace(i.Code) && i.Quantity > 0)
@@ -202,6 +211,7 @@ public static class StockpileEndpoints
                 .Select(g =>
                 {
                     var first = g.First();
+                    thresholds.TryGetValue(g.Key, out var th);
                     return new StockpileItem
                     {
                         StockpileId = sp.Id,
@@ -209,6 +219,8 @@ public static class StockpileEndpoints
                         Name = string.IsNullOrWhiteSpace(first.Name) ? g.Key : first.Name.Trim(),
                         Category = (first.Category ?? "").Trim(),
                         Quantity = g.Sum(x => x.Quantity),
+                        LowThreshold = th.LowThreshold,
+                        CriticalThreshold = th.CriticalThreshold,
                     };
                 });
             db.StockpileItems.AddRange(deduped);
@@ -222,7 +234,7 @@ public static class StockpileEndpoints
     private static async Task<List<StockpileItemDto>> ItemsAsync(AppDbContext db, string stockpileId) =>
         await db.StockpileItems.Where(i => i.StockpileId == stockpileId)
             .OrderBy(i => i.Category).ThenBy(i => i.Name)
-            .Select(i => new StockpileItemDto(i.Code, i.Name, i.Category, i.Quantity))
+            .Select(i => new StockpileItemDto(i.Code, i.Name, i.Category, i.Quantity, i.LowThreshold, i.CriticalThreshold))
             .ToListAsync();
 
     private static async Task<bool> CanSeeAsync(AppDbContext db, Stockpile sp, string myRegId)

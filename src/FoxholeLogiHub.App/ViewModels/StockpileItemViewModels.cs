@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using FoxholeLogiHub.Contracts;
 
 namespace FoxholeLogiHub.App.ViewModels;
@@ -102,7 +103,7 @@ public sealed class StockpileItemViewModel : ObservableObject
     public bool ShowForeignRegiment => !IsOwn;
 }
 
-/// <summary>Une ligne d'item dans le détail d'un stockpile.</summary>
+/// <summary>Une ligne/carte d'item dans le détail d'un stockpile (icône, quantité, statut de stock).</summary>
 public sealed class StockpileLineViewModel : ObservableObject
 {
     public StockpileLineViewModel(StockpileItemDto dto, bool canManage)
@@ -111,15 +112,73 @@ public sealed class StockpileLineViewModel : ObservableObject
         Name = dto.Name;
         Category = dto.Category;
         Quantity = dto.Quantity;
+        Low = dto.LowThreshold;
+        Critical = dto.CriticalThreshold;
         CanManage = canManage;
+        Icon = LoadIcon(Code);
     }
 
     public string Code { get; }
     public string Name { get; }
     public string Category { get; }
     public int Quantity { get; }
+    public int Low { get; }
+    public int Critical { get; }
     public bool CanManage { get; }
+    public ImageSource? Icon { get; }
 
     public string QuantityText => Quantity.ToString("N0");
     public string CategoryLabel => string.IsNullOrEmpty(Category) ? "Autres" : Category;
+    public string Initial => string.IsNullOrEmpty(Name) ? "?" : Name[..1].ToUpperInvariant();
+
+    /// <summary>"critical" | "low" | "good" | "" (aucun seuil défini).</summary>
+    public string Status =>
+        Critical > 0 && Quantity <= Critical ? "critical"
+        : Low > 0 && Quantity <= Low ? "low"
+        : (Low > 0 || Critical > 0) ? "good"
+        : "";
+
+    public bool HasStatus => Status.Length > 0;
+
+    public string StatusLabel => Status switch
+    {
+        "critical" => "Critique",
+        "low" => "Bas",
+        "good" => "Bon",
+        _ => "",
+    };
+
+    public Brush StatusBrush => Status switch
+    {
+        "critical" => new SolidColorBrush(Color.FromRgb(0xC0, 0x3A, 0x3A)),
+        "low" => new SolidColorBrush(Color.FromRgb(0xC8, 0x8A, 0x2E)),
+        "good" => new SolidColorBrush(Color.FromRgb(0x3A, 0x8A, 0x4F)),
+        _ => new SolidColorBrush(Color.FromRgb(0x3A, 0x41, 0x4C)),
+    };
+
+    private static ImageSource? LoadIcon(string code)
+    {
+        try
+        {
+            string dir = System.IO.Path.Combine(AppContext.BaseDirectory, "Data", "icons");
+            string name = code.EndsWith("@crate", StringComparison.Ordinal) ? code[..^6] + "-crated" : code;
+            string path = System.IO.Path.Combine(dir, name + ".png");
+            if (!System.IO.File.Exists(path) && code.EndsWith("@crate", StringComparison.Ordinal))
+                path = System.IO.Path.Combine(dir, code[..^6] + ".png");
+            if (!System.IO.File.Exists(path))
+                return null;
+
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.UriSource = new Uri(path);
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }

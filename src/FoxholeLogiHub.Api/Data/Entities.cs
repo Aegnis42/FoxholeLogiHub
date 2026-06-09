@@ -107,7 +107,7 @@ public sealed class StockpileShare
     public string RegimentId { get; set; } = "";
 }
 
-/// <summary>Un item (quantité) dans un stockpile.</summary>
+/// <summary>Un item (quantité) dans un stockpile, avec seuils d'alerte (0 = pas d'alerte).</summary>
 public sealed class StockpileItem
 {
     public int Id { get; set; }
@@ -116,6 +116,8 @@ public sealed class StockpileItem
     public string Name { get; set; } = "";
     public string Category { get; set; } = "";
     public int Quantity { get; set; }
+    public int LowThreshold { get; set; }      // sous ce seuil → Bas
+    public int CriticalThreshold { get; set; } // sous ce seuil → Critique
 }
 
 public sealed class AppDbContext : DbContext

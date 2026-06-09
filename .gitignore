@@ -26,6 +26,11 @@ coverage*.json
 *.png
 *.log
 app-screenshot.png
+app-out.txt
+app-err.txt
+
+# Exception : icônes d'items (bundle FIR, nécessaires au build/affichage)
+!src/FoxholeLogiHub.App/Data/icons/*.png
 
 # Base de données locale de l'API (SQLite)
 *.db

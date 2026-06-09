@@ -905,39 +905,84 @@
                                             </DockPanel>
                                         </Border>
 
-                                        <DockPanel Margin="0,0,0,10"
-                                                   Visibility="{Binding SelectedCanManage, Converter={StaticResource BoolToVis}}">
-                                            <Button DockPanel.Dock="Right" Content="Définir" Style="{StaticResource FlatButton}"
-                                                    Background="#FF2A475E" Padding="14,6" Margin="8,0,0,0" Click="OnSetItem"/>
-                                            <TextBox DockPanel.Dock="Right" Width="90" Margin="8,0,0,0"
-                                                     Text="{Binding NewItemQuantity, UpdateSourceTrigger=PropertyChanged}"
-                                                     FontSize="14" Padding="6" Background="#FF1B1E24" Foreground="White"
-                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
-                                                     VerticalContentAlignment="Center" ToolTip="Quantité (0 = retirer)"/>
-                                            <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
-                                                      Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"/>
-                                        </DockPanel>
+                                        <StackPanel Margin="0,0,0,12"
+                                                    Visibility="{Binding SelectedCanManage, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="AJOUTER / MODIFIER (item · quantité · seuil bas · seuil critique)"
+                                                       Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Right" Content="Définir" Style="{StaticResource FlatButton}"
+                                                        Background="#FF2A475E" Padding="14,6" Margin="6,0,0,0" Click="OnSetItem"/>
+                                                <TextBox DockPanel.Dock="Right" Width="70" Margin="6,0,0,0"
+                                                         Text="{Binding NewItemCritical, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="14" Padding="6" Background="#FF1B1E24" Foreground="White"
+                                                         BorderBrush="#FFC03A3A" BorderThickness="1" CaretBrush="White"
+                                                         VerticalContentAlignment="Center" ToolTip="Seuil critique (🔴 ≤)"/>
+                                                <TextBox DockPanel.Dock="Right" Width="70" Margin="6,0,0,0"
+                                                         Text="{Binding NewItemLow, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="14" Padding="6" Background="#FF1B1E24" Foreground="White"
+                                                         BorderBrush="#FFC88A2E" BorderThickness="1" CaretBrush="White"
+                                                         VerticalContentAlignment="Center" ToolTip="Seuil bas (🟠 ≤)"/>
+                                                <TextBox DockPanel.Dock="Right" Width="80" Margin="6,0,0,0"
+                                                         Text="{Binding NewItemQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="14" Padding="6" Background="#FF1B1E24" Foreground="White"
+                                                         BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                         VerticalContentAlignment="Center" ToolTip="Quantité (0 = retirer)"/>
+                                                <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
+                                                          Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </DockPanel>
+                                        </StackPanel>
 
-                                        <TextBlock Text="Aucun item. Ajoute-en ci-dessus." Foreground="#FF6B7280" FontSize="13"
+                                        <TextBlock Text="Aucun item. Ajoute-en ci-dessus ou via 📷 Importer." Foreground="#FF6B7280" FontSize="13"
                                                    Visibility="{Binding HasNoItems, Converter={StaticResource BoolToVis}}"/>
-                                        <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl ItemsSource="{Binding ItemsView}">
+                                            <ItemsControl.GroupStyle>
+                                                <GroupStyle>
+                                                    <GroupStyle.HeaderTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#FF9AA4B2"
+                                                                       FontSize="12" Margin="2,10,0,6"/>
+                                                        </DataTemplate>
+                                                    </GroupStyle.HeaderTemplate>
+                                                    <GroupStyle.Panel>
+                                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                    </GroupStyle.Panel>
+                                                </GroupStyle>
+                                            </ItemsControl.GroupStyle>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="8,6" Margin="0,0,0,5">
-                                                        <DockPanel>
-                                                            <Button DockPanel.Dock="Right" Content="×" Style="{StaticResource FlatButton}"
-                                                                    Background="#FF3A3030" Padding="9,2" Margin="6,0,0,0" Click="OnRemoveItem"
-                                                                    Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
-                                                            <Button DockPanel.Dock="Right" Content="✎" Style="{StaticResource FlatButton}"
-                                                                    Background="#FF333A45" Padding="9,2" Margin="6,0,0,0" Click="OnEditItem"
-                                                                    Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
-                                                            <TextBlock DockPanel.Dock="Right" Text="{Binding QuantityText}" FontWeight="Bold"
-                                                                       Foreground="#FF7FA8D9" FontSize="14" VerticalAlignment="Center"
-                                                                       MinWidth="60" TextAlignment="Right"/>
-                                                            <TextBlock DockPanel.Dock="Left" Text="{Binding CategoryLabel}" Foreground="#FF6B7280"
-                                                                       FontSize="10" VerticalAlignment="Center" MinWidth="95"/>
-                                                            <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"/>
-                                                        </DockPanel>
+                                                    <Border Width="158" Background="#FF2E343F" CornerRadius="8" Margin="0,0,8,8">
+                                                        <Grid>
+                                                            <Border Width="4" HorizontalAlignment="Left" Background="{Binding StatusBrush}"
+                                                                    CornerRadius="8,0,0,8"/>
+                                                            <StackPanel Margin="12,8,8,8">
+                                                                <DockPanel>
+                                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top"
+                                                                                Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}">
+                                                                        <Button Content="✎" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                                                                Padding="6,1" Margin="0,0,4,0" Click="OnEditItem" FontSize="11"/>
+                                                                        <Button Content="×" Style="{StaticResource FlatButton}" Background="#FF3A3030"
+                                                                                Padding="7,1" Click="OnRemoveItem" FontSize="11"/>
+                                                                    </StackPanel>
+                                                                    <Grid Width="40" Height="40" HorizontalAlignment="Left">
+                                                                        <Border Background="#FF1B1E24" CornerRadius="6"/>
+                                                                        <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontWeight="Bold"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                        <Image Source="{Binding Icon}" Width="38" Height="38" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                    </Grid>
+                                                                </DockPanel>
+                                                                <TextBlock Text="{Binding Name}" FontSize="12" Foreground="#FFE6E6E6"
+                                                                           TextWrapping="Wrap" Height="30" Margin="0,6,0,2"/>
+                                                                <DockPanel>
+                                                                    <Border DockPanel.Dock="Right" Background="{Binding StatusBrush}" CornerRadius="4"
+                                                                            Padding="6,1" VerticalAlignment="Center"
+                                                                            Visibility="{Binding HasStatus, Converter={StaticResource BoolToVis}}">
+                                                                        <TextBlock Text="{Binding StatusLabel}" Foreground="White" FontSize="10"/>
+                                                                    </Border>
+                                                                    <TextBlock Text="{Binding QuantityText}" FontWeight="Bold" FontSize="18"
+                                                                               Foreground="#FFE6E6E6"/>
+                                                                </DockPanel>
+                                                            </StackPanel>
+                                                        </Grid>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>

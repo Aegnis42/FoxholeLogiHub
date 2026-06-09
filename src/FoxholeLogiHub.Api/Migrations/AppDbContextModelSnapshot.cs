@@ -296,6 +296,12 @@ namespace FoxholeLogiHub.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("CriticalThreshold")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LowThreshold")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
