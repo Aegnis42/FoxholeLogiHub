@@ -305,7 +305,42 @@ public sealed class IngredientViewModel
     public string Initial => string.IsNullOrEmpty(Name) ? "?" : Name[..1].ToUpperInvariant();
 }
 
-/// <summary>Fiche détaillée d'un item : catégorie, caisse, recette de craft (gestion poussée).</summary>
+/// <summary>Une recette affichée (bâtiment(s), ingrédients, sortie, temps).</summary>
+public sealed class RecipeViewModel
+{
+    public RecipeViewModel(ItemRecipe r)
+    {
+        Buildings = string.Join(" · ", r.Buildings);
+        Output = r.Output;
+        Time = r.Time;
+        IsMpf = r.Buildings.Any(b => b.Contains("MPF"));
+        foreach (var ing in r.Ingredients)
+            Ingredients.Add(new IngredientViewModel(ing));
+    }
+
+    public string Buildings { get; }
+    public int Output { get; }
+    public double Time { get; }
+    public bool IsMpf { get; }
+    public ObservableCollection<IngredientViewModel> Ingredients { get; } = new();
+
+    public string Header => $"🏭 {Buildings}";
+    public bool HasOutput => Output > 0;
+    public string OutputText => Output > 0 ? $"→ produit {Output:N0}" : "";
+    public bool HasTime => Time > 0;
+    public string TimeText => "⏱ " + FormatTime(Time);
+
+    private static string FormatTime(double s)
+    {
+        if (s <= 0) return "";
+        if (s < 1) return $"{s:0.##} s";
+        if (s < 60) return $"{s:0.#} s";
+        int m = (int)(s / 60), sec = (int)System.Math.Round(s % 60);
+        return sec == 0 ? $"{m} min" : $"{m} min {sec} s";
+    }
+}
+
+/// <summary>Fiche détaillée d'un item : catégorie, caisse, recettes de craft (gestion poussée).</summary>
 public sealed class ItemDetailViewModel : ObservableObject
 {
     public ItemDetailViewModel(ItemEntry e)
@@ -315,26 +350,22 @@ public sealed class ItemDetailViewModel : ObservableObject
         Caliber = e.Display;
         Category = e.Category;
         CrateSize = e.CrateSize;
-        ProdTime = e.ProdTime;
+        Raw = e.Raw;
         HasRecipe = e.HasRecipe;
         Icon = ItemIcons.Load(e.Code);
-        foreach (var ing in e.Ingredients)
-            Ingredients.Add(new IngredientViewModel(ing));
-        foreach (var b in e.Buildings)
-            _buildings.Add(BuildingLabel(b));
+        foreach (var r in e.Recipes)
+            Recipes.Add(new RecipeViewModel(r));
     }
-
-    private readonly List<string> _buildings = new();
 
     public string Code { get; }
     public string Name { get; }
     public string Caliber { get; }
     public string Category { get; }
     public int CrateSize { get; }
-    public int ProdTime { get; }
+    public bool Raw { get; }
     public bool HasRecipe { get; }
     public ImageSource? Icon { get; }
-    public ObservableCollection<IngredientViewModel> Ingredients { get; } = new();
+    public ObservableCollection<RecipeViewModel> Recipes { get; } = new();
 
     public string Initial => string.IsNullOrEmpty(Name) ? "?" : Name[..1].ToUpperInvariant();
     public bool HasCaliber => Caliber.Length > 0 && !Caliber.Equals(Name, System.StringComparison.OrdinalIgnoreCase);
@@ -344,26 +375,9 @@ public sealed class ItemDetailViewModel : ObservableObject
     public string CrateText => IsCratable ? $"{CrateSize:N0} / caisse" : "Non caissable";
 
     public bool NoRecipe => !HasRecipe;
-    public string RecipeHeader => IsCratable ? $"Recette (1 caisse = {CrateSize:N0})" : "Recette (à l'unité)";
-    public string ProdTimeText => ProdTime > 0 ? FormatTime(ProdTime) : "";
-    public bool HasProdTime => ProdTime > 0;
-    public bool HasBuildings => _buildings.Count > 0;
-    public string BuildingsText => string.Join("  ·  ", _buildings);
-    public bool IsMpf => _buildings.Any(b => b.Contains("MPF"));
-    public string NoRecipeText => "Ressource brute / non fabricable en usine.";
-
-    private static string BuildingLabel(string code) => code switch
-    {
-        "Factory" => "Usine",
-        "MassProductionFactory" => "MPF",
-        _ => code,
-    };
-
-    private static string FormatTime(int seconds)
-    {
-        if (seconds < 60)
-            return $"{seconds} s";
-        int m = seconds / 60, s = seconds % 60;
-        return s == 0 ? $"{m} min" : $"{m} min {s} s";
-    }
+    public bool HasMpf => Recipes.Any(r => r.IsMpf);
+    public string RecipeHeader => Recipes.Count > 1 ? $"Recettes ({Recipes.Count})" : "Recette";
+    public string NoRecipeText => Raw
+        ? "Ressource brute — extraite sur le terrain (champ / mine), non fabriquée."
+        : "Produit en raffinerie / installation (recette non répertoriée).";
 }

@@ -9,7 +9,10 @@ namespace FoxholeLogiHub.App.ViewModels;
 public sealed record CatalogItem(string Code, string Name, string Category);
 public sealed record ItemIngredient(string Code, int Qty);
 
-/// <summary>Fiche complète d'un item (catégorie corrigée, caisse, recette de craft).</summary>
+/// <summary>Une recette de production (un ou plusieurs bâtiments partageant la même recette).</summary>
+public sealed record ItemRecipe(IReadOnlyList<string> Buildings, int Output, double Time, IReadOnlyList<ItemIngredient> Ingredients);
+
+/// <summary>Fiche complète d'un item (catégorie corrigée, caisse, recettes de craft).</summary>
 public sealed class ItemEntry
 {
     public required string Code { get; init; }
@@ -18,11 +21,10 @@ public sealed class ItemEntry
     public required string Category { get; init; }    // catégorie FR corrigée
     public required string Label { get; init; }       // libellé sélecteur (calibre préfixé)
     public int CrateSize { get; init; }               // unités par caisse (0 = non caissable)
-    public int ProdTime { get; init; }                // temps de production d'une caisse (s)
-    public required IReadOnlyList<ItemIngredient> Ingredients { get; init; }
-    public required IReadOnlyList<string> Buildings { get; init; } // Factory / MassProductionFactory
+    public bool Raw { get; init; }                    // ressource brute (extraite, non fabriquée)
+    public required IReadOnlyList<ItemRecipe> Recipes { get; init; }
 
-    public bool HasRecipe => Ingredients.Count > 0;
+    public bool HasRecipe => Recipes.Count > 0;
     public bool IsCratable => CrateSize > 0;
 }
 
@@ -131,14 +133,20 @@ public static class FoxholeItemCatalog
                     var v = p.Value;
                     string name = Str(v, "name", p.Name);
                     string disp = Str(v, "display", "");
-                    var ingredients = new List<ItemIngredient>();
-                    if (v.TryGetProperty("ingredients", out var ing) && ing.ValueKind == JsonValueKind.Array)
-                        foreach (var it in ing.EnumerateArray())
-                            ingredients.Add(new ItemIngredient(Str(it, "code", ""), Int(it, "qty")));
-                    var buildings = new List<string>();
-                    if (v.TryGetProperty("buildings", out var b) && b.ValueKind == JsonValueKind.Array)
-                        foreach (var it in b.EnumerateArray())
-                            buildings.Add(it.GetString() ?? "");
+                    var recipes = new List<ItemRecipe>();
+                    if (v.TryGetProperty("recipes", out var recs) && recs.ValueKind == JsonValueKind.Array)
+                        foreach (var r in recs.EnumerateArray())
+                        {
+                            var blds = new List<string>();
+                            if (r.TryGetProperty("buildings", out var b) && b.ValueKind == JsonValueKind.Array)
+                                foreach (var it in b.EnumerateArray())
+                                    blds.Add(it.GetString() ?? "");
+                            var ings = new List<ItemIngredient>();
+                            if (r.TryGetProperty("ingredients", out var ing) && ing.ValueKind == JsonValueKind.Array)
+                                foreach (var it in ing.EnumerateArray())
+                                    ings.Add(new ItemIngredient(Str(it, "code", ""), Int(it, "qty")));
+                            recipes.Add(new ItemRecipe(blds, Int(r, "output"), Dbl(r, "time"), ings));
+                        }
 
                     list.Add(new ItemEntry
                     {
@@ -148,9 +156,8 @@ public static class FoxholeItemCatalog
                         Category = Str(v, "category", "Autres"),
                         Label = MakeLabel(name, disp),
                         CrateSize = Int(v, "crateSize"),
-                        ProdTime = Int(v, "prodTime"),
-                        Ingredients = ingredients,
-                        Buildings = buildings,
+                        Raw = v.TryGetProperty("raw", out var rw) && rw.ValueKind == JsonValueKind.True,
+                        Recipes = recipes,
                     });
                   }
                   catch
@@ -174,7 +181,10 @@ public static class FoxholeItemCatalog
     {
         if (!e.TryGetProperty(prop, out var v) || v.ValueKind != JsonValueKind.Number)
             return 0;
-        // Tolère les nombres non entiers (ex. prodTime 37.5) — GetInt32() lèverait sinon.
+        // Tolère les nombres non entiers (ex. 37.5) — GetInt32() lèverait sinon.
         return v.TryGetInt32(out int i) ? i : (int)Math.Round(v.GetDouble());
     }
+
+    private static double Dbl(JsonElement e, string prop) =>
+        e.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : 0;
 }
