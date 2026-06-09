@@ -29,6 +29,7 @@ public sealed class ResupplyClient : IDisposable
     public Task<List<ResupplyRequestDto>> DoneAsync(string id) => PostAsync("/api/resupply/done", new ResupplyActionRequest(id));
     public Task<List<ResupplyRequestDto>> ReopenAsync(string id) => PostAsync("/api/resupply/reopen", new ResupplyActionRequest(id));
     public Task<List<ResupplyRequestDto>> DeleteAsync(string id) => PostAsync("/api/resupply/delete", new ResupplyActionRequest(id));
+    public Task<List<ResupplyRequestDto>> SetVisibilityAsync(string id, int visibility) => PostAsync("/api/resupply/visibility", new SetResupplyVisibilityRequest(id, visibility));
 
     private async Task<List<ResupplyRequestDto>> PostAsync(string path, object body)
     {

@@ -129,6 +129,7 @@ public sealed class ResupplyRequest
     public string Hex { get; set; } = "";
     public string Coords { get; set; } = "";         // coordonnées libres (ex. "E5", "123x456")
     public int Priority { get; set; }                // 0 normale, 1 haute, 2 urgente
+    public int Visibility { get; set; }              // 0 régiment, 1 alliance, 2 public
     public string Status { get; set; } = "open";     // open | claimed | done
     public string Note { get; set; } = "";
     public string CreatedBySteamId { get; set; } = "";

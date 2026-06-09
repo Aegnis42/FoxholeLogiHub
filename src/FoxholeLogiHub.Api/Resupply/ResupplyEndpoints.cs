@@ -10,6 +10,8 @@ namespace FoxholeLogiHub.Api.Resupply;
 
 public static class ResupplyEndpoints
 {
+    private enum Scope { Visible, Own }
+
     public static void MapResupplyEndpoints(this WebApplication app)
     {
         app.MapGet("/api/resupply", async (ClaimsPrincipal p, AppDbContext db) =>
@@ -36,6 +38,7 @@ public static class ResupplyEndpoints
                 Hex = (req.Hex ?? "").Trim(),
                 Coords = (req.Coords ?? "").Trim(),
                 Priority = Math.Clamp(req.Priority, 0, 2),
+                Visibility = Math.Clamp(req.Visibility, 0, 2),
                 Status = ResupplyStatus.Open,
                 Note = (req.Note ?? "").Trim(),
                 CreatedBySteamId = me,
@@ -56,50 +59,80 @@ public static class ResupplyEndpoints
             return Results.Ok(await BuildListAsync(db, me));
         }).RequireAuthorization();
 
-        // Prendre en charge / se désengager (bascule).
+        // Prendre en charge / se désengager (toute demande visible — collaboration inter-régiment).
         app.MapPost("/api/resupply/claim", async (ResupplyActionRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
-            await MutateAsync(db, hub, Me(p), req.Id, false, r =>
+        {
+            string me = Me(p);
+            return await MutateAsync(db, hub, me, req.Id, Scope.Visible, r =>
             {
-                if (r.ClaimedBySteamId == Me(p))
+                if (r.ClaimedBySteamId == me)
                 { r.ClaimedBySteamId = ""; if (r.Status == ResupplyStatus.Claimed) r.Status = ResupplyStatus.Open; }
                 else
-                { r.ClaimedBySteamId = Me(p); if (r.Status == ResupplyStatus.Open) r.Status = ResupplyStatus.Claimed; }
-            })).RequireAuthorization();
+                { r.ClaimedBySteamId = me; if (r.Status == ResupplyStatus.Open) r.Status = ResupplyStatus.Claimed; }
+            });
+        }).RequireAuthorization();
 
         // Marquer livrée.
         app.MapPost("/api/resupply/done", async (ResupplyActionRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
-            await MutateAsync(db, hub, Me(p), req.Id, false, r => r.Status = ResupplyStatus.Done)).RequireAuthorization();
+            await MutateAsync(db, hub, Me(p), req.Id, Scope.Visible, r => r.Status = ResupplyStatus.Done)).RequireAuthorization();
 
         // Rouvrir.
         app.MapPost("/api/resupply/reopen", async (ResupplyActionRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
-            await MutateAsync(db, hub, Me(p), req.Id, false, r =>
+            await MutateAsync(db, hub, Me(p), req.Id, Scope.Visible, r =>
             { r.Status = r.ClaimedBySteamId.Length > 0 ? ResupplyStatus.Claimed : ResupplyStatus.Open; })).RequireAuthorization();
 
-        // Supprimer (créateur ou droit ManageStockpiles).
+        // Changer la visibilité (créateur ou ManageStockpiles, sur ses propres demandes).
+        app.MapPost("/api/resupply/visibility", async (SetResupplyVisibilityRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+            await MutateAsync(db, hub, Me(p), req.Id, Scope.Own, r => r.Visibility = Math.Clamp(req.Visibility, 0, 2))).RequireAuthorization();
+
+        // Supprimer (créateur ou ManageStockpiles, sur ses propres demandes).
         app.MapPost("/api/resupply/delete", async (ResupplyActionRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
-            await MutateAsync(db, hub, Me(p), req.Id, true, r =>
+            await MutateAsync(db, hub, Me(p), req.Id, Scope.Own, r =>
             {
                 db.ResupplyRequestItems.RemoveRange(db.ResupplyRequestItems.Where(i => i.RequestId == r.Id));
                 db.ResupplyRequests.Remove(r);
             })).RequireAuthorization();
     }
 
-    private static async Task<IResult> MutateAsync(AppDbContext db, IHubContext<PresenceHub> hub, string me, string id, bool needManage, Action<ResupplyRequest> apply)
+    private static async Task<IResult> MutateAsync(AppDbContext db, IHubContext<PresenceHub> hub, string me, string id, Scope scope, Action<ResupplyRequest> apply)
     {
         var ctx = await MyRegimentAsync(db, me);
         if (ctx is null)
             return Results.Forbid();
-        var r = await db.ResupplyRequests.FirstOrDefaultAsync(x => x.Id == id && x.RegimentId == ctx.Value.reg.Id);
+        string myRegId = ctx.Value.reg.Id;
+        var r = await db.ResupplyRequests.FirstOrDefaultAsync(x => x.Id == id);
         if (r is null)
             return Results.NotFound(new ApiError("Demande introuvable."));
-        if (needManage && r.CreatedBySteamId != me
-            && !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
-            return Results.Forbid();
 
+        if (scope == Scope.Own)
+        {
+            if (r.RegimentId != myRegId)
+                return Results.Forbid();
+            if (r.CreatedBySteamId != me
+                && !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+                return Results.Forbid();
+        }
+        else if (!await CanSeeAsync(db, r, myRegId))
+        {
+            return Results.Forbid();
+        }
+
+        string ownerReg = r.RegimentId;
         apply(r);
         await db.SaveChangesAsync();
-        await NotifyAsync(hub, db, ctx.Value.reg.Id);
+        await NotifyAsync(hub, db, ownerReg);
+        if (myRegId != ownerReg)
+            await NotifyAsync(hub, db, myRegId);
         return Results.Ok(await BuildListAsync(db, me));
+    }
+
+    private static async Task<bool> CanSeeAsync(AppDbContext db, ResupplyRequest r, string myRegId)
+    {
+        if (r.RegimentId == myRegId || r.Visibility == ResupplyVisibility.Public)
+            return true;
+        if (r.Visibility == ResupplyVisibility.Alliance)
+            return (await AlliedIdsAsync(db, myRegId)).Contains(r.RegimentId);
+        return false;
     }
 
     private static async Task<List<ResupplyRequestDto>> BuildListAsync(AppDbContext db, string me)
@@ -109,27 +142,55 @@ public static class ResupplyEndpoints
             return new List<ResupplyRequestDto>();
         string regId = ctx.Value.reg.Id;
         bool canManageAll = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles);
+        var allies = await AlliedIdsAsync(db, regId);
 
-        var reqs = await db.ResupplyRequests.Where(r => r.RegimentId == regId).ToListAsync();
+        // Visibles : les miennes + alliance (régiments alliés) + publiques (tout le monde).
+        var reqs = await db.ResupplyRequests
+            .Where(r => r.RegimentId == regId
+                || r.Visibility == ResupplyVisibility.Public
+                || (r.Visibility == ResupplyVisibility.Alliance && allies.Contains(r.RegimentId)))
+            .ToListAsync();
+
         var reqIds = reqs.Select(r => r.Id).ToList();
         var allItems = await db.ResupplyRequestItems.Where(i => reqIds.Contains(i.RequestId)).ToListAsync();
         var itemsByReq = allItems.GroupBy(i => i.RequestId)
             .ToDictionary(g => g.Key, g => g.Select(i => new ResupplyItemDto(i.Code, i.Name, i.Category, i.Quantity)).ToList());
-        var ids = reqs.SelectMany(r => new[] { r.CreatedBySteamId, r.ClaimedBySteamId })
-            .Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList();
-        var names = await db.Users.Where(u => ids.Contains(u.SteamId)).ToDictionaryAsync(u => u.SteamId, u => u.DisplayName);
 
-        return reqs.Select(r => new ResupplyRequestDto(
+        var userIds = reqs.SelectMany(r => new[] { r.CreatedBySteamId, r.ClaimedBySteamId })
+            .Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList();
+        var names = await db.Users.Where(u => userIds.Contains(u.SteamId)).ToDictionaryAsync(u => u.SteamId, u => u.DisplayName);
+
+        var ownerRegIds = reqs.Select(r => r.RegimentId).Distinct().ToList();
+        var regNames = await db.Regiments.Where(rg => ownerRegIds.Contains(rg.Id)).ToDictionaryAsync(rg => rg.Id, rg => rg.Name);
+
+        var claimerIds = reqs.Where(r => r.ClaimedBySteamId.Length > 0).Select(r => r.ClaimedBySteamId).Distinct().ToList();
+        var claimerRegs = await db.RegimentMembers.Where(m => claimerIds.Contains(m.SteamId))
+            .ToDictionaryAsync(m => m.SteamId, m => m.RegimentId);
+
+        return reqs.Select(r =>
+        {
+            bool isMine = r.RegimentId == regId;
+            bool claimedByMine = r.ClaimedBySteamId.Length > 0 && claimerRegs.GetValueOrDefault(r.ClaimedBySteamId, "") == regId;
+            return new ResupplyRequestDto(
                 r.Id, r.Title, r.Hex, r.Coords,
                 itemsByReq.GetValueOrDefault(r.Id, new List<ResupplyItemDto>()),
-                r.Priority, r.Status, r.Note,
+                r.Priority, r.Status, r.Note, r.Visibility,
+                regNames.GetValueOrDefault(r.RegimentId, "?"), isMine, claimedByMine,
                 r.CreatedBySteamId, names.GetValueOrDefault(r.CreatedBySteamId, "?"),
                 r.ClaimedBySteamId, names.GetValueOrDefault(r.ClaimedBySteamId, ""),
-                canManageAll || r.CreatedBySteamId == me, r.ClaimedBySteamId == me))
+                isMine && (canManageAll || r.CreatedBySteamId == me), r.ClaimedBySteamId == me);
+        })
         .OrderBy(d => d.Status == ResupplyStatus.Done ? 1 : 0)
         .ThenByDescending(d => d.Priority)
         .ThenBy(d => d.Title)
         .ToList();
+    }
+
+    private static async Task<List<string>> AlliedIdsAsync(AppDbContext db, string regId)
+    {
+        var rows = await db.RegimentAlliances
+            .Where(a => a.Accepted && (a.RegimentAId == regId || a.RegimentBId == regId)).ToListAsync();
+        return rows.Select(a => a.RegimentAId == regId ? a.RegimentBId : a.RegimentAId).Distinct().ToList();
     }
 
     private static async Task NotifyAsync(IHubContext<PresenceHub> hub, AppDbContext db, string regimentId)

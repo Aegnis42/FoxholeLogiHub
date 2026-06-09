@@ -26,6 +26,7 @@ public sealed class ResupplyViewModel : ObservableObject
     private string _newCoords = "";
     private string _newNote = "";
     private int _newPriority = ResupplyPriority.Normal;
+    private int _newVisibility = ResupplyVisibility.Regiment;
     private string _draftItemName = "";
     private string _draftItemQuantity = "";
 
@@ -42,6 +43,12 @@ public sealed class ResupplyViewModel : ObservableObject
         new ResupplyPriorityOption(ResupplyPriority.High, "Haute"),
         new ResupplyPriorityOption(ResupplyPriority.Urgent, "Urgente"),
     };
+    public IReadOnlyList<ResupplyVisibilityOption> Visibilities { get; } = new[]
+    {
+        new ResupplyVisibilityOption(ResupplyVisibility.Regiment, "🔒 Privé (régiment)"),
+        new ResupplyVisibilityOption(ResupplyVisibility.Alliance, "🤝 Alliance"),
+        new ResupplyVisibilityOption(ResupplyVisibility.Public, "🌍 Public"),
+    };
 
     public bool Authed { get => _authed; private set { Set(ref _authed, value); RaiseViewFlags(); } }
     public bool Busy { get => _busy; private set => Set(ref _busy, value); }
@@ -52,6 +59,7 @@ public sealed class ResupplyViewModel : ObservableObject
     public string NewCoords { get => _newCoords; set => Set(ref _newCoords, value); }
     public string NewNote { get => _newNote; set => Set(ref _newNote, value); }
     public int NewPriority { get => _newPriority; set => Set(ref _newPriority, value); }
+    public int NewVisibility { get => _newVisibility; set => Set(ref _newVisibility, value); }
     public string DraftItemName { get => _draftItemName; set => Set(ref _draftItemName, value); }
     public string DraftItemQuantity { get => _draftItemQuantity; set => Set(ref _draftItemQuantity, value); }
 
@@ -140,8 +148,11 @@ public sealed class ResupplyViewModel : ObservableObject
         foreach (var d in list)
         {
             var vm = new ResupplyRequestViewModel(d);
-            if (d.Status == ResupplyStatus.Open) OpenRequests.Add(vm);
-            else TakenRequests.Add(vm);
+            if (d.Status == ResupplyStatus.Open)
+                OpenRequests.Add(vm);                              // toutes les demandes ouvertes visibles
+            else if (d.IsMine || d.ClaimedByMyRegiment)
+                TakenRequests.Add(vm);                             // prises en charge par/pour mon régiment
+            // sinon : prise par un autre régiment → pas dans ma vue
         }
         RaiseCounts();
     }
@@ -182,10 +193,10 @@ public sealed class ResupplyViewModel : ObservableObject
         {
             ApplyRequests(await _client.CreateAsync(new CreateResupplyRequest(
                 string.IsNullOrWhiteSpace(NewTitle) ? "Demande" : NewTitle.Trim(),
-                NewHex ?? "", NewCoords?.Trim() ?? "", items, NewPriority, NewNote?.Trim() ?? "")));
+                NewHex ?? "", NewCoords?.Trim() ?? "", items, NewPriority, NewNote?.Trim() ?? "", NewVisibility)));
             Status = $"Demande « {(string.IsNullOrWhiteSpace(NewTitle) ? "Demande" : NewTitle.Trim())} » créée ({items.Count} item(s)).";
             DraftItems.Clear();
-            NewTitle = ""; NewHex = ""; NewCoords = ""; NewNote = ""; NewPriority = ResupplyPriority.Normal;
+            NewTitle = ""; NewHex = ""; NewCoords = ""; NewNote = ""; NewPriority = ResupplyPriority.Normal; NewVisibility = ResupplyVisibility.Regiment;
             Raise(nameof(HasDraft));
         }
         catch (FriendException fex) { Status = fex.Message; }
@@ -198,6 +209,7 @@ public sealed class ResupplyViewModel : ObservableObject
     public Task DoneAsync(ResupplyRequestViewModel r) => ActAsync(() => _client!.DoneAsync(r.Id));
     public Task ReopenAsync(ResupplyRequestViewModel r) => ActAsync(() => _client!.ReopenAsync(r.Id));
     public Task DeleteAsync(ResupplyRequestViewModel r) => ActAsync(() => _client!.DeleteAsync(r.Id));
+    public Task SetVisibilityAsync(ResupplyRequestViewModel r, int visibility) => ActAsync(() => _client!.SetVisibilityAsync(r.Id, visibility));
 
     private async Task ActAsync(Func<Task<List<ResupplyRequestDto>>> action)
     {

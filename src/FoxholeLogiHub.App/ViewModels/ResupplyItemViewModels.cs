@@ -7,6 +7,7 @@ using FoxholeLogiHub.Contracts;
 namespace FoxholeLogiHub.App.ViewModels;
 
 public sealed record ResupplyPriorityOption(int Value, string Label);
+public sealed record ResupplyVisibilityOption(int Value, string Label);
 
 /// <summary>Un item dans une demande ou un brouillon (icône + nom + quantité).</summary>
 public sealed class ResupplyItemLineViewModel : ObservableObject
@@ -112,6 +113,10 @@ public sealed class ResupplyRequestViewModel : ObservableObject
         Priority = d.Priority;
         Status = d.Status;
         Note = d.Note;
+        Visibility = d.Visibility;
+        OwnerRegimentName = d.OwnerRegimentName;
+        IsMine = d.IsMine;
+        ClaimedByMyRegiment = d.ClaimedByMyRegiment;
         CreatedByName = d.CreatedByName;
         ClaimedByName = d.ClaimedByName;
         CanManage = d.CanManage;
@@ -130,6 +135,10 @@ public sealed class ResupplyRequestViewModel : ObservableObject
     public int Priority { get; }
     public string Status { get; }
     public string Note { get; }
+    public int Visibility { get; }
+    public string OwnerRegimentName { get; }
+    public bool IsMine { get; }
+    public bool ClaimedByMyRegiment { get; }
     public string CreatedByName { get; }
     public string ClaimedByName { get; }
     public bool CanManage { get; }
@@ -177,6 +186,26 @@ public sealed class ResupplyRequestViewModel : ObservableObject
     public Brush ClaimButtonBrush => MineClaim
         ? new SolidColorBrush(Color.FromRgb(0x2F, 0x6B, 0x43))
         : new SolidColorBrush(Color.FromRgb(0x33, 0x3A, 0x45));
+
+    // Visibilité + propriétaire
+    public string VisibilityLabel => Visibility switch
+    {
+        ResupplyVisibility.Public => "🌍 Public",
+        ResupplyVisibility.Alliance => "🤝 Alliance",
+        _ => "🔒 Privé",
+    };
+    public Brush VisibilityBrush => Visibility switch
+    {
+        ResupplyVisibility.Public => new SolidColorBrush(Color.FromRgb(0x4A, 0x5A, 0x2A)),
+        ResupplyVisibility.Alliance => new SolidColorBrush(Color.FromRgb(0x2A, 0x4A, 0x5A)),
+        _ => new SolidColorBrush(Color.FromRgb(0x3A, 0x41, 0x4C)),
+    };
+    public bool ShowOwner => !IsMine;
+    public string OwnerLabel => $"Demande de {OwnerRegimentName}";
+    // Boutons de changement de visibilité (créateur / gestionnaire, sur ses propres demandes)
+    public bool CanSetRegiment => CanManage && Visibility != ResupplyVisibility.Regiment;
+    public bool CanSetAlliance => CanManage && Visibility != ResupplyVisibility.Alliance;
+    public bool CanSetPublic => CanManage && Visibility != ResupplyVisibility.Public;
 
     // --- Plan de production (calculé à la demande) ---
     public IReadOnlyList<CraftStepViewModel> Crafts => _plan.Value.Crafts.Select(c => new CraftStepViewModel(c)).ToList();

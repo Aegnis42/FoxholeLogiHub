@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using FoxholeLogiHub.App.ViewModels;
+using FoxholeLogiHub.Contracts;
 
 namespace FoxholeLogiHub.App;
 
@@ -103,6 +104,24 @@ public partial class MainWindow : Window
     {
         if (sender is Button { DataContext: ResupplyRequestViewModel r })
             await _vm.Resupply.DeleteAsync(r);
+    }
+
+    private async void OnVisRegiment(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: ResupplyRequestViewModel r })
+            await _vm.Resupply.SetVisibilityAsync(r, ResupplyVisibility.Regiment);
+    }
+
+    private async void OnVisAlliance(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: ResupplyRequestViewModel r })
+            await _vm.Resupply.SetVisibilityAsync(r, ResupplyVisibility.Alliance);
+    }
+
+    private async void OnVisPublic(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: ResupplyRequestViewModel r })
+            await _vm.Resupply.SetVisibilityAsync(r, ResupplyVisibility.Public);
     }
 
     private void OnRefreshClick(object sender, RoutedEventArgs e) => _vm.Load();

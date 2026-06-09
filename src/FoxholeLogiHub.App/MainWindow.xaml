@@ -1232,9 +1232,15 @@
                         <!-- Nouvelle demande (multi-items) -->
                         <Border Background="#FF1B1E24" CornerRadius="8" Padding="14" Margin="0,0,0,14">
                             <StackPanel>
-                                <TextBlock Text="NOUVELLE DEMANDE (nom · hexagone · coordonnées · priorité, puis ajoute des items)"
+                                <TextBlock Text="NOUVELLE DEMANDE (nom · hexagone · coordonnées · priorité · visibilité, puis ajoute des items)"
                                            Style="{StaticResource Label}" Margin="0,0,0,8"/>
+                                <TextBox Margin="0,0,0,8" Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Padding="7"
+                                         Background="#FF15181E" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                         CaretBrush="White" VerticalContentAlignment="Center" ToolTip="Nom de la demande"/>
                                 <DockPanel Margin="0,0,0,8">
+                                    <ComboBox DockPanel.Dock="Right" Width="155" Margin="6,0,0,0" SelectedValuePath="Value"
+                                              DisplayMemberPath="Label" SelectedValue="{Binding NewVisibility}"
+                                              ItemsSource="{Binding Visibilities}" FontSize="14" Padding="6" ToolTip="Visibilité (qui voit la demande)"/>
                                     <ComboBox DockPanel.Dock="Right" Width="110" Margin="6,0,0,0" SelectedValuePath="Value"
                                               DisplayMemberPath="Label" SelectedValue="{Binding NewPriority}"
                                               ItemsSource="{Binding Priorities}" FontSize="14" Padding="6" ToolTip="Priorité"/>
@@ -1243,12 +1249,9 @@
                                              FontSize="14" Padding="6" Background="#FF15181E" Foreground="White"
                                              BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
                                              VerticalContentAlignment="Center" ToolTip="Coordonnées (ex. E5, 123x456)"/>
-                                    <ComboBox DockPanel.Dock="Right" Width="180" Margin="6,0,0,0" IsEditable="True"
-                                              ItemsSource="{Binding Hexes}" Text="{Binding NewHex, UpdateSourceTrigger=PropertyChanged}"
+                                    <ComboBox IsEditable="True" ItemsSource="{Binding Hexes}"
+                                              Text="{Binding NewHex, UpdateSourceTrigger=PropertyChanged}"
                                               FontSize="14" Padding="6" ToolTip="Hexagone"/>
-                                    <TextBox Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Padding="6"
-                                             Background="#FF15181E" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
-                                             CaretBrush="White" VerticalContentAlignment="Center" ToolTip="Nom de la demande"/>
                                 </DockPanel>
                                 <DockPanel Margin="0,0,0,8">
                                     <Button DockPanel.Dock="Right" Content="+ Ajouter l'item" Style="{StaticResource FlatButton}"
@@ -1336,6 +1339,8 @@
                                             <StackPanel Margin="14,10,12,10">
                                                 <DockPanel>
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                                        <Border Background="{Binding VisibilityBrush}" CornerRadius="4" Padding="6,1" Margin="0,0,4,0">
+                                                            <TextBlock Text="{Binding VisibilityLabel}" Foreground="White" FontSize="10"/></Border>
                                                         <Border Background="{Binding StatusBrush}" CornerRadius="4" Padding="6,1" Margin="0,0,4,0">
                                                             <TextBlock Text="{Binding StatusLabel}" Foreground="White" FontSize="10"/></Border>
                                                         <Border Background="{Binding PriorityBrush}" CornerRadius="4" Padding="6,1"
@@ -1345,6 +1350,8 @@
                                                     <StackPanel>
                                                         <TextBlock Text="{Binding Title}" Foreground="White" FontSize="15" FontWeight="Bold"/>
                                                         <TextBlock Text="{Binding LocationLabel, StringFormat='📍 {0}'}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                        <TextBlock Text="{Binding OwnerLabel}" Foreground="#FF6FA8CF" FontSize="10"
+                                                                   Visibility="{Binding ShowOwner, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>
                                                 </DockPanel>
                                                 <ItemsControl ItemsSource="{Binding Items}" Margin="0,8,0,0">
@@ -1373,7 +1380,18 @@
                                                                 Padding="9,5" FontSize="11" Click="OnDeleteResupply"
                                                                 Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>
-                                                    <TextBlock Text="{Binding CreatedInfo}" Foreground="#FF6B7280" FontSize="10" VerticalAlignment="Center"/>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding CreatedInfo}" Foreground="#FF6B7280" FontSize="10" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                        <Button Content="🔒" Style="{StaticResource FlatButton}" Background="#FF333A45" Padding="6,2" Margin="0,0,3,0" FontSize="10"
+                                                                Click="OnVisRegiment" ToolTip="Rendre privé (régiment)"
+                                                                Visibility="{Binding CanSetRegiment, Converter={StaticResource BoolToVis}}"/>
+                                                        <Button Content="🤝" Style="{StaticResource FlatButton}" Background="#FF2A4A5A" Padding="6,2" Margin="0,0,3,0" FontSize="10"
+                                                                Click="OnVisAlliance" ToolTip="Partager à l'alliance"
+                                                                Visibility="{Binding CanSetAlliance, Converter={StaticResource BoolToVis}}"/>
+                                                        <Button Content="🌍" Style="{StaticResource FlatButton}" Background="#FF4A5A2A" Padding="6,2" FontSize="10"
+                                                                Click="OnVisPublic" ToolTip="Rendre public (tous les utilisateurs)"
+                                                                Visibility="{Binding CanSetPublic, Converter={StaticResource BoolToVis}}"/>
+                                                    </StackPanel>
                                                 </DockPanel>
                                             </StackPanel>
                                         </Grid>
@@ -1422,6 +1440,8 @@
                                             <StackPanel Margin="14,12,14,12">
                                                 <DockPanel>
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                                        <Border Background="{Binding VisibilityBrush}" CornerRadius="4" Padding="6,1" Margin="0,0,4,0">
+                                                            <TextBlock Text="{Binding VisibilityLabel}" Foreground="White" FontSize="10"/></Border>
                                                         <Border Background="{Binding StatusBrush}" CornerRadius="4" Padding="6,1" Margin="0,0,4,0">
                                                             <TextBlock Text="{Binding StatusLabel}" Foreground="White" FontSize="10"/></Border>
                                                         <Border Background="{Binding PriorityBrush}" CornerRadius="4" Padding="6,1"
@@ -1431,6 +1451,8 @@
                                                     <StackPanel>
                                                         <TextBlock Text="{Binding Title}" Foreground="White" FontSize="16" FontWeight="Bold"/>
                                                         <TextBlock Text="{Binding LocationLabel, StringFormat='📍 {0}'}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                        <TextBlock Text="{Binding OwnerLabel}" Foreground="#FF6FA8CF" FontSize="11"
+                                                                   Visibility="{Binding ShowOwner, Converter={StaticResource BoolToVis}}"/>
                                                         <TextBlock Text="{Binding ClaimInfo}" Foreground="#FF6FA8CF" FontSize="11"
                                                                    Visibility="{Binding HasClaim, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>
