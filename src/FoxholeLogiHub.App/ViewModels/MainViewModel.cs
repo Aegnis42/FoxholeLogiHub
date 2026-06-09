@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using FoxholeLogiHub.App.Services;
 using FoxholeLogiHub.Core.Models;
 using FoxholeLogiHub.Core.Services;
 using FactionId = FoxholeLogiHub.Core.Models.Faction;
@@ -30,6 +31,7 @@ public sealed class MainViewModel : ObservableObject
     public FriendsViewModel Friends { get; } = new();
     public RegimentViewModel Regiment { get; } = new();
     public StockpilesViewModel Stockpiles { get; } = new();
+    public CompanionManager Companion { get; } = new();
     public ObservableCollection<Loadout> Loadouts { get; } = new();
 
     public MainViewModel()
@@ -130,7 +132,8 @@ public sealed class MainViewModel : ObservableObject
 
             // Démarre la connexion au serveur d'amis (présence temps réel) ; régiment+stockpiles suivent.
             Regiment.Initialize(_account, Friends);
-            Stockpiles.Initialize(Regiment);
+            Stockpiles.Initialize(Regiment, Companion);
+            Companion.EnsureStarted();
             _ = Friends.InitializeAsync(_account);
         }
         catch (Exception ex)

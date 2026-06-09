@@ -895,6 +895,16 @@
                                                        FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         </DockPanel>
 
+                                        <Border Background="#FF22384A" CornerRadius="6" Padding="10" Margin="0,0,0,10"
+                                                Visibility="{Binding SelectedCanManage, Converter={StaticResource BoolToVis}}">
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Right" Content="📷 Importer (capture)" Style="{StaticResource FlatButton}"
+                                                        Background="#FF2A6E8F" Padding="14,6" Click="OnImportCapture"/>
+                                                <TextBlock VerticalAlignment="Center" Foreground="#FFB8C4D0" FontSize="11" TextWrapping="Wrap"
+                                                           Text="Remplissage auto (FIR) : ouvre le stockpile en VUE-CARTE en jeu, puis clique (4 s pour basculer) — ou appuie sur F8 directement en jeu. Compatible mods d'icônes."/>
+                                            </DockPanel>
+                                        </Border>
+
                                         <DockPanel Margin="0,0,0,10"
                                                    Visibility="{Binding SelectedCanManage, Converter={StaticResource BoolToVis}}">
                                             <Button DockPanel.Dock="Right" Content="Définir" Style="{StaticResource FlatButton}"

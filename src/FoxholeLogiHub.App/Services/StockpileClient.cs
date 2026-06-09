@@ -44,6 +44,14 @@ public sealed class StockpileClient : IDisposable
         return (await resp.Content.ReadFromJsonAsync<List<StockpileItemDto>>()) ?? new();
     }
 
+    public async Task<List<StockpileItemDto>> ImportItemsAsync(string stockpileId, List<StockpileItemDto> items)
+    {
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/stockpiles/items/import",
+            new ImportStockpileItemsRequest(stockpileId, items));
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<StockpileItemDto>>()) ?? new();
+    }
+
     private async Task<List<StockpileDto>> PostListAsync(string path, object body, HttpMethod method)
     {
         using var req = new HttpRequestMessage(method, path) { Content = JsonContent.Create(body) };

@@ -39,3 +39,6 @@ public sealed record StockpileItemDto(string Code, string Name, string Category,
 
 /// <summary>Définit la quantité d'un item dans un stockpile (upsert ; quantité ≤ 0 = retrait).</summary>
 public sealed record SetStockpileItemRequest(string StockpileId, string Code, string Name, string Category, int Quantity);
+
+/// <summary>Remplace tout le contenu d'un stockpile (utilisé par l'import auto/capture).</summary>
+public sealed record ImportStockpileItemsRequest(string StockpileId, List<StockpileItemDto> Items);

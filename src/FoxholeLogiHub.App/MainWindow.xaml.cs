@@ -1,5 +1,8 @@
+using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using FoxholeLogiHub.App.ViewModels;
 
 namespace FoxholeLogiHub.App;
@@ -9,13 +12,50 @@ namespace FoxholeLogiHub.App;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private const int HotkeyId = 0xF0C;   // identifiant arbitraire
+    private const int WmHotkey = 0x0312;
+    private const uint VkF8 = 0x77;
+
+    [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
     private readonly MainViewModel _vm = new();
+    private HwndSource? _source;
+    private IntPtr _hwnd;
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = _vm;
         Loaded += (_, _) => _vm.Load();
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        _hwnd = new WindowInteropHelper(this).Handle;
+        _source = HwndSource.FromHwnd(_hwnd);
+        _source?.AddHook(HwndHook);
+        RegisterHotKey(_hwnd, HotkeyId, 0, VkF8); // F8 global → import par capture
+    }
+
+    private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WmHotkey && wParam.ToInt32() == HotkeyId)
+        {
+            _ = _vm.Stockpiles.ImportFromCaptureAsync(0); // capture immédiate de la fenêtre au 1er plan (le jeu)
+            handled = true;
+        }
+        return IntPtr.Zero;
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (_hwnd != IntPtr.Zero)
+            UnregisterHotKey(_hwnd, HotkeyId);
+        _source?.RemoveHook(HwndHook);
+        _vm.Companion.Dispose();
+        base.OnClosed(e);
     }
 
     private void OnNavProfile(object sender, RoutedEventArgs e) => _vm.ShowProfile();
@@ -182,4 +222,8 @@ public partial class MainWindow : Window
         if (sender is Button { DataContext: StockpileLineViewModel line })
             _vm.Stockpiles.EditLine(line);
     }
+
+    // Bouton : laisse 4 s pour basculer sur le jeu (panneau stockpile en vue-carte) avant la capture.
+    private async void OnImportCapture(object sender, RoutedEventArgs e) =>
+        await _vm.Stockpiles.ImportFromCaptureAsync(4);
 }

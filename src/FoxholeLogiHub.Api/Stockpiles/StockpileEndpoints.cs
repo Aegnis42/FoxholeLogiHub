@@ -182,6 +182,33 @@ public static class StockpileEndpoints
             await NotifyAsync(hub, db, sp.RegimentId);
             return Results.Ok(await ItemsAsync(db, sp.Id));
         }).RequireAuthorization();
+
+        // Remplace tout le contenu (import auto / capture).
+        app.MapPost("/api/stockpiles/items/import", async (ImportStockpileItemsRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+                return Results.Forbid();
+            var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
+            if (sp is null)
+                return Results.NotFound(new ApiError("Stockpile introuvable."));
+
+            db.StockpileItems.RemoveRange(db.StockpileItems.Where(i => i.StockpileId == sp.Id));
+            foreach (var item in req.Items.Where(i => !string.IsNullOrWhiteSpace(i.Code) && i.Quantity > 0))
+            {
+                db.StockpileItems.Add(new StockpileItem
+                {
+                    StockpileId = sp.Id, Code = item.Code.Trim(),
+                    Name = string.IsNullOrWhiteSpace(item.Name) ? item.Code.Trim() : item.Name.Trim(),
+                    Category = (item.Category ?? "").Trim(), Quantity = item.Quantity,
+                });
+            }
+            sp.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync();
+            await NotifyAsync(hub, db, sp.RegimentId);
+            return Results.Ok(await ItemsAsync(db, sp.Id));
+        }).RequireAuthorization();
     }
 
     private static async Task<List<StockpileItemDto>> ItemsAsync(AppDbContext db, string stockpileId) =>

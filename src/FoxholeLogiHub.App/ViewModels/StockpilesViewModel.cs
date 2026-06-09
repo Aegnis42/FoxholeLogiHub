@@ -13,7 +13,10 @@ public sealed class StockpilesViewModel : ObservableObject
     private readonly SettingsStore _settingsStore = new();
     private readonly TokenStore _tokenStore = new();
 
+    private readonly CaptureService _capture = new();
+    private readonly FirCatalog _firCatalog = new();
     private RegimentViewModel? _regiment;
+    private CompanionManager? _companion;
     private StockpileClient? _client;
 
     private bool _authed;
@@ -85,7 +88,55 @@ public sealed class StockpilesViewModel : ObservableObject
     public bool IsEditing => _editingId is not null;
     public string SubmitLabel => IsEditing ? "Enregistrer" : "Créer le stockpile";
 
-    public void Initialize(RegimentViewModel regiment) => _regiment = regiment;
+    public void Initialize(RegimentViewModel regiment, CompanionManager companion)
+    {
+        _regiment = regiment;
+        _companion = companion;
+    }
+
+    /// <summary>Capture le panneau stockpile en jeu, reconnaît les items via FIR et remplace le contenu.</summary>
+    public async Task ImportFromCaptureAsync(int delaySeconds)
+    {
+        if (_client is null || _selectedId is null) { Status = "Sélectionne d'abord un stockpile."; return; }
+        if (!SelectedCanManage) { Status = "Tu n'as pas la permission."; return; }
+        if (Busy) return;
+
+        _companion?.EnsureStarted();
+        if (_companion is null || !_companion.Available) { Status = "Companion FIR (fic.exe) introuvable."; return; }
+
+        Busy = true;
+        try
+        {
+            for (int s = delaySeconds; s > 0; s--)
+            {
+                Status = $"Capture dans {s}s — affiche le stockpile en VUE-CARTE (clique le dépôt sur la carte)…";
+                await Task.Delay(1000);
+            }
+
+            byte[]? png = _capture.CaptureForegroundWindow();
+            if (png is null) { Status = "Capture impossible."; return; }
+
+            var recognized = await new FicClient(_companion.BaseUrl).ExtractAsync(png);
+            if (recognized.Count == 0)
+            {
+                Status = "Aucun item reconnu — capture le panneau stockpile en vue-carte (pas l'UI en base).";
+                return;
+            }
+
+            var items = recognized.Select(r =>
+            {
+                var (name, category) = _firCatalog.Resolve(r.Code);
+                return new StockpileItemDto(r.Code, name, category, r.Quantity);
+            }).ToList();
+
+            ApplyItems(await _client.ImportItemsAsync(_selectedId, items));
+            Status = $"{items.Count} item(s) importés depuis la capture.";
+        }
+        catch (FriendException fex) { Status = fex.Message; }
+        catch (AuthRequiredException) { ClearAuth(); }
+        catch (Exception ex) { Status = $"Erreur import : {ex.Message}"; }
+        finally { Busy = false; }
+    }
 
     public void ClearAuth()
     {
