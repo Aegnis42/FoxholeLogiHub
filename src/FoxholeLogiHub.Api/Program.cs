@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 
@@ -76,14 +78,27 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
-// Crée la base si absente. RESET_DB=1 : supprime puis recrée le schéma (une fois après un
-// changement de modèle, puis retirer la variable). EnsureCreated ne migre PAS l'existant.
+// Schéma : en prod (Postgres) via migrations EF (Migrate) — les changements de modèle se
+// déploient sans perte de données. En local (SQLite) via EnsureCreated (les migrations sont
+// spécifiques à Postgres). RESET_DB=1 reste un filet de secours (vide la base).
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (Environment.GetEnvironmentVariable("RESET_DB") == "1")
-        db.Database.EnsureDeleted();
-    db.Database.EnsureCreated();
+    bool reset = Environment.GetEnvironmentVariable("RESET_DB") == "1";
+
+    if (postgres is not null)
+    {
+        if (reset)
+            await db.Database.EnsureDeletedAsync();
+        await AdoptMigrationsIfLegacyAsync(db);
+        await db.Database.MigrateAsync();
+    }
+    else
+    {
+        if (reset)
+            db.Database.EnsureDeleted();
+        db.Database.EnsureCreated();
+    }
 }
 
 app.UseAuthentication();
@@ -288,6 +303,34 @@ app.MapPost("/api/friends/remove", async (RemoveFriendRequest req, ClaimsPrincip
 app.MapHub<PresenceHub>("/hub/presence");
 
 app.Run();
+
+// Adopte une base existante (créée jadis par EnsureCreated, sans historique de migrations)
+// dans le système de migrations, SANS la recréer : on crée la table d'historique et on marque
+// la migration initiale comme déjà appliquée. Migrate() n'appliquera alors que les suivantes.
+static async Task AdoptMigrationsIfLegacyAsync(AppDbContext db)
+{
+    var history = db.GetService<IHistoryRepository>();
+    if (await history.ExistsAsync())
+        return; // déjà sous migrations
+
+    bool legacySchema = await TableExistsAsync(db, "Users");
+    if (!legacySchema)
+        return; // base vierge → Migrate() créera tout
+
+    await db.Database.ExecuteSqlRawAsync(history.GetCreateScript());
+    string firstMigration = db.Database.GetMigrations().First();
+    await db.Database.ExecuteSqlRawAsync(
+        history.GetInsertScript(new HistoryRow(firstMigration, ProductInfo.GetVersion())));
+}
+
+static async Task<bool> TableExistsAsync(AppDbContext db, string table)
+{
+    List<int> rows = await db.Database
+        .SqlQueryRaw<int>(
+            "SELECT COUNT(*)::int AS \"Value\" FROM information_schema.tables WHERE table_name = {0}", table)
+        .ToListAsync();
+    return rows.FirstOrDefault() > 0;
+}
 
 static string SteamId(ClaimsPrincipal principal) =>
     principal.FindFirstValue(TokenService.SteamIdClaim)
