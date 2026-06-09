@@ -1048,12 +1048,16 @@
                                                                     CornerRadius="8,0,0,8"/>
                                                             <StackPanel Margin="12,8,8,8">
                                                                 <DockPanel>
-                                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top"
-                                                                                Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}">
+                                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                                                        <Button Content="ⓘ" Style="{StaticResource FlatButton}" Background="#FF2A3340"
+                                                                                Padding="6,1" Margin="0,0,4,0" Click="OnItemDetails" FontSize="11"
+                                                                                ToolTip="Détails / recette de craft"/>
                                                                         <Button Content="✎" Style="{StaticResource FlatButton}" Background="#FF333A45"
-                                                                                Padding="6,1" Margin="0,0,4,0" Click="OnEditItem" FontSize="11"/>
+                                                                                Padding="6,1" Margin="0,0,4,0" Click="OnEditItem" FontSize="11"
+                                                                                Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                                         <Button Content="×" Style="{StaticResource FlatButton}" Background="#FF3A3030"
-                                                                                Padding="7,1" Click="OnRemoveItem" FontSize="11"/>
+                                                                                Padding="7,1" Click="OnRemoveItem" FontSize="11"
+                                                                                Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                                     </StackPanel>
                                                                     <Grid Width="40" Height="40" HorizontalAlignment="Left">
                                                                         <Border Background="#FF1B1E24" CornerRadius="6"/>
@@ -1085,6 +1089,84 @@
                         </ScrollViewer>
                     </Grid>
                 </DockPanel>
+
+                <!-- ===== Fiche détaillée d'un item (gestion poussée : catégorie, caisse, recette) ===== -->
+                <Border Background="#CC0A0C10" Visibility="{Binding HasItemDetail, Converter={StaticResource BoolToVis}}">
+                    <Border Width="430" MaxHeight="600" VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Background="#FF1B1F27" CornerRadius="12" BorderBrush="#FF3A414C" BorderThickness="1"
+                            DataContext="{Binding ItemDetail}">
+                        <DockPanel>
+                            <!-- En-tête -->
+                            <Border DockPanel.Dock="Top" Background="#FF222834" CornerRadius="12,12,0,0">
+                                <DockPanel Margin="16,14">
+                                    <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource FlatButton}"
+                                            Background="#FF333A45" Padding="9,3" VerticalAlignment="Top" Click="OnCloseItemDetail"/>
+                                    <Grid Width="48" Height="48" DockPanel.Dock="Left" Margin="0,0,12,0" VerticalAlignment="Top">
+                                        <Border Background="#FF12151B" CornerRadius="8"/>
+                                        <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontWeight="Bold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Source="{Binding Icon}" Width="44" Height="44" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                    </Grid>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Category}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,1,0,0"/>
+                                        <TextBlock Text="{Binding CaliberLabel}" Foreground="#FF7FA8D9" FontSize="11"
+                                                   Visibility="{Binding HasCaliber, Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <!-- Corps -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="16,12,16,16">
+                                    <DockPanel Margin="0,0,0,12">
+                                        <TextBlock Text="📦 Caisse" Foreground="#FF9AA4B2" FontSize="12" Width="90" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding CrateText}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                                    </DockPanel>
+
+                                    <TextBlock Text="{Binding RecipeHeader}" Style="{StaticResource Label}" Margin="0,0,0,6"
+                                               Visibility="{Binding HasRecipe, Converter={StaticResource BoolToVis}}"/>
+                                    <ItemsControl ItemsSource="{Binding Ingredients}"
+                                                  Visibility="{Binding HasRecipe, Converter={StaticResource BoolToVis}}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#FF252A33" CornerRadius="6" Margin="0,0,0,5" Padding="8,5">
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FFE6B45A"
+                                                                   FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                                                        <Grid Width="30" Height="30" DockPanel.Dock="Left" Margin="0,0,10,0">
+                                                            <Border Background="#FF12151B" CornerRadius="5"/>
+                                                            <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontSize="11"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            <Image Source="{Binding Icon}" Width="28" Height="28"/>
+                                                        </Grid>
+                                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                                                    </DockPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <DockPanel Margin="0,8,0,0" Visibility="{Binding HasRecipe, Converter={StaticResource BoolToVis}}">
+                                        <Border Background="#FF252A33" CornerRadius="6" Padding="8,4" Margin="0,0,8,0"
+                                                Visibility="{Binding HasProdTime, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="{Binding ProdTimeText, StringFormat='⏱ {0}'}" Foreground="#FFB8C4D0" FontSize="12"/>
+                                        </Border>
+                                        <Border Background="#FF252A33" CornerRadius="6" Padding="8,4"
+                                                Visibility="{Binding HasBuildings, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="{Binding BuildingsText, StringFormat='🏭 {0}'}" Foreground="#FFB8C4D0" FontSize="12"/>
+                                        </Border>
+                                    </DockPanel>
+                                    <TextBlock Text="ℹ La MPF produit en lot (3/9/...) avec une remise de matériaux à volume."
+                                               Foreground="#FF6B7280" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0"
+                                               Visibility="{Binding IsMpf, Converter={StaticResource BoolToVis}}"/>
+
+                                    <TextBlock Text="{Binding NoRecipeText}" Foreground="#FF6B7280" FontSize="12" TextWrapping="Wrap"
+                                               Visibility="{Binding NoRecipe, Converter={StaticResource BoolToVis}}"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                </Border>
               </Grid>
             </Grid>
         </Grid>

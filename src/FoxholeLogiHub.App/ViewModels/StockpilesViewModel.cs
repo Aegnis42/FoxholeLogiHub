@@ -16,7 +16,6 @@ public sealed class StockpilesViewModel : ObservableObject
     private readonly TokenStore _tokenStore = new();
 
     private readonly CaptureService _capture = new();
-    private readonly FirCatalog _firCatalog = new();
     private RegimentViewModel? _regiment;
     private CompanionManager? _companion;
     private StockpileClient? _client;
@@ -73,6 +72,21 @@ public sealed class StockpilesViewModel : ObservableObject
         Raise(nameof(CriticalCount)); Raise(nameof(LowCount));
         Raise(nameof(HasAlerts)); Raise(nameof(NoAlerts)); Raise(nameof(HasCritical)); Raise(nameof(AlertsSummary));
     }
+
+    private ItemDetailViewModel? _itemDetail;
+    public ItemDetailViewModel? ItemDetail { get => _itemDetail; private set { Set(ref _itemDetail, value); Raise(nameof(HasItemDetail)); } }
+    public bool HasItemDetail => _itemDetail is not null;
+
+    /// <summary>Ouvre la fiche détaillée (catégorie, caisse, recette) d'un item par code.</summary>
+    public void ShowItemDetail(string code)
+    {
+        var e = FoxholeItemCatalog.Get(code);
+        ItemDetail = e is null ? null : new ItemDetailViewModel(e);
+        if (e is null)
+            Status = "Pas de fiche pour cet item (code inconnu du catalogue).";
+    }
+
+    public void CloseItemDetail() => ItemDetail = null;
 
     public bool IsStockpileSelected => _selectedId is not null;
     public string SelectedName { get => _selectedName; private set => Set(ref _selectedName, value); }
@@ -160,7 +174,9 @@ public sealed class StockpilesViewModel : ObservableObject
 
             var items = recognized.Select(r =>
             {
-                var (name, category) = _firCatalog.Resolve(r.Code);
+                var entry = FoxholeItemCatalog.Get(r.Code);
+                string name = entry?.Label ?? r.Code;
+                string category = entry?.Category ?? "Importé";
                 // Distingue caisse / à l'unité (codes distincts → pas de collision, contenu plus exact).
                 string code = r.IsCrated ? r.Code + "@crate" : r.Code;
                 string displayName = r.IsCrated ? $"{name} (caisse)" : name;

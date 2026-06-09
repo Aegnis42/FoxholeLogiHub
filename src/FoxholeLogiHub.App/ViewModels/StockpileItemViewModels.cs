@@ -196,7 +196,8 @@ public sealed class StockpileLineViewModel : ObservableObject
     public ImageSource? Icon { get; }
 
     public string QuantityText => Quantity.ToString("N0");
-    public string CategoryLabel => ItemCategories.Label(Category);
+    // Catégorie recalculée depuis le code (corrige les items déjà stockés) ; repli sur la catégorie stockée.
+    public string CategoryLabel => FoxholeItemCatalog.CategoryOf(Code) ?? ItemCategories.Label(Category);
     public string Initial => string.IsNullOrEmpty(Name) ? "?" : Name[..1].ToUpperInvariant();
 
     /// <summary>"critical" | "low" | "good" | "" (aucun seuil défini).</summary>
@@ -262,7 +263,7 @@ public sealed class StockpileAlertViewModel : ObservableObject
     public bool IsCritical => Severity == "critical";
     public string Initial => string.IsNullOrEmpty(Name) ? "?" : Name[..1].ToUpperInvariant();
     public string QuantityText => Quantity.ToString("N0");
-    public string CategoryLabel => ItemCategories.Label(Category);
+    public string CategoryLabel => FoxholeItemCatalog.CategoryOf(Code) ?? ItemCategories.Label(Category);
 
     // En-tête de groupe (ordre : critiques d'abord via le tri côté serveur/collection).
     public string SeverityGroup => IsCritical ? "🔴 Critique" : "🟠 Bas";
@@ -282,4 +283,87 @@ public sealed class StockpileAlertViewModel : ObservableObject
     public Brush SeverityBrush => IsCritical
         ? new SolidColorBrush(Color.FromRgb(0xC0, 0x3A, 0x3A))
         : new SolidColorBrush(Color.FromRgb(0xC8, 0x8A, 0x2E));
+}
+
+/// <summary>Un ingrédient d'une recette (icône + nom + quantité).</summary>
+public sealed class IngredientViewModel
+{
+    public IngredientViewModel(ItemIngredient ing)
+    {
+        Code = ing.Code;
+        Qty = ing.Qty;
+        var e = FoxholeItemCatalog.Get(ing.Code);
+        Name = e?.Name ?? ing.Code;
+        Icon = ItemIcons.Load(e?.Code ?? ing.Code);
+    }
+
+    public string Code { get; }
+    public int Qty { get; }
+    public string Name { get; }
+    public ImageSource? Icon { get; }
+    public string QtyText => $"×{Qty:N0}";
+    public string Initial => string.IsNullOrEmpty(Name) ? "?" : Name[..1].ToUpperInvariant();
+}
+
+/// <summary>Fiche détaillée d'un item : catégorie, caisse, recette de craft (gestion poussée).</summary>
+public sealed class ItemDetailViewModel : ObservableObject
+{
+    public ItemDetailViewModel(ItemEntry e)
+    {
+        Code = e.Code;
+        Name = e.Name;
+        Caliber = e.Display;
+        Category = e.Category;
+        CrateSize = e.CrateSize;
+        ProdTime = e.ProdTime;
+        HasRecipe = e.HasRecipe;
+        Icon = ItemIcons.Load(e.Code);
+        foreach (var ing in e.Ingredients)
+            Ingredients.Add(new IngredientViewModel(ing));
+        foreach (var b in e.Buildings)
+            _buildings.Add(BuildingLabel(b));
+    }
+
+    private readonly List<string> _buildings = new();
+
+    public string Code { get; }
+    public string Name { get; }
+    public string Caliber { get; }
+    public string Category { get; }
+    public int CrateSize { get; }
+    public int ProdTime { get; }
+    public bool HasRecipe { get; }
+    public ImageSource? Icon { get; }
+    public ObservableCollection<IngredientViewModel> Ingredients { get; } = new();
+
+    public string Initial => string.IsNullOrEmpty(Name) ? "?" : Name[..1].ToUpperInvariant();
+    public bool HasCaliber => Caliber.Length > 0 && !Caliber.Equals(Name, System.StringComparison.OrdinalIgnoreCase);
+    public string CaliberLabel => HasCaliber ? $"Calibre : {Caliber}" : "";
+
+    public bool IsCratable => CrateSize > 0;
+    public string CrateText => IsCratable ? $"{CrateSize:N0} / caisse" : "Non caissable";
+
+    public bool NoRecipe => !HasRecipe;
+    public string RecipeHeader => IsCratable ? $"Recette (1 caisse = {CrateSize:N0})" : "Recette (à l'unité)";
+    public string ProdTimeText => ProdTime > 0 ? FormatTime(ProdTime) : "";
+    public bool HasProdTime => ProdTime > 0;
+    public bool HasBuildings => _buildings.Count > 0;
+    public string BuildingsText => string.Join("  ·  ", _buildings);
+    public bool IsMpf => _buildings.Any(b => b.Contains("MPF"));
+    public string NoRecipeText => "Ressource brute / non fabricable en usine.";
+
+    private static string BuildingLabel(string code) => code switch
+    {
+        "Factory" => "Usine",
+        "MassProductionFactory" => "MPF",
+        _ => code,
+    };
+
+    private static string FormatTime(int seconds)
+    {
+        if (seconds < 60)
+            return $"{seconds} s";
+        int m = seconds / 60, s = seconds % 60;
+        return s == 0 ? $"{m} min" : $"{m} min {s} s";
+    }
 }

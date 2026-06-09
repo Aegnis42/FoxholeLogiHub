@@ -224,6 +224,14 @@ public partial class MainWindow : Window
             _vm.Stockpiles.EditLine(line);
     }
 
+    private void OnItemDetails(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: StockpileLineViewModel line })
+            _vm.Stockpiles.ShowItemDetail(line.Code);
+    }
+
+    private void OnCloseItemDetail(object sender, RoutedEventArgs e) => _vm.Stockpiles.CloseItemDetail();
+
     // Bouton : laisse 4 s pour basculer sur le jeu (panneau stockpile en vue-carte) avant la capture.
     private async void OnImportCapture(object sender, RoutedEventArgs e) =>
         await _vm.Stockpiles.ImportFromCaptureAsync(4);
