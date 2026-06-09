@@ -24,12 +24,24 @@ public partial class MainWindow : Window
     private void OnRefreshClick(object sender, RoutedEventArgs e) => _vm.Load();
     private void OnSaveProfileClick(object sender, RoutedEventArgs e) => _vm.SaveProfile();
 
-    private async void OnAddFriendClick(object sender, RoutedEventArgs e) =>
-        await _vm.Friends.AddFriendAsync();
+    private async void OnSendRequestClick(object sender, RoutedEventArgs e) =>
+        await _vm.Friends.SendRequestAsync();
 
     private async void OnRemoveFriendClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: FriendItemViewModel friend })
             await _vm.Friends.RemoveFriendAsync(friend);
+    }
+
+    private async void OnAcceptRequestClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: FriendRequestItemViewModel request })
+            await _vm.Friends.AcceptRequestAsync(request);
+    }
+
+    private async void OnDeclineRequestClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: FriendRequestItemViewModel request })
+            await _vm.Friends.DeclineRequestAsync(request);
     }
 }

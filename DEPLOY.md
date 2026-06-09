@@ -118,7 +118,11 @@ curl https://foxholelogihub-api.up.railway.app/
 - **Ne définis pas `PORT` toi-même** : Railway l'injecte, l'app le lit.
 - Pour réduire la latence/coût, tu peux référencer la base en réseau privé :
   `DATABASE_URL` = `${{Postgres.DATABASE_PRIVATE_URL}}` (même projet).
-- Le schéma est créé via `EnsureCreated()` (pas de migrations). Si tu changes le modèle de
-  données plus tard, il faudra passer aux migrations EF Core.
+- Le schéma est créé via `EnsureCreated()` (pas de migrations). `EnsureCreated` **ne fait pas
+  évoluer** une base existante : après un changement de modèle (nouvelle table/colonne), il faut
+  recréer le schéma. Sur Railway : service API → **Variables** → ajoute `RESET_DB` = `1`, laisse
+  redéployer (cela **supprime puis recrée** la base — données perdues), puis **retire la variable
+  `RESET_DB`** pour que les données persistent ensuite. À remplacer par des migrations EF avant
+  d'avoir de vraies données à conserver.
 - ⚠️ Pas encore d'authentification : le Steam ID est déclaratif. À durcir avant un usage public.
 ```

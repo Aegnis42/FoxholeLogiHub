@@ -8,8 +8,7 @@ using FoxholeLogiHub.Core.Services;
 namespace FoxholeLogiHub.App.ViewModels;
 
 /// <summary>
-/// Gère la liste d'amis et la présence temps réel. Identifie l'utilisateur par son Steam ID
-/// (compte), récupère son code d'ami, et tient la liste à jour via SignalR.
+/// Gère la liste d'amis, les demandes reçues et la présence temps réel.
 /// </summary>
 public sealed class FriendsViewModel : ObservableObject
 {
@@ -31,30 +30,23 @@ public sealed class FriendsViewModel : ObservableObject
         _settings = _settingsStore.Load();
         _apiBaseUrl = _settings.ApiBaseUrl;
         Friends.CollectionChanged += (_, _) => Raise(nameof(HasNoFriends));
+        Requests.CollectionChanged += (_, _) => Raise(nameof(HasRequests));
     }
 
     public ObservableCollection<FriendItemViewModel> Friends { get; } = new();
+    public ObservableCollection<FriendRequestItemViewModel> Requests { get; } = new();
 
     public bool HasNoFriends => Friends.Count == 0;
+    public bool HasRequests => Requests.Count > 0;
 
     public string MyFriendCode { get => _myFriendCode; private set => Set(ref _myFriendCode, value); }
     public string Status { get => _status; private set => Set(ref _status, value); }
     public bool Connected { get => _connected; private set => Set(ref _connected, value); }
     public bool Busy { get => _busy; private set => Set(ref _busy, value); }
 
-    public string AddCodeInput
-    {
-        get => _addCodeInput;
-        set => Set(ref _addCodeInput, value);
-    }
+    public string AddCodeInput { get => _addCodeInput; set => Set(ref _addCodeInput, value); }
+    public string ApiBaseUrl { get => _apiBaseUrl; set => Set(ref _apiBaseUrl, value); }
 
-    public string ApiBaseUrl
-    {
-        get => _apiBaseUrl;
-        set => Set(ref _apiBaseUrl, value);
-    }
-
-    /// <summary>Appelé par le shell une fois le compte chargé.</summary>
     public async Task InitializeAsync(Account account)
     {
         _account = account;
@@ -72,7 +64,6 @@ public sealed class FriendsViewModel : ObservableObject
 
         try
         {
-            // Sauvegarde l'URL choisie.
             _settings.ApiBaseUrl = ApiBaseUrl.Trim();
             _settingsStore.Save(_settings);
 
@@ -83,9 +74,14 @@ public sealed class FriendsViewModel : ObservableObject
             UserDto me = await _client.UpsertUserAsync(_account.SteamId, _account.DisplayName, _account.Faction.ToString());
             MyFriendCode = Format(me.FriendCode);
 
-            await ReloadFriendsAsync();
+            // Partage l'avatar Steam local sur le serveur.
+            await _client.UploadAvatarAsync(_account.SteamId, _account.AvatarPath ?? "");
 
-            await _client.ConnectPresenceAsync(_account.SteamId, OnPresenceChanged, OnOnlineFriends);
+            await ReloadFriendsAsync();
+            await ReloadRequestsAsync();
+
+            await _client.ConnectPresenceAsync(_account.SteamId, new PresenceHandlers(
+                OnPresenceChanged, OnOnlineFriends, OnFriendRequestReceived, OnFriendsChanged));
 
             Connected = true;
             Status = $"Connecté · {Friends.Count} ami(s).";
@@ -101,7 +97,7 @@ public sealed class FriendsViewModel : ObservableObject
         }
     }
 
-    public async Task AddFriendAsync()
+    public async Task SendRequestAsync()
     {
         if (_client is null || _account is null)
         {
@@ -116,10 +112,17 @@ public sealed class FriendsViewModel : ObservableObject
         Busy = true;
         try
         {
-            FriendDto friend = await _client.AddFriendAsync(_account.SteamId, code);
+            SendFriendRequestResult result = await _client.SendRequestAsync(_account.SteamId, code);
             AddCodeInput = "";
-            await ReloadFriendsAsync();
-            Status = $"{friend.DisplayName} ajouté.";
+            if (result.Accepted)
+            {
+                await ReloadFriendsAsync();
+                Status = $"{result.DisplayName} ajouté (vous vous étiez demandés mutuellement).";
+            }
+            else
+            {
+                Status = $"Demande envoyée à {result.DisplayName}.";
+            }
         }
         catch (FriendException fex)
         {
@@ -127,7 +130,40 @@ public sealed class FriendsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Status = $"Échec de l'ajout : {ex.Message}";
+            Status = $"Échec : {ex.Message}";
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+
+    public async Task AcceptRequestAsync(FriendRequestItemViewModel request) => await RespondAsync(request, accept: true);
+    public async Task DeclineRequestAsync(FriendRequestItemViewModel request) => await RespondAsync(request, accept: false);
+
+    private async Task RespondAsync(FriendRequestItemViewModel request, bool accept)
+    {
+        if (_client is null || _account is null)
+            return;
+
+        Busy = true;
+        try
+        {
+            await _client.RespondAsync(_account.SteamId, request.FromSteamId, accept);
+            Requests.Remove(request);
+            if (accept)
+            {
+                await ReloadFriendsAsync();
+                Status = $"{request.DisplayName} est maintenant ton ami.";
+            }
+            else
+            {
+                Status = $"Demande de {request.DisplayName} refusée.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Status = $"Échec : {ex.Message}";
         }
         finally
         {
@@ -165,8 +201,21 @@ public sealed class FriendsViewModel : ObservableObject
         List<FriendDto> friends = await _client.GetFriendsAsync(_account.SteamId);
         Friends.Clear();
         foreach (FriendDto f in friends)
-            Friends.Add(new FriendItemViewModel(f));
+            Friends.Add(new FriendItemViewModel(f, _client.AvatarUrl(f.SteamId)));
     }
+
+    private async Task ReloadRequestsAsync()
+    {
+        if (_client is null || _account is null)
+            return;
+
+        List<FriendRequestDto> requests = await _client.GetRequestsAsync(_account.SteamId);
+        Requests.Clear();
+        foreach (FriendRequestDto r in requests)
+            Requests.Add(new FriendRequestItemViewModel(r, _client.AvatarUrl(r.FromSteamId)));
+    }
+
+    // --- Événements temps réel (marshalés sur le thread UI) ---
 
     private void OnOnlineFriends(IReadOnlyList<string> onlineSteamIds)
     {
@@ -188,12 +237,20 @@ public sealed class FriendsViewModel : ObservableObject
         });
     }
 
-    private static void OnUi(Action action)
+    private void OnFriendRequestReceived() => OnUi(() =>
     {
-        Application.Current?.Dispatcher.Invoke(action);
-    }
+        _ = ReloadRequestsAsync();
+        Status = "Nouvelle demande d'ami reçue.";
+    });
 
-    /// <summary>Affiche un code "ABC123" sous la forme "ABC-123".</summary>
+    private void OnFriendsChanged() => OnUi(() =>
+    {
+        _ = ReloadFriendsAsync();
+        _ = ReloadRequestsAsync();
+    });
+
+    private static void OnUi(Action action) => Application.Current?.Dispatcher.Invoke(action);
+
     private static string Format(string code) =>
         code.Length == 6 ? $"{code[..3]}-{code[3..]}" : code;
 }

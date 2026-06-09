@@ -268,6 +268,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -302,14 +303,61 @@
                                      FontSize="15" Padding="8" Background="#FF1B1E24" Foreground="White"
                                      BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
                                      VerticalContentAlignment="Center"/>
-                            <Button Grid.Column="1" Content="Ajouter" Style="{StaticResource FlatButton}"
-                                    Margin="10,0,0,0" Click="OnAddFriendClick" IsEnabled="{Binding Connected}"/>
+                            <Button Grid.Column="1" Content="Envoyer" Style="{StaticResource FlatButton}"
+                                    Margin="10,0,0,0" Click="OnSendRequestClick" IsEnabled="{Binding Connected}"/>
                         </Grid>
                     </StackPanel>
                 </Border>
 
+                <!-- Demandes reçues -->
+                <Border Grid.Row="3" Style="{StaticResource Card}"
+                        Visibility="{Binding HasRequests, Converter={StaticResource BoolToVis}}">
+                    <StackPanel>
+                        <TextBlock Text="Demandes reçues" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <ItemsControl ItemsSource="{Binding Requests}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FF33384A" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Grid Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0">
+                                                <Ellipse Fill="{Binding FactionBrush}"/>
+                                                <TextBlock Text="{Binding Initial}" Foreground="White"
+                                                           FontWeight="Bold" FontSize="16"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Ellipse>
+                                                    <Ellipse.Fill>
+                                                        <ImageBrush ImageSource="{Binding AvatarUrl}" Stretch="UniformToFill"/>
+                                                    </Ellipse.Fill>
+                                                </Ellipse>
+                                            </Grid>
+
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Faction}" FontSize="11" Foreground="#FF9AA4B2"/>
+                                            </StackPanel>
+
+                                            <Button Grid.Column="2" Content="Accepter" Style="{StaticResource FlatButton}"
+                                                    Background="#FF2F6B43" Padding="12,6" Margin="0,0,8,0"
+                                                    Click="OnAcceptRequestClick"/>
+                                            <Button Grid.Column="3" Content="Refuser" Style="{StaticResource FlatButton}"
+                                                    Background="#FF3A3030" Padding="12,6" Click="OnDeclineRequestClick"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
                 <!-- Liste d'amis -->
-                <Border Grid.Row="3" Style="{StaticResource Card}">
+                <Border Grid.Row="4" Style="{StaticResource Card}">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Text="Mes amis" FontSize="16" FontWeight="SemiBold"
                                    Margin="0,0,0,12"/>
@@ -336,6 +384,11 @@
                                                     <TextBlock Text="{Binding Initial}" Foreground="White"
                                                                FontWeight="Bold" FontSize="16"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Ellipse>
+                                                        <Ellipse.Fill>
+                                                            <ImageBrush ImageSource="{Binding AvatarUrl}" Stretch="UniformToFill"/>
+                                                        </Ellipse.Fill>
+                                                    </Ellipse>
                                                     <Ellipse Width="12" Height="12" HorizontalAlignment="Right"
                                                              VerticalAlignment="Bottom" Stroke="#FF2E343F"
                                                              StrokeThickness="2" Fill="{Binding StatusBrush}"/>
