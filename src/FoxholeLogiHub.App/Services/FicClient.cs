@@ -14,7 +14,7 @@ public sealed class FicClient
         _http = new HttpClient { BaseAddress = new Uri(baseUrl.TrimEnd('/')), Timeout = TimeSpan.FromSeconds(30) };
     }
 
-    public async Task<List<(string Code, int Quantity)>> ExtractAsync(byte[] png)
+    public async Task<List<(string Code, int Quantity, bool IsCrated)>> ExtractAsync(byte[] png)
     {
         using var content = new ByteArrayContent(png);
         content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
@@ -22,7 +22,7 @@ public sealed class FicClient
         resp.EnsureSuccessStatusCode();
 
         string json = await resp.Content.ReadAsStringAsync();
-        var items = new List<(string, int)>();
+        var items = new List<(string, int, bool)>();
 
         using JsonDocument doc = JsonDocument.Parse(json);
         if (doc.RootElement.ValueKind != JsonValueKind.Object)
@@ -33,15 +33,21 @@ public sealed class FicClient
         foreach (JsonElement e in contents.EnumerateArray())
         {
             string? code = null;
-            if (e.TryGetProperty("icon", out var icon) && icon.TryGetProperty("code_name", out var cn) && cn.ValueKind == JsonValueKind.String)
-                code = cn.GetString();
+            bool crated = false;
+            if (e.TryGetProperty("icon", out var icon))
+            {
+                if (icon.TryGetProperty("code_name", out var cn) && cn.ValueKind == JsonValueKind.String)
+                    code = cn.GetString();
+                if (icon.TryGetProperty("is_crated", out var ic) && ic.ValueKind == JsonValueKind.True)
+                    crated = true;
+            }
 
             int qty = 0;
             if (e.TryGetProperty("quantity", out var q) && q.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.Number)
                 qty = v.GetInt32();
 
             if (!string.IsNullOrEmpty(code) && qty > 0)
-                items.Add((code!, qty));
+                items.Add((code!, qty, crated));
         }
         return items;
     }

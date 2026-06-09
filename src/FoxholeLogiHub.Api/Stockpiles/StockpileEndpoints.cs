@@ -195,15 +195,23 @@ public static class StockpileEndpoints
                 return Results.NotFound(new ApiError("Stockpile introuvable."));
 
             db.StockpileItems.RemoveRange(db.StockpileItems.Where(i => i.StockpileId == sp.Id));
-            foreach (var item in req.Items.Where(i => !string.IsNullOrWhiteSpace(i.Code) && i.Quantity > 0))
-            {
-                db.StockpileItems.Add(new StockpileItem
+            // Dédoublonne par code (FIR peut renvoyer le même item plusieurs fois) → somme.
+            var deduped = req.Items
+                .Where(i => !string.IsNullOrWhiteSpace(i.Code) && i.Quantity > 0)
+                .GroupBy(i => i.Code.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g =>
                 {
-                    StockpileId = sp.Id, Code = item.Code.Trim(),
-                    Name = string.IsNullOrWhiteSpace(item.Name) ? item.Code.Trim() : item.Name.Trim(),
-                    Category = (item.Category ?? "").Trim(), Quantity = item.Quantity,
+                    var first = g.First();
+                    return new StockpileItem
+                    {
+                        StockpileId = sp.Id,
+                        Code = g.Key,
+                        Name = string.IsNullOrWhiteSpace(first.Name) ? g.Key : first.Name.Trim(),
+                        Category = (first.Category ?? "").Trim(),
+                        Quantity = g.Sum(x => x.Quantity),
+                    };
                 });
-            }
+            db.StockpileItems.AddRange(deduped);
             sp.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
             await NotifyAsync(hub, db, sp.RegimentId);

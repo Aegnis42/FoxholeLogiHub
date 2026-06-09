@@ -126,7 +126,10 @@ public sealed class StockpilesViewModel : ObservableObject
             var items = recognized.Select(r =>
             {
                 var (name, category) = _firCatalog.Resolve(r.Code);
-                return new StockpileItemDto(r.Code, name, category, r.Quantity);
+                // Distingue caisse / à l'unité (codes distincts → pas de collision, contenu plus exact).
+                string code = r.IsCrated ? r.Code + "@crate" : r.Code;
+                string displayName = r.IsCrated ? $"{name} (caisse)" : name;
+                return new StockpileItemDto(code, displayName, category, r.Quantity);
             }).ToList();
 
             ApplyItems(await _client.ImportItemsAsync(_selectedId, items));
