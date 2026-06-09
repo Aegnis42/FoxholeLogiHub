@@ -63,6 +63,39 @@ public partial class MainWindow : Window
     private void OnNavFriends(object sender, RoutedEventArgs e) => _vm.ShowFriends();
     private void OnNavRegiment(object sender, RoutedEventArgs e) => _vm.ShowRegiment();
     private void OnNavStockpiles(object sender, RoutedEventArgs e) => _vm.ShowStockpiles();
+    private void OnNavResupply(object sender, RoutedEventArgs e) => _vm.ShowResupply();
+
+    private async void OnCreateResupply(object sender, RoutedEventArgs e) => await _vm.Resupply.CreateFromFormAsync();
+
+    private async void OnCreateFromNeed(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: ResupplyNeedViewModel need })
+            await _vm.Resupply.CreateFromNeedAsync(need);
+    }
+
+    private async void OnClaimResupply(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: ResupplyRequestViewModel r })
+            await _vm.Resupply.ClaimAsync(r);
+    }
+
+    private async void OnDoneResupply(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: ResupplyRequestViewModel r })
+            await _vm.Resupply.DoneAsync(r);
+    }
+
+    private async void OnReopenResupply(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: ResupplyRequestViewModel r })
+            await _vm.Resupply.ReopenAsync(r);
+    }
+
+    private async void OnDeleteResupply(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: ResupplyRequestViewModel r })
+            await _vm.Resupply.DeleteAsync(r);
+    }
 
     private void OnRefreshClick(object sender, RoutedEventArgs e) => _vm.Load();
     private void OnSaveProfileClick(object sender, RoutedEventArgs e) => _vm.SaveProfile();

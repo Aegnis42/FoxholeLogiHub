@@ -58,4 +58,7 @@ public static class PresenceEvents
 
     /// <summary>Serveur → client : les stockpiles ont changé — recharger.</summary>
     public const string StockpilesChanged = "StockpilesChanged";
+
+    /// <summary>Serveur → client : les demandes de ravitaillement ont changé — recharger.</summary>
+    public const string ResupplyChanged = "ResupplyChanged";
 }

@@ -43,6 +43,7 @@ public sealed class FriendsViewModel : ObservableObject
     public event Action? RegimentChanged;
     public event Action? RegimentInviteReceived;
     public event Action? StockpilesChanged;
+    public event Action? ResupplyChanged;
 
     public ObservableCollection<FriendItemViewModel> Friends { get; } = new();
     public ObservableCollection<FriendRequestItemViewModel> Requests { get; } = new();
@@ -158,7 +159,8 @@ public sealed class FriendsViewModel : ObservableObject
                 OnPresenceChanged, OnOnlineFriends, OnFriendRequestReceived, OnFriendsChanged,
                 () => OnUi(() => RegimentChanged?.Invoke()),
                 () => OnUi(() => RegimentInviteReceived?.Invoke()),
-                () => OnUi(() => StockpilesChanged?.Invoke())));
+                () => OnUi(() => StockpilesChanged?.Invoke()),
+                () => OnUi(() => ResupplyChanged?.Invoke())));
 
             Connected = true;
             NeedsLogin = false;

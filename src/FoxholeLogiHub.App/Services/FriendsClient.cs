@@ -25,7 +25,8 @@ public sealed record PresenceHandlers(
     Action OnFriendsChanged,
     Action OnRegimentChanged,
     Action OnRegimentInviteReceived,
-    Action OnStockpilesChanged);
+    Action OnStockpilesChanged,
+    Action OnResupplyChanged);
 
 /// <summary>
 /// Client de l'API d'amis, authentifié par JWT (en-tête Bearer pour HTTP, access_token pour SignalR).
@@ -119,6 +120,7 @@ public sealed class FriendsClient : IAsyncDisposable
         _hub.On(PresenceEvents.RegimentChanged, handlers.OnRegimentChanged);
         _hub.On(PresenceEvents.RegimentInviteReceived, handlers.OnRegimentInviteReceived);
         _hub.On(PresenceEvents.StockpilesChanged, handlers.OnStockpilesChanged);
+        _hub.On(PresenceEvents.ResupplyChanged, handlers.OnResupplyChanged);
 
         await _hub.StartAsync();
     }

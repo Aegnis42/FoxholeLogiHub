@@ -31,24 +31,34 @@ public sealed class MainViewModel : ObservableObject
     public FriendsViewModel Friends { get; } = new();
     public RegimentViewModel Regiment { get; } = new();
     public StockpilesViewModel Stockpiles { get; } = new();
+    public ResupplyViewModel Resupply { get; } = new();
     public CompanionManager Companion { get; } = new();
     public ObservableCollection<Loadout> Loadouts { get; } = new();
 
     public MainViewModel()
     {
-        // Le module amis porte la connexion temps réel ; on relaie aux modules régiment/stockpiles.
+        // Le module amis porte la connexion temps réel ; on relaie aux modules régiment/stockpiles/ravito.
         Friends.Authenticated += () => _ = RefreshSocialAsync();
-        Friends.LoggedOut += () => { Regiment.ClearAuth(); Stockpiles.ClearAuth(); };
+        Friends.LoggedOut += () => { Regiment.ClearAuth(); Stockpiles.ClearAuth(); Resupply.ClearAuth(); };
         Friends.RegimentChanged += () => _ = RefreshSocialAsync();
         Friends.RegimentInviteReceived += () => _ = Regiment.ReloadInvitesAsync();
-        Friends.StockpilesChanged += () => _ = Stockpiles.RefreshAsync();
+        // Les stockpiles changent → mettre à jour aussi les manques du ravitaillement.
+        Friends.StockpilesChanged += () => _ = RefreshStockAndResupplyAsync();
+        Friends.ResupplyChanged += () => _ = Resupply.RefreshAsync();
     }
 
-    // Régiment d'abord (ses alliances servent au partage des stockpiles), puis stockpiles.
+    // Régiment d'abord (ses alliances servent au partage des stockpiles), puis stockpiles, puis ravito.
     private async Task RefreshSocialAsync()
     {
         await Regiment.RefreshAsync();
         await Stockpiles.RefreshAsync();
+        await Resupply.RefreshAsync();
+    }
+
+    private async Task RefreshStockAndResupplyAsync()
+    {
+        await Stockpiles.RefreshAsync();
+        await Resupply.RefreshAsync();
     }
 
     // --- Navigation ---
@@ -57,12 +67,14 @@ public sealed class MainViewModel : ObservableObject
     public bool IsFriendsActive => _activeTab == "Amis";
     public bool IsRegimentActive => _activeTab == "Régiment";
     public bool IsStockpilesActive => _activeTab == "Stockpiles";
+    public bool IsResupplyActive => _activeTab == "Ravitaillement";
 
     public void ShowDashboard() => SetTab("Dashboard");
     public void ShowProfile() => SetTab("Profil");
     public void ShowFriends() => SetTab("Amis");
     public void ShowRegiment() => SetTab("Régiment");
     public void ShowStockpiles() => SetTab("Stockpiles");
+    public void ShowResupply() => SetTab("Ravitaillement");
 
     private void SetTab(string tab)
     {
@@ -74,6 +86,7 @@ public sealed class MainViewModel : ObservableObject
         Raise(nameof(IsFriendsActive));
         Raise(nameof(IsRegimentActive));
         Raise(nameof(IsStockpilesActive));
+        Raise(nameof(IsResupplyActive));
     }
 
     // --- Profil ---
@@ -136,6 +149,7 @@ public sealed class MainViewModel : ObservableObject
             // Démarre la connexion au serveur d'amis (présence temps réel) ; régiment+stockpiles suivent.
             Regiment.Initialize(_account, Friends);
             Stockpiles.Initialize(Regiment, Companion);
+            Resupply.Initialize(Regiment);
             Companion.EnsureStarted();
             _ = Friends.InitializeAsync(_account);
         }
