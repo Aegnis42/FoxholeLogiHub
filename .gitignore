@@ -1,0 +1,36 @@
+# Config locale Claude Code
+.claude/settings.local.json
+
+# Build
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.user
+*.suo
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.userprefs
+
+# Tests
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+coverage*.json
+
+# Artefacts temporaires
+*.png
+*.log
+app-screenshot.png
+
+# Base de données locale de l'API (SQLite)
+*.db
+*.db-shm
+*.db-wal
+
+# Données joueur (ne jamais committer un .sav réel : contient Steam ID & device IDs)
+*.sav

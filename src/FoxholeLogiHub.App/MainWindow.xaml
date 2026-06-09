@@ -1,0 +1,367 @@
+<Window x:Class="FoxholeLogiHub.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="FoxholeLogiHub" Height="720" Width="980"
+        Background="#FF1B1E24" Foreground="#FFE6E6E6"
+        FontFamily="Segoe UI">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFE6E6E6"/>
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="#FF252A33"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FF9AA4B2"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+        </Style>
+        <Style x:Key="FlatButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF333A45"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="NavButtonBase" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#FFC7CDD6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="180"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="#FF15181E" Padding="14">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="FoxholeLogiHub" FontSize="16" FontWeight="Bold"
+                           Margin="4,4,0,18"/>
+
+                <StackPanel DockPanel.Dock="Top">
+                    <Button Content="👤  Profil" Click="OnNavProfile">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsProfileActive}" Value="True">
+                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Content="🫂  Amis" Click="OnNavFriends">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFriendsActive}" Value="True">
+                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+
+                <!-- Présence en bas -->
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="4,0,0,2">
+                    <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,6,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#FF6B7280"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Friends.Connected}" Value="True">
+                                        <Setter Property="Fill" Value="#FF4CC26A"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding Friends.Status}" FontSize="10" Foreground="#FF9AA4B2"
+                               TextWrapping="Wrap" Width="130"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Contenu -->
+        <Grid Grid.Column="1" Margin="20">
+
+            <!-- ====================== PROFIL ====================== -->
+            <Grid Visibility="{Binding IsProfileActive, Converter={StaticResource BoolToVis}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,16">
+                    <TextBlock Text="Profil" FontSize="22" FontWeight="Bold" DockPanel.Dock="Left"/>
+                    <Button Content="Rafraîchir" DockPanel.Dock="Right" HorizontalAlignment="Right"
+                            Style="{StaticResource FlatButton}" Click="OnRefreshClick"/>
+                </DockPanel>
+
+                <Border Grid.Row="1" Style="{StaticResource Card}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0" Width="96" Height="96" Margin="0,0,20,0">
+                            <Ellipse Fill="{Binding FactionBrush}"/>
+                            <Ellipse>
+                                <Ellipse.Fill>
+                                    <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill"/>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Ellipse Stroke="#33FFFFFF" StrokeThickness="2"/>
+                        </Grid>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="PSEUDO" Style="{StaticResource Label}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="22" FontWeight="Bold" Foreground="White"
+                                         Background="Transparent" BorderThickness="0" Padding="0"
+                                         CaretBrush="White" MaxLength="40"/>
+                                <Button Grid.Column="1" Content="Enregistrer" Style="{StaticResource FlatButton}"
+                                        Margin="10,0,0,0" Click="OnSaveProfileClick"/>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <TextBlock Text="Steam : " Foreground="#FF9AA4B2" FontSize="12"/>
+                                <TextBlock Text="{Binding SteamId}" FontSize="12"/>
+                                <TextBlock Text="  ·  pseudo Steam : " Foreground="#FF9AA4B2" FontSize="12"/>
+                                <TextBlock Text="{Binding PersonaName}" FontSize="12"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Grid.Column="2" Background="{Binding FactionBrush}" CornerRadius="6"
+                                Padding="14,10" VerticalAlignment="Center" Margin="20,0,0,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="FACTION" Foreground="#CCFFFFFF" FontSize="10"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding Faction}" FontSize="16" FontWeight="Bold"
+                                           Foreground="White" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2" Style="{StaticResource Card}">
+                    <UniformGrid Columns="3" Rows="1">
+                        <StackPanel>
+                            <TextBlock Text="DERNIER SERVEUR" Style="{StaticResource Label}"/>
+                            <TextBlock Text="{Binding Server}" FontSize="15"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="LANGUE" Style="{StaticResource Label}"/>
+                            <TextBlock Text="{Binding Language}" FontSize="15"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="GUERRES REJOINTES" Style="{StaticResource Label}"/>
+                            <TextBlock Text="{Binding WarCount}" FontSize="15"/>
+                        </StackPanel>
+                    </UniformGrid>
+                </Border>
+
+                <Border Grid.Row="3" Style="{StaticResource Card}">
+                    <DockPanel>
+                        <TextBlock Text="Loadouts sauvegardés" FontSize="16" FontWeight="SemiBold"
+                                   DockPanel.Dock="Top" Margin="0,0,0,12"/>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Loadouts}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FF2E343F" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Bold"
+                                                           Margin="0,0,0,8"/>
+                                                <ItemsControl ItemsSource="{Binding Equipment}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <DockPanel Margin="0,1">
+                                                                <TextBlock Text="{Binding Slot}" Width="80"
+                                                                           Foreground="#FF7FA8D9" FontSize="12"/>
+                                                                <TextBlock Text="{Binding CodeName}" FontSize="13"/>
+                                                                <TextBlock Text="{Binding Quantity, StringFormat='×{0}'}"
+                                                                           DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                                                           Foreground="#FF9AA4B2"/>
+                                                            </DockPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <ItemsControl ItemsSource="{Binding Backpack}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <DockPanel Margin="0,1">
+                                                                <TextBlock Text="sac" Width="80"
+                                                                           Foreground="#FF8AA37A" FontSize="12"/>
+                                                                <TextBlock Text="{Binding CodeName}" FontSize="13"/>
+                                                                <TextBlock Text="{Binding Quantity, StringFormat='×{0}'}"
+                                                                           DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                                                           Foreground="#FF9AA4B2"/>
+                                                            </DockPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+
+                <TextBlock Grid.Row="4" Text="{Binding Status}" Foreground="#FF9AA4B2" FontSize="12"/>
+            </Grid>
+
+            <!-- ====================== AMIS ====================== -->
+            <Grid Visibility="{Binding IsFriendsActive, Converter={StaticResource BoolToVis}}">
+              <Grid DataContext="{Binding Friends}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Amis" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
+
+                <!-- Mon code d'ami -->
+                <Border Grid.Row="1" Style="{StaticResource Card}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="MON CODE D'AMI" Style="{StaticResource Label}"/>
+                            <TextBox Text="{Binding MyFriendCode, Mode=OneWay}" IsReadOnly="True"
+                                     FontSize="26" FontWeight="Bold" Foreground="#FF7FA8D9"
+                                     Background="Transparent" BorderThickness="0" Padding="0"
+                                     FontFamily="Consolas"/>
+                        </StackPanel>
+                        <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" TextAlignment="Right"
+                                   Foreground="#FF9AA4B2" FontSize="11" TextWrapping="Wrap" MaxWidth="220"
+                                   Text="Partage ce code pour qu'on t'ajoute en ami."/>
+                    </DockPanel>
+                </Border>
+
+                <!-- Ajouter un ami -->
+                <Border Grid.Row="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="AJOUTER UN AMI PAR CODE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding AddCodeInput, UpdateSourceTrigger=PropertyChanged}"
+                                     FontSize="15" Padding="8" Background="#FF1B1E24" Foreground="White"
+                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                     VerticalContentAlignment="Center"/>
+                            <Button Grid.Column="1" Content="Ajouter" Style="{StaticResource FlatButton}"
+                                    Margin="10,0,0,0" Click="OnAddFriendClick" IsEnabled="{Binding Connected}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Liste d'amis -->
+                <Border Grid.Row="3" Style="{StaticResource Card}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Mes amis" FontSize="16" FontWeight="SemiBold"
+                                   Margin="0,0,0,12"/>
+                        <Grid DockPanel.Dock="Top">
+                            <TextBlock Text="Aucun ami pour l'instant. Partage ton code ou ajoute un code ci-dessus."
+                                       Foreground="#FF6B7280" FontSize="13"
+                                       Visibility="{Binding HasNoFriends, Converter={StaticResource BoolToVis}}"/>
+                        </Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Friends}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FF2E343F" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Grid Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0">
+                                                    <Ellipse Fill="{Binding FactionBrush}"/>
+                                                    <TextBlock Text="{Binding Initial}" Foreground="White"
+                                                               FontWeight="Bold" FontSize="16"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Ellipse Width="12" Height="12" HorizontalAlignment="Right"
+                                                             VerticalAlignment="Bottom" Stroke="#FF2E343F"
+                                                             StrokeThickness="2" Fill="{Binding StatusBrush}"/>
+                                                </Grid>
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Faction}" FontSize="11" Foreground="#FF9AA4B2"/>
+                                                </StackPanel>
+
+                                                <TextBlock Grid.Column="2" Text="{Binding StatusText}" FontSize="12"
+                                                           Foreground="{Binding StatusBrush}" VerticalAlignment="Center"
+                                                           Margin="0,0,12,0"/>
+
+                                                <Button Grid.Column="3" Content="Retirer" Style="{StaticResource FlatButton}"
+                                                        Background="#FF3A3030" Padding="10,5" Click="OnRemoveFriendClick"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+              </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

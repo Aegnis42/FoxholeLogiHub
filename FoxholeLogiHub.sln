@@ -1,0 +1,66 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BFE7D232-3D89-49E5-979D-2C149D266E2D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoxholeLogiHub.Core", "src\FoxholeLogiHub.Core\FoxholeLogiHub.Core.csproj", "{986D1E24-B126-4A8B-A059-7D0CB0869638}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoxholeLogiHub.App", "src\FoxholeLogiHub.App\FoxholeLogiHub.App.csproj", "{A5C7515D-6A03-4DB3-AF83-861350A257D9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{15F2871A-2FE6-4369-8554-B2E3A7D1A346}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoxholeLogiHub.Core.Tests", "tests\FoxholeLogiHub.Core.Tests\FoxholeLogiHub.Core.Tests.csproj", "{5222B789-65DF-4D47-AA90-95C910F9BD43}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoxholeLogiHub.Contracts", "src\FoxholeLogiHub.Contracts\FoxholeLogiHub.Contracts.csproj", "{669C4A08-9FBD-459A-A521-EE800731122E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoxholeLogiHub.Api", "src\FoxholeLogiHub.Api\FoxholeLogiHub.Api.csproj", "{783C90AC-9940-4825-839B-071B7B289142}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{A2522CBD-44A9-4CC1-8129-EF8A5930F28D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PresenceSim", "tools\PresenceSim\PresenceSim.csproj", "{C618BCB7-FC5A-4809-AA80-6F95C1B973AD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{986D1E24-B126-4A8B-A059-7D0CB0869638}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{986D1E24-B126-4A8B-A059-7D0CB0869638}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{986D1E24-B126-4A8B-A059-7D0CB0869638}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{986D1E24-B126-4A8B-A059-7D0CB0869638}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5C7515D-6A03-4DB3-AF83-861350A257D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5C7515D-6A03-4DB3-AF83-861350A257D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5C7515D-6A03-4DB3-AF83-861350A257D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5C7515D-6A03-4DB3-AF83-861350A257D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5222B789-65DF-4D47-AA90-95C910F9BD43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5222B789-65DF-4D47-AA90-95C910F9BD43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5222B789-65DF-4D47-AA90-95C910F9BD43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5222B789-65DF-4D47-AA90-95C910F9BD43}.Release|Any CPU.Build.0 = Release|Any CPU
+		{669C4A08-9FBD-459A-A521-EE800731122E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{669C4A08-9FBD-459A-A521-EE800731122E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{669C4A08-9FBD-459A-A521-EE800731122E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{669C4A08-9FBD-459A-A521-EE800731122E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{783C90AC-9940-4825-839B-071B7B289142}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{783C90AC-9940-4825-839B-071B7B289142}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{783C90AC-9940-4825-839B-071B7B289142}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{783C90AC-9940-4825-839B-071B7B289142}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C618BCB7-FC5A-4809-AA80-6F95C1B973AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C618BCB7-FC5A-4809-AA80-6F95C1B973AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C618BCB7-FC5A-4809-AA80-6F95C1B973AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C618BCB7-FC5A-4809-AA80-6F95C1B973AD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{986D1E24-B126-4A8B-A059-7D0CB0869638} = {BFE7D232-3D89-49E5-979D-2C149D266E2D}
+		{A5C7515D-6A03-4DB3-AF83-861350A257D9} = {BFE7D232-3D89-49E5-979D-2C149D266E2D}
+		{5222B789-65DF-4D47-AA90-95C910F9BD43} = {15F2871A-2FE6-4369-8554-B2E3A7D1A346}
+		{669C4A08-9FBD-459A-A521-EE800731122E} = {BFE7D232-3D89-49E5-979D-2C149D266E2D}
+		{783C90AC-9940-4825-839B-071B7B289142} = {BFE7D232-3D89-49E5-979D-2C149D266E2D}
+		{C618BCB7-FC5A-4809-AA80-6F95C1B973AD} = {A2522CBD-44A9-4CC1-8129-EF8A5930F28D}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+*.user
+*.db
+*.db-shm
+*.db-wal
+*.png
+*.log
+*.sav
+.git/
+tests/
+tools/
+src/FoxholeLogiHub.App/
+src/FoxholeLogiHub.Core/
