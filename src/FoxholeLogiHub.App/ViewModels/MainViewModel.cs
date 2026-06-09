@@ -28,14 +28,26 @@ public sealed class MainViewModel : ObservableObject
     private int _warCount;
 
     public FriendsViewModel Friends { get; } = new();
+    public RegimentViewModel Regiment { get; } = new();
     public ObservableCollection<Loadout> Loadouts { get; } = new();
+
+    public MainViewModel()
+    {
+        // Le module amis porte la connexion temps réel ; on relaie au module régiment.
+        Friends.Authenticated += () => _ = Regiment.RefreshAsync();
+        Friends.LoggedOut += () => Regiment.ClearAuth();
+        Friends.RegimentChanged += () => _ = Regiment.RefreshAsync();
+        Friends.RegimentInviteReceived += () => _ = Regiment.ReloadInvitesAsync();
+    }
 
     // --- Navigation ---
     public bool IsProfileActive => _activeTab == "Profil";
     public bool IsFriendsActive => _activeTab == "Amis";
+    public bool IsRegimentActive => _activeTab == "Régiment";
 
     public void ShowProfile() => SetTab("Profil");
     public void ShowFriends() => SetTab("Amis");
+    public void ShowRegiment() => SetTab("Régiment");
 
     private void SetTab(string tab)
     {
@@ -44,6 +56,7 @@ public sealed class MainViewModel : ObservableObject
         _activeTab = tab;
         Raise(nameof(IsProfileActive));
         Raise(nameof(IsFriendsActive));
+        Raise(nameof(IsRegimentActive));
     }
 
     // --- Profil ---
@@ -103,7 +116,8 @@ public sealed class MainViewModel : ObservableObject
             HasData = true;
             Status = $"Connecté en tant que {DisplayName} ({Faction}).";
 
-            // Démarre la connexion au serveur d'amis (présence temps réel).
+            // Démarre la connexion au serveur d'amis (présence temps réel) ; le régiment suit.
+            Regiment.Initialize(_account, Friends);
             _ = Friends.InitializeAsync(_account);
         }
         catch (Exception ex)

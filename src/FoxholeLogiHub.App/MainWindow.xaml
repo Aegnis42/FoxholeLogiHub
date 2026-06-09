@@ -41,6 +41,11 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#FFE6E6E6"/>
+            <Setter Property="Margin" Value="0,0,14,4"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
         <Style x:Key="NavButtonBase" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#FFC7CDD6"/>
@@ -92,6 +97,18 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsFriendsActive}" Value="True">
+                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Content="🛡  Régiment" Click="OnNavRegiment">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRegimentActive}" Value="True">
                                         <Setter Property="Background" Value="#FF2C3340"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
@@ -426,6 +443,282 @@
                         </ScrollViewer>
                     </DockPanel>
                 </Border>
+              </Grid>
+            </Grid>
+
+            <!-- ====================== RÉGIMENT ====================== -->
+            <Grid Visibility="{Binding IsRegimentActive, Converter={StaticResource BoolToVis}}">
+              <Grid DataContext="{Binding Regiment}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Régiment" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,8,0,0"/>
+
+                    <Grid>
+                        <!-- État : connexion requise -->
+                        <Border Style="{StaticResource Card}" VerticalAlignment="Top"
+                                Visibility="{Binding ShowAuthNeeded, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Connecte-toi avec Steam (onglet Amis) pour créer ou gérer ton régiment."
+                                       Foreground="#FF9AA4B2" FontSize="13" TextWrapping="Wrap"/>
+                        </Border>
+
+                        <!-- État : pas de régiment -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding ShowNoRegiment, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <Border Style="{StaticResource Card}"
+                                        Visibility="{Binding HasInvites, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Invitations reçues" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding Invites}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#FF33384A" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                                        <DockPanel>
+                                                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                                                <Button Content="Accepter" Style="{StaticResource FlatButton}"
+                                                                        Background="#FF2F6B43" Padding="12,6" Margin="0,0,8,0" Click="OnAcceptRegInvite"/>
+                                                                <Button Content="Refuser" Style="{StaticResource FlatButton}"
+                                                                        Background="#FF3A3030" Padding="12,6" Click="OnDeclineRegInvite"/>
+                                                            </StackPanel>
+                                                            <StackPanel VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold"/>
+                                                                <TextBlock Text="{Binding FromDisplayName, StringFormat='Invité par {0}'}"
+                                                                           FontSize="11" Foreground="#FF9AA4B2"/>
+                                                            </StackPanel>
+                                                        </DockPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="CRÉER UN RÉGIMENT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <TextBox Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"
+                                                 FontSize="15" Padding="8" Background="#FF1B1E24" Foreground="White"
+                                                 BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                 ToolTip="Nom du régiment"/>
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Créer" Style="{StaticResource FlatButton}"
+                                                    Background="#FF2A475E" Padding="16,8" Margin="10,0,0,0" Click="OnCreateRegiment"/>
+                                            <TextBox Text="{Binding NewTag, UpdateSourceTrigger=PropertyChanged}"
+                                                     FontSize="15" Padding="8" Background="#FF1B1E24" Foreground="White"
+                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                     ToolTip="Tag court, ex. FOX"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="REJOINDRE PAR CODE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Rejoindre" Style="{StaticResource FlatButton}"
+                                                    Padding="16,8" Margin="10,0,0,0" Click="OnJoinRegiment"/>
+                                            <TextBox Text="{Binding JoinCode, UpdateSourceTrigger=PropertyChanged}"
+                                                     FontSize="15" Padding="8" Background="#FF1B1E24" Foreground="White"
+                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                     VerticalContentAlignment="Center"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- État : membre d'un régiment -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding ShowRegiment, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <!-- En-tête -->
+                                <Border Style="{StaticResource Card}">
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Right" VerticalAlignment="Top" HorizontalAlignment="Right">
+                                            <Button Content="Régénérer le code" Style="{StaticResource FlatButton}"
+                                                    Background="#FF333A45" Padding="10,5" Margin="0,0,0,6" Click="OnRegenCode"
+                                                    Visibility="{Binding CanInvite, Converter={StaticResource BoolToVis}}"/>
+                                            <Button Content="Supprimer le régiment" Style="{StaticResource FlatButton}"
+                                                    Background="#FF5A2A2A" Padding="10,5" Click="OnDeleteRegiment"
+                                                    Visibility="{Binding IAmOwner, Converter={StaticResource BoolToVis}}"/>
+                                            <Button Content="Quitter le régiment"
+                                                    Background="#FF3A3030" Padding="10,5" Click="OnLeaveRegiment">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource FlatButton}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IAmOwner}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock FontSize="22" FontWeight="Bold">
+                                                <Run Text="{Binding Name, Mode=OneWay}"/>
+                                                <Run Text="{Binding Tag, Mode=OneWay, StringFormat=' [{0}]'}" Foreground="#FF9AA4B2"/>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Faction}" FontSize="12" Foreground="#FF7FA8D9" Margin="0,2,0,8"/>
+                                            <TextBlock Text="CODE D'INVITATION" Style="{StaticResource Label}"/>
+                                            <TextBox Text="{Binding InviteCode, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas"
+                                                     FontSize="20" FontWeight="Bold" Foreground="#FF7FA8D9"
+                                                     Background="Transparent" BorderThickness="0" Padding="0"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- Membres -->
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="Membres" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding Members}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Grid Grid.Column="0" Width="38" Height="38" Margin="0,0,12,0">
+                                                                <Ellipse Fill="{Binding FactionBrush}"/>
+                                                                <TextBlock Text="{Binding Initial}" Foreground="White" FontWeight="Bold"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                <Ellipse><Ellipse.Fill><ImageBrush ImageSource="{Binding AvatarUrl}" Stretch="UniformToFill"/></Ellipse.Fill></Ellipse>
+                                                                <Ellipse Width="11" Height="11" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                                         Stroke="#FF2E343F" StrokeThickness="2" Fill="{Binding StatusBrush}"/>
+                                                            </Grid>
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"/>
+                                                                <TextBlock Text="{Binding RoleBadge}" FontSize="11" Foreground="#FF9AA4B2"/>
+                                                            </StackPanel>
+                                                            <ComboBox Grid.Column="2" Width="120" Margin="0,0,8,0" VerticalAlignment="Center"
+                                                                      ItemsSource="{Binding Roles}" DisplayMemberPath="Name" SelectedValuePath="Id"
+                                                                      SelectedValue="{Binding RoleId, Mode=OneWay}" SelectionChanged="OnMemberRoleChanged"
+                                                                      Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
+                                                            <Button Grid.Column="3" Content="Exclure" Style="{StaticResource FlatButton}"
+                                                                    Background="#FF3A3030" Padding="10,5" Click="OnKickMember"
+                                                                    Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Inviter des amis -->
+                                <Border Style="{StaticResource Card}" Visibility="{Binding CanInvite, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Inviter des amis" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding Friends}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="8" Margin="0,0,0,6">
+                                                        <DockPanel>
+                                                            <Button DockPanel.Dock="Right" Content="Inviter" Style="{StaticResource FlatButton}"
+                                                                    Background="#FF2A475E" Padding="12,5" Click="OnInviteFriendToReg"/>
+                                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="13"/>
+                                                        </DockPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Rôles & permissions -->
+                                <Border Style="{StaticResource Card}" Visibility="{Binding CanManageRoles, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Rôles &amp; permissions" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding Roles}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                                        <StackPanel>
+                                                            <DockPanel>
+                                                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                                                    <Button Content="Enregistrer" Style="{StaticResource FlatButton}"
+                                                                            Background="#FF2F6B43" Padding="10,5" Margin="0,0,6,0" Click="OnSaveRole"/>
+                                                                    <Button Content="Suppr." Style="{StaticResource FlatButton}"
+                                                                            Background="#FF3A3030" Padding="10,5" Click="OnDeleteRole"
+                                                                            Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"/>
+                                                                </StackPanel>
+                                                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" FontWeight="SemiBold"
+                                                                         FontSize="14" Background="Transparent" Foreground="White" BorderThickness="0"
+                                                                         CaretBrush="White" VerticalAlignment="Center"/>
+                                                            </DockPanel>
+                                                            <WrapPanel Margin="0,8,0,0">
+                                                                <CheckBox Content="Membres" IsChecked="{Binding PMembers}"/>
+                                                                <CheckBox Content="Rôles" IsChecked="{Binding PRoles}"/>
+                                                                <CheckBox Content="Inviter" IsChecked="{Binding PInvite}"/>
+                                                                <CheckBox Content="Régiment" IsChecked="{Binding PRegiment}"/>
+                                                                <CheckBox Content="Alliances" IsChecked="{Binding PAlliances}"/>
+                                                            </WrapPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <DockPanel Margin="0,4,0,0">
+                                            <Button DockPanel.Dock="Right" Content="+ Rôle" Style="{StaticResource FlatButton}"
+                                                    Padding="14,6" Margin="10,0,0,0" Click="OnCreateRole"/>
+                                            <TextBox Text="{Binding NewRoleName, UpdateSourceTrigger=PropertyChanged}"
+                                                     FontSize="13" Padding="6" Background="#FF1B1E24" Foreground="White"
+                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                     VerticalContentAlignment="Center" ToolTip="Nom du nouveau rôle"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Alliances -->
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="Alliances" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding Alliances}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                                        <DockPanel>
+                                                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                                                <Button Content="Accepter" Style="{StaticResource FlatButton}"
+                                                                        Background="#FF2F6B43" Padding="10,5" Margin="0,0,6,0" Click="OnAcceptAlliance"
+                                                                        Visibility="{Binding IsIncomingRequest, Converter={StaticResource BoolToVis}}"/>
+                                                                <Button Content="Refuser" Style="{StaticResource FlatButton}"
+                                                                        Background="#FF3A3030" Padding="10,5" Click="OnDeclineAlliance"
+                                                                        Visibility="{Binding IsIncomingRequest, Converter={StaticResource BoolToVis}}"/>
+                                                                <Button Content="Rompre" Style="{StaticResource FlatButton}"
+                                                                        Background="#FF3A3030" Padding="10,5" Click="OnRemoveAlliance"
+                                                                        Visibility="{Binding IsAccepted, Converter={StaticResource BoolToVis}}"/>
+                                                            </StackPanel>
+                                                            <Border DockPanel.Dock="Left" Width="6" CornerRadius="3" Margin="0,0,10,0"
+                                                                    Background="{Binding FactionBrush}"/>
+                                                            <StackPanel VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold"/>
+                                                                <TextBlock Text="{Binding StateText}" FontSize="11" Foreground="#FF9AA4B2"/>
+                                                            </StackPanel>
+                                                        </DockPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <DockPanel Margin="0,4,0,0" Visibility="{Binding CanManageAlliances, Converter={StaticResource BoolToVis}}">
+                                            <Button DockPanel.Dock="Right" Content="Proposer" Style="{StaticResource FlatButton}"
+                                                    Background="#FF2A475E" Padding="14,6" Margin="10,0,0,0" Click="OnProposeAlliance"/>
+                                            <TextBox Text="{Binding AllianceCode, UpdateSourceTrigger=PropertyChanged}"
+                                                     FontSize="13" Padding="6" Background="#FF1B1E24" Foreground="White"
+                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                     VerticalContentAlignment="Center" ToolTip="Code d'invitation du régiment à allier"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </DockPanel>
               </Grid>
             </Grid>
         </Grid>

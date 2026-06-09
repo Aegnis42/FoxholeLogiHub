@@ -1,0 +1,47 @@
+namespace FoxholeLogiHub.Contracts;
+
+/// <summary>Permissions au sein d'un régiment (combinables). Le chef (propriétaire) les a toutes.</summary>
+[Flags]
+public enum RegimentPermission
+{
+    None = 0,
+    ManageMembers = 1,    // changer le rôle des membres, exclure
+    ManageRoles = 2,      // créer/modifier/supprimer des rôles
+    Invite = 4,           // inviter des amis, voir/régénérer le code
+    ManageRegiment = 8,   // éditer le régiment, le supprimer
+    ManageAlliances = 16, // proposer/accepter/rompre des alliances
+}
+
+public sealed record CreateRegimentRequest(string Name, string Tag, string Faction);
+public sealed record JoinRegimentRequest(string InviteCode);
+public sealed record UpdateRegimentRequest(string Name, string Tag);
+
+public sealed record RegimentRoleDto(int Id, string Name, int Permissions, bool IsDefault);
+
+public sealed record RegimentMemberDto(
+    string SteamId, string DisplayName, string Faction, bool Online, bool HasAvatar,
+    int RoleId, string RoleName, bool IsOwner);
+
+public sealed record RegimentAllianceDto(
+    string RegimentId, string Name, string Tag, string Faction, string Status, bool ProposedByUs);
+
+/// <summary>Vue complète du régiment de l'utilisateur.</summary>
+public sealed record RegimentDto(
+    string Id, string Name, string Tag, string Faction, string InviteCode,
+    string OwnerSteamId, bool IAmOwner, int MyPermissions,
+    List<RegimentMemberDto> Members, List<RegimentRoleDto> Roles, List<RegimentAllianceDto> Alliances);
+
+/// <summary>Invitation de régiment reçue (en attente).</summary>
+public sealed record RegimentInviteDto(string RegimentId, string Name, string Tag, string Faction, string FromDisplayName);
+
+public sealed record InviteFriendToRegimentRequest(string FriendSteamId);
+public sealed record RespondRegimentInviteRequest(string RegimentId, bool Accept);
+
+public sealed record CreateRoleRequest(string Name, int Permissions);
+public sealed record UpdateRoleRequest(int RoleId, string Name, int Permissions);
+public sealed record SetMemberRoleRequest(string MemberSteamId, int RoleId);
+public sealed record KickMemberRequest(string MemberSteamId);
+
+public sealed record ProposeAllianceRequest(string TargetInviteCode);
+public sealed record RespondAllianceRequest(string OtherRegimentId, bool Accept);
+public sealed record RemoveAllianceRequest(string OtherRegimentId);

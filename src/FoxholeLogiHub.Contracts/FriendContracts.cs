@@ -49,4 +49,10 @@ public static class PresenceEvents
 
     /// <summary>Serveur → client : la liste d'amis a changé (acceptation/suppression) — recharger.</summary>
     public const string FriendsChanged = "FriendsChanged";
+
+    /// <summary>Serveur → client : une invitation de régiment est arrivée — recharger les invitations.</summary>
+    public const string RegimentInviteReceived = "RegimentInviteReceived";
+
+    /// <summary>Serveur → client : le régiment a changé (membre, rôle, alliance…) — recharger.</summary>
+    public const string RegimentChanged = "RegimentChanged";
 }

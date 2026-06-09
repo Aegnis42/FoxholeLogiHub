@@ -37,6 +37,12 @@ public sealed class FriendsViewModel : ObservableObject
         Requests.CollectionChanged += (_, _) => Raise(nameof(HasRequests));
     }
 
+    /// <summary>Événements relayés au shell (pour le ViewModel régiment notamment).</summary>
+    public event Action? Authenticated;
+    public event Action? LoggedOut;
+    public event Action? RegimentChanged;
+    public event Action? RegimentInviteReceived;
+
     public ObservableCollection<FriendItemViewModel> Friends { get; } = new();
     public ObservableCollection<FriendRequestItemViewModel> Requests { get; } = new();
 
@@ -119,6 +125,7 @@ public sealed class FriendsViewModel : ObservableObject
         Connected = false;
         NeedsLogin = true;
         Status = "Déconnecté.";
+        LoggedOut?.Invoke();
     }
 
     public async Task ConnectAsync()
@@ -147,11 +154,14 @@ public sealed class FriendsViewModel : ObservableObject
             await ReloadRequestsAsync();
 
             await _client.ConnectPresenceAsync(new PresenceHandlers(
-                OnPresenceChanged, OnOnlineFriends, OnFriendRequestReceived, OnFriendsChanged));
+                OnPresenceChanged, OnOnlineFriends, OnFriendRequestReceived, OnFriendsChanged,
+                () => OnUi(() => RegimentChanged?.Invoke()),
+                () => OnUi(() => RegimentInviteReceived?.Invoke())));
 
             Connected = true;
             NeedsLogin = false;
             Status = $"Connecté · {Friends.Count} ami(s).";
+            Authenticated?.Invoke();
         }
         catch (AuthRequiredException)
         {
