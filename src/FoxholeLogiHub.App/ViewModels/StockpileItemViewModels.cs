@@ -106,30 +106,49 @@ public sealed class StockpileItemViewModel : ObservableObject
 /// <summary>Chargement des icônes d'items (bundle FIR, <c>Data/icons/&lt;code&gt;.png</c>, variante <c>-crated</c>).</summary>
 public static class ItemIcons
 {
+    private static readonly string Dir = System.IO.Path.Combine(AppContext.BaseDirectory, "Data", "icons");
+
     public static ImageSource? Load(string code)
     {
-        try
-        {
-            string dir = System.IO.Path.Combine(AppContext.BaseDirectory, "Data", "icons");
-            string name = code.EndsWith("@crate", StringComparison.Ordinal) ? code[..^6] + "-crated" : code;
-            string path = System.IO.Path.Combine(dir, name + ".png");
-            if (!System.IO.File.Exists(path) && code.EndsWith("@crate", StringComparison.Ordinal))
-                path = System.IO.Path.Combine(dir, code[..^6] + ".png");
-            if (!System.IO.File.Exists(path))
-                return null;
+        bool crated = code.EndsWith("@crate", StringComparison.Ordinal);
+        string baseCode = crated ? code[..^6] : code;
 
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.CacheOption = BitmapCacheOption.OnLoad;
-            bmp.UriSource = new Uri(path);
-            bmp.EndInit();
-            bmp.Freeze();
-            return bmp;
-        }
-        catch
+        // 1) code direct (cas normal : import FIR)
+        var img = TryLoad(baseCode, crated);
+        if (img is not null)
+            return img;
+
+        // 2) repli par alias : un code/calibre/nom stocké (« 40mm », « Basic Materials ») → CodeName FIR
+        string? alias = FoxholeItemCatalog.AliasToCode(baseCode);
+        if (alias is not null && !alias.Equals(baseCode, StringComparison.OrdinalIgnoreCase))
+            return TryLoad(alias, crated);
+
+        return null;
+    }
+
+    private static ImageSource? TryLoad(string codeName, bool crated)
+    {
+        foreach (string fileName in crated ? new[] { codeName + "-crated", codeName } : new[] { codeName })
         {
-            return null;
+            string path = System.IO.Path.Combine(Dir, fileName + ".png");
+            if (!System.IO.File.Exists(path))
+                continue;
+            try
+            {
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.UriSource = new Uri(path);
+                bmp.EndInit();
+                bmp.Freeze();
+                return bmp;
+            }
+            catch
+            {
+                return null;
+            }
         }
+        return null;
     }
 }
 

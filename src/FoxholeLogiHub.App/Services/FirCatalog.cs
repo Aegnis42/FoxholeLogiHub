@@ -23,13 +23,24 @@ public sealed class FirCatalog
             {
                 string name = p.Value.TryGetProperty("name", out var n) ? n.GetString() ?? p.Name : p.Name;
                 string cat = p.Value.TryGetProperty("category", out var c) ? c.GetString() ?? "" : "";
-                _map[p.Name] = (name, cat);
+                string disp = p.Value.TryGetProperty("display", out var d) ? d.GetString() ?? "" : "";
+                _map[p.Name] = (MakeLabel(name, disp), cat);
             }
         }
         catch
         {
             // Catalogue absent/illisible : on retombera sur les codenames bruts.
         }
+    }
+
+    // Munitions : préfixe par le calibre (« 40mm — Cannon Ammo ») pour rester reconnaissable comme en jeu.
+    private static string MakeLabel(string name, string display)
+    {
+        bool isCaliber = display.Length > 0 && char.IsDigit(display[0])
+            && display.Contains("mm", StringComparison.OrdinalIgnoreCase);
+        return isCaliber && !display.Equals(name, StringComparison.OrdinalIgnoreCase)
+            ? $"{display} — {name}"
+            : name;
     }
 
     public (string Name, string Category) Resolve(string code) =>
