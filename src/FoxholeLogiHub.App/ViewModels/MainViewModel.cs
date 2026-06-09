@@ -17,7 +17,7 @@ public sealed class MainViewModel : ObservableObject
 
     private string _status = "";
     private bool _hasData;
-    private string _activeTab = "Profil";
+    private string _activeTab = "Dashboard";
     private string _steamId = "";
     private string _displayName = "";
     private string _personaName = "";
@@ -52,11 +52,13 @@ public sealed class MainViewModel : ObservableObject
     }
 
     // --- Navigation ---
+    public bool IsDashboardActive => _activeTab == "Dashboard";
     public bool IsProfileActive => _activeTab == "Profil";
     public bool IsFriendsActive => _activeTab == "Amis";
     public bool IsRegimentActive => _activeTab == "Régiment";
     public bool IsStockpilesActive => _activeTab == "Stockpiles";
 
+    public void ShowDashboard() => SetTab("Dashboard");
     public void ShowProfile() => SetTab("Profil");
     public void ShowFriends() => SetTab("Amis");
     public void ShowRegiment() => SetTab("Régiment");
@@ -67,6 +69,7 @@ public sealed class MainViewModel : ObservableObject
         if (_activeTab == tab)
             return;
         _activeTab = tab;
+        Raise(nameof(IsDashboardActive));
         Raise(nameof(IsProfileActive));
         Raise(nameof(IsFriendsActive));
         Raise(nameof(IsRegimentActive));

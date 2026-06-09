@@ -30,6 +30,13 @@ public sealed class StockpileClient : IDisposable
     public Task<List<StockpileDto>> ShareAsync(string id, string regimentId) => PostListAsync("/api/stockpiles/share", new ShareStockpileRequest(id, regimentId), HttpMethod.Post);
     public Task<List<StockpileDto>> UnshareAsync(string id, string regimentId) => PostListAsync("/api/stockpiles/unshare", new UnshareStockpileRequest(id, regimentId), HttpMethod.Post);
 
+    public async Task<List<StockpileAlertDto>> GetAlertsAsync()
+    {
+        HttpResponseMessage resp = await _http.GetAsync("/api/stockpiles/alerts");
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<StockpileAlertDto>>()) ?? new();
+    }
+
     public async Task<List<StockpileItemDto>> GetItemsAsync(string stockpileId)
     {
         HttpResponseMessage resp = await _http.GetAsync($"/api/stockpiles/{stockpileId}/items");

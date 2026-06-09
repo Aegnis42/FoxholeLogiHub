@@ -229,6 +229,49 @@ public static class StockpileEndpoints
             await NotifyAsync(hub, db, sp.RegimentId);
             return Results.Ok(await ItemsAsync(db, sp.Id));
         }).RequireAuthorization();
+
+        // --- Tableau de bord : alertes de stock (items sous seuil) sur tous les stockpiles visibles ---
+        app.MapGet("/api/stockpiles/alerts", async (ClaimsPrincipal p, AppDbContext db) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null)
+                return Results.Ok(new List<StockpileAlertDto>());
+            string myRegId = ctx.Value.reg.Id;
+
+            var own = await db.Stockpiles.Where(s => s.RegimentId == myRegId).ToListAsync();
+            var alliedIds = await AlliedIdsAsync(db, myRegId);
+            var allied = await db.Stockpiles
+                .Where(s => alliedIds.Contains(s.RegimentId)
+                    && (s.IsPublic || db.StockpileShares.Any(sh => sh.StockpileId == s.Id && sh.RegimentId == myRegId)))
+                .ToListAsync();
+            var all = own.Concat(allied).ToList();
+            var spById = all.ToDictionary(s => s.Id);
+            var spIds = all.Select(s => s.Id).ToList();
+
+            var regIds = all.Select(s => s.RegimentId).Distinct().ToList();
+            var names = await db.Regiments.Where(r => regIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, r => r.Name);
+
+            var items = await db.StockpileItems
+                .Where(i => spIds.Contains(i.StockpileId)
+                    && ((i.CriticalThreshold > 0 && i.Quantity <= i.CriticalThreshold)
+                     || (i.LowThreshold > 0 && i.Quantity <= i.LowThreshold)))
+                .ToListAsync();
+
+            var alerts = items.Select(i =>
+            {
+                var s = spById[i.StockpileId];
+                bool crit = i.CriticalThreshold > 0 && i.Quantity <= i.CriticalThreshold;
+                return new StockpileAlertDto(
+                    s.Id, s.Name, names.GetValueOrDefault(s.RegimentId, "?"), s.RegimentId == myRegId,
+                    s.Hex, s.Town, s.Type,
+                    i.Code, i.Name, i.Category, i.Quantity, i.LowThreshold, i.CriticalThreshold,
+                    crit ? "critical" : "low");
+            })
+            .OrderBy(a => a.Severity == "critical" ? 0 : 1).ThenBy(a => a.Name)
+            .ToList();
+            return Results.Ok(alerts);
+        }).RequireAuthorization();
     }
 
     private static async Task<List<StockpileItemDto>> ItemsAsync(AppDbContext db, string stockpileId) =>

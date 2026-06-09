@@ -80,6 +80,26 @@
                            Margin="4,4,0,18"/>
 
                 <StackPanel DockPanel.Dock="Top">
+                    <Button Click="OnNavDashboard">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDashboardActive}" Value="True">
+                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📊  Dashboard" VerticalAlignment="Center"/>
+                            <Border Background="#FFC03A3A" CornerRadius="9" Padding="6,1" Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding Stockpiles.HasCritical, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding Stockpiles.CriticalCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                            </Border>
+                        </StackPanel>
+                    </Button>
                     <Button Content="👤  Profil" Click="OnNavProfile">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
@@ -152,6 +172,78 @@
 
         <!-- Contenu -->
         <Grid Grid.Column="1" Margin="20">
+
+            <!-- ====================== TABLEAU DE BORD ====================== -->
+            <Grid Visibility="{Binding IsDashboardActive, Converter={StaticResource BoolToVis}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                    <TextBlock Text="Tableau de bord" FontSize="22" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Stockpiles.AlertsSummary}" Foreground="#FF9AA4B2" FontSize="13" Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <!-- Non connecté -->
+                <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam (onglet Amis) pour voir tes alertes."
+                           Foreground="#FF6B7280" FontSize="14"
+                           Visibility="{Binding Stockpiles.ShowAuthNeeded, Converter={StaticResource BoolToVis}}"/>
+
+                <!-- Alertes -->
+                <Grid Grid.Row="1" Visibility="{Binding Stockpiles.Authed, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="Aucune alerte. Définis des seuils bas/critique sur tes items (onglet Stockpiles) pour les voir apparaître ici."
+                               Foreground="#FF6B7280" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Top"
+                               Visibility="{Binding Stockpiles.NoAlerts, Converter={StaticResource BoolToVis}}"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding Stockpiles.HasAlerts, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl ItemsSource="{Binding Stockpiles.AlertsView}">
+                            <ItemsControl.GroupStyle>
+                                <GroupStyle>
+                                    <GroupStyle.HeaderTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="0,12,0,6">
+                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" Foreground="#FFE6E6E6"/>
+                                                <TextBlock Text="{Binding ItemCount, StringFormat=' ({0})'}" FontSize="14" Foreground="#FF9AA4B2"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </GroupStyle.HeaderTemplate>
+                                </GroupStyle>
+                            </ItemsControl.GroupStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FF20242C" CornerRadius="8" Margin="0,0,0,6">
+                                        <Grid>
+                                            <Border Width="4" HorizontalAlignment="Left" Background="{Binding SeverityBrush}"
+                                                    CornerRadius="8,0,0,8"/>
+                                            <DockPanel Margin="14,8,12,8">
+                                                <Grid Width="36" Height="36" DockPanel.Dock="Left" Margin="0,0,12,0" VerticalAlignment="Center">
+                                                    <Border Background="#FF1B1E24" CornerRadius="6"/>
+                                                    <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontWeight="Bold"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Image Source="{Binding Icon}" Width="34" Height="34"
+                                                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                </Grid>
+                                                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
+                                                    <TextBlock Text="{Binding QuantityText}" FontWeight="Bold" FontSize="17"
+                                                               Foreground="{Binding SeverityBrush}" TextAlignment="Right"/>
+                                                    <TextBlock Text="{Binding ThresholdText}" Foreground="#FF6B7280" FontSize="10"
+                                                               TextAlignment="Right"/>
+                                                </StackPanel>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding LocationLabel}" Foreground="#FF9AA4B2" FontSize="11"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
 
             <!-- ====================== PROFIL ====================== -->
             <Grid Visibility="{Binding IsProfileActive, Converter={StaticResource BoolToVis}}">

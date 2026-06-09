@@ -46,13 +46,32 @@ public sealed class StockpilesViewModel : ObservableObject
 
     public ObservableCollection<StockpileItemViewModel> Stockpiles { get; } = new();
     public ObservableCollection<StockpileLineViewModel> Items { get; } = new();
+    public ObservableCollection<StockpileAlertViewModel> Alerts { get; } = new();
     public ICollectionView ItemsView { get; }
+    public ICollectionView AlertsView { get; }
     public IReadOnlyList<string> ItemNames { get; } = FoxholeItemCatalog.Names;
 
     public StockpilesViewModel()
     {
         ItemsView = CollectionViewSource.GetDefaultView(Items);
         ItemsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(StockpileLineViewModel.CategoryLabel)));
+        AlertsView = CollectionViewSource.GetDefaultView(Alerts);
+        AlertsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(StockpileAlertViewModel.SeverityGroup)));
+    }
+
+    public int CriticalCount => Alerts.Count(a => a.IsCritical);
+    public int LowCount => Alerts.Count(a => !a.IsCritical);
+    public bool HasAlerts => Alerts.Count > 0;
+    public bool NoAlerts => Alerts.Count == 0;
+    public bool HasCritical => CriticalCount > 0;
+    public string AlertsSummary => Authed
+        ? (HasAlerts ? $"{CriticalCount} critique(s) · {LowCount} bas" : "Aucune alerte — tout est au-dessus des seuils. ✅")
+        : "Connecte-toi pour voir tes alertes.";
+
+    private void RaiseAlertFlags()
+    {
+        Raise(nameof(CriticalCount)); Raise(nameof(LowCount));
+        Raise(nameof(HasAlerts)); Raise(nameof(NoAlerts)); Raise(nameof(HasCritical)); Raise(nameof(AlertsSummary));
     }
 
     public bool IsStockpileSelected => _selectedId is not null;
@@ -163,6 +182,8 @@ public sealed class StockpilesViewModel : ObservableObject
         _client = null;
         Authed = false;
         Stockpiles.Clear();
+        Alerts.Clear();
+        RaiseAlertFlags();
         CloseDetail();
         Raise(nameof(HasNoStockpiles));
         Status = "Connecte-toi avec Steam (onglet Amis).";
@@ -187,11 +208,28 @@ public sealed class StockpilesViewModel : ObservableObject
             ApplyList(await _client.GetListAsync());
             if (IsStockpileSelected)
                 await LoadItemsAsync();
+            await LoadAlertsAsync();
             Status = HasRegiment ? $"{Stockpiles.Count} stockpile(s)." : "Rejoins un régiment pour gérer des stockpiles.";
         }
         catch (AuthRequiredException) { ClearAuth(); }
         catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
         finally { Busy = false; }
+    }
+
+    private async Task LoadAlertsAsync()
+    {
+        if (_client is null)
+            return;
+        try
+        {
+            var list = await _client.GetAlertsAsync();
+            Alerts.Clear();
+            foreach (var a in list)
+                Alerts.Add(new StockpileAlertViewModel(a));
+            RaiseAlertFlags();
+        }
+        catch (AuthRequiredException) { ClearAuth(); }
+        catch { /* les alertes ne doivent pas bloquer le reste */ }
     }
 
     private void ApplyList(List<StockpileDto> list)

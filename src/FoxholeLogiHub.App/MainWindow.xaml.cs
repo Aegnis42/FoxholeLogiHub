@@ -58,6 +58,7 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 
+    private void OnNavDashboard(object sender, RoutedEventArgs e) => _vm.ShowDashboard();
     private void OnNavProfile(object sender, RoutedEventArgs e) => _vm.ShowProfile();
     private void OnNavFriends(object sender, RoutedEventArgs e) => _vm.ShowFriends();
     private void OnNavRegiment(object sender, RoutedEventArgs e) => _vm.ShowRegiment();

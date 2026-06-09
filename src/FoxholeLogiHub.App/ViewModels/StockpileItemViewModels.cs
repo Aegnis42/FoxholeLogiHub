@@ -103,6 +103,55 @@ public sealed class StockpileItemViewModel : ObservableObject
     public bool ShowForeignRegiment => !IsOwn;
 }
 
+/// <summary>Chargement des icônes d'items (bundle FIR, <c>Data/icons/&lt;code&gt;.png</c>, variante <c>-crated</c>).</summary>
+public static class ItemIcons
+{
+    public static ImageSource? Load(string code)
+    {
+        try
+        {
+            string dir = System.IO.Path.Combine(AppContext.BaseDirectory, "Data", "icons");
+            string name = code.EndsWith("@crate", StringComparison.Ordinal) ? code[..^6] + "-crated" : code;
+            string path = System.IO.Path.Combine(dir, name + ".png");
+            if (!System.IO.File.Exists(path) && code.EndsWith("@crate", StringComparison.Ordinal))
+                path = System.IO.Path.Combine(dir, code[..^6] + ".png");
+            if (!System.IO.File.Exists(path))
+                return null;
+
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.UriSource = new Uri(path);
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}
+
+/// <summary>Libellés FR des catégories FIR (sinon le code brut).</summary>
+public static class ItemCategories
+{
+    public static string Label(string category) => category switch
+    {
+        "SmallArms" => "Armes légères",
+        "HeavyArms" => "Armes lourdes",
+        "HeavyAmmo" => "Munitions lourdes",
+        "Medical" => "Médical",
+        "Supplies" => "Ravitaillement",
+        "Uniforms" => "Uniformes",
+        "Utility" => "Utilitaire",
+        "Parts" => "Pièces",
+        "Vehicles" => "Véhicules",
+        "" or "Autres" => "Autres",
+        _ => category,
+    };
+}
+
 /// <summary>Une ligne/carte d'item dans le détail d'un stockpile (icône, quantité, statut de stock).</summary>
 public sealed class StockpileLineViewModel : ObservableObject
 {
@@ -115,7 +164,7 @@ public sealed class StockpileLineViewModel : ObservableObject
         Low = dto.LowThreshold;
         Critical = dto.CriticalThreshold;
         CanManage = canManage;
-        Icon = LoadIcon(Code);
+        Icon = ItemIcons.Load(Code);
     }
 
     public string Code { get; }
@@ -128,7 +177,7 @@ public sealed class StockpileLineViewModel : ObservableObject
     public ImageSource? Icon { get; }
 
     public string QuantityText => Quantity.ToString("N0");
-    public string CategoryLabel => string.IsNullOrEmpty(Category) ? "Autres" : Category;
+    public string CategoryLabel => ItemCategories.Label(Category);
     public string Initial => string.IsNullOrEmpty(Name) ? "?" : Name[..1].ToUpperInvariant();
 
     /// <summary>"critical" | "low" | "good" | "" (aucun seuil défini).</summary>
@@ -155,30 +204,63 @@ public sealed class StockpileLineViewModel : ObservableObject
         "good" => new SolidColorBrush(Color.FromRgb(0x3A, 0x8A, 0x4F)),
         _ => new SolidColorBrush(Color.FromRgb(0x3A, 0x41, 0x4C)),
     };
+}
 
-    private static ImageSource? LoadIcon(string code)
+/// <summary>Une alerte de stock (item sous seuil) affichée dans le tableau de bord.</summary>
+public sealed class StockpileAlertViewModel : ObservableObject
+{
+    public StockpileAlertViewModel(StockpileAlertDto a)
     {
-        try
-        {
-            string dir = System.IO.Path.Combine(AppContext.BaseDirectory, "Data", "icons");
-            string name = code.EndsWith("@crate", StringComparison.Ordinal) ? code[..^6] + "-crated" : code;
-            string path = System.IO.Path.Combine(dir, name + ".png");
-            if (!System.IO.File.Exists(path) && code.EndsWith("@crate", StringComparison.Ordinal))
-                path = System.IO.Path.Combine(dir, code[..^6] + ".png");
-            if (!System.IO.File.Exists(path))
-                return null;
+        Code = a.Code;
+        Name = a.Name;
+        Category = a.Category;
+        StockpileName = a.StockpileName;
+        RegimentName = a.RegimentName;
+        IsOwn = a.IsOwn;
+        Hex = a.Hex;
+        Town = a.Town;
+        Quantity = a.Quantity;
+        Low = a.LowThreshold;
+        Critical = a.CriticalThreshold;
+        Severity = a.Severity;
+        Icon = ItemIcons.Load(Code);
+    }
 
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.CacheOption = BitmapCacheOption.OnLoad;
-            bmp.UriSource = new Uri(path);
-            bmp.EndInit();
-            bmp.Freeze();
-            return bmp;
-        }
-        catch
+    public string Code { get; }
+    public string Name { get; }
+    public string Category { get; }
+    public string StockpileName { get; }
+    public string RegimentName { get; }
+    public bool IsOwn { get; }
+    public string Hex { get; }
+    public string Town { get; }
+    public int Quantity { get; }
+    public int Low { get; }
+    public int Critical { get; }
+    public string Severity { get; }
+    public ImageSource? Icon { get; }
+
+    public bool IsCritical => Severity == "critical";
+    public string Initial => string.IsNullOrEmpty(Name) ? "?" : Name[..1].ToUpperInvariant();
+    public string QuantityText => Quantity.ToString("N0");
+    public string CategoryLabel => ItemCategories.Label(Category);
+
+    // En-tête de groupe (ordre : critiques d'abord via le tri côté serveur/collection).
+    public string SeverityGroup => IsCritical ? "🔴 Critique" : "🟠 Bas";
+    public string SeverityLabel => IsCritical ? "Critique" : "Bas";
+    public string ThresholdText => IsCritical ? $"seuil critique ≤ {Critical:N0}" : $"seuil bas ≤ {Low:N0}";
+
+    public string LocationLabel
+    {
+        get
         {
-            return null;
+            string loc = string.IsNullOrEmpty(Town) ? Hex : $"{Hex} · {Town}";
+            string place = $"{StockpileName} — {loc}";
+            return IsOwn ? place : $"{place}  ({RegimentName})";
         }
     }
+
+    public Brush SeverityBrush => IsCritical
+        ? new SolidColorBrush(Color.FromRgb(0xC0, 0x3A, 0x3A))
+        : new SolidColorBrush(Color.FromRgb(0xC8, 0x8A, 0x2E));
 }

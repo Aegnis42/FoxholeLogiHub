@@ -42,3 +42,13 @@ public sealed record SetStockpileItemRequest(string StockpileId, string Code, st
 
 /// <summary>Remplace tout le contenu d'un stockpile (utilisé par l'import auto/capture).</summary>
 public sealed record ImportStockpileItemsRequest(string StockpileId, List<StockpileItemDto> Items);
+
+/// <summary>
+/// Une alerte de stock (item sous son seuil) pour le tableau de bord, avec le contexte du stockpile.
+/// <see cref="Severity"/> = "critical" (qty ≤ seuil critique) ou "low" (qty ≤ seuil bas).
+/// </summary>
+public sealed record StockpileAlertDto(
+    string StockpileId, string StockpileName, string RegimentName, bool IsOwn,
+    string Hex, string Town, string Type,
+    string Code, string Name, string Category,
+    int Quantity, int LowThreshold, int CriticalThreshold, string Severity);
