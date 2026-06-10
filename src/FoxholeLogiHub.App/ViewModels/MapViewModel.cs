@@ -232,6 +232,9 @@ public sealed class MapPinViewModel
         + (Stockpile.IsThreatened ? $"\n{Stockpile.ThreatLabel}" : "");
 }
 
+/// <summary>Demande de placement venant de l'onglet Stockpiles (création hors port/dépôt).</summary>
+public sealed record PendingMapPick(string Name, string Hex, string Town, string Type, string Code, bool IsPublic);
+
 /// <summary>
 /// Carte interactive du monde : 53 hexagones (HexLayout) colorés par le contrôle réel des villes
 /// (API War, cache serveur), points de villes, pins des stockpiles visibles, panneau de détail.
@@ -346,6 +349,7 @@ public sealed class MapViewModel : ObservableObject
         Towns.Clear();
         Pins.Clear();
         CancelPlacement();
+        CancelPick();
         Select(null);
         Status = "Connecte-toi avec Steam.";
     }
@@ -597,6 +601,68 @@ public sealed class MapViewModel : ObservableObject
             }
             perHex[hex.Map] = perHex.GetValueOrDefault(hex.Map) + 1;
             Pins.Add(new MapPinViewModel(s, hex, x, y));
+        }
+    }
+
+    // ---------- Choix d'emplacement demandé par l'onglet Stockpiles ----------
+
+    private PendingMapPick? _pick;
+
+    public bool PickActive => _pick is not null;
+    public string PickBanner => _pick is null ? "" : $"📍 Clique sur la carte pour placer « {_pick.Name} »";
+
+    /// <summary>La vue doit zoomer sur cet hexagone (le ViewModel ne possède pas les transforms).</summary>
+    public event Action<MapHexViewModel>? FocusHexRequested;
+
+    /// <summary>Le stockpile demandé par l'onglet Stockpiles a été créé.</summary>
+    public event Action? PickCompleted;
+
+    public void BeginPickPosition(PendingMapPick pick)
+    {
+        CancelPlacement(); // pas deux formulaires en même temps
+        _pick = pick;
+        Raise(nameof(PickActive));
+        Raise(nameof(PickBanner));
+
+        var hex = FindHex(pick.Hex);
+        if (hex is not null)
+        {
+            Select(hex);
+            FocusHexRequested?.Invoke(hex);
+        }
+    }
+
+    public void CancelPick()
+    {
+        _pick = null;
+        Raise(nameof(PickActive));
+        Raise(nameof(PickBanner));
+    }
+
+    /// <summary>Clic sur la carte en mode choix : crée le stockpile à cet endroit précis.</summary>
+    public async Task CompletePickAsync(MapHexViewModel hex, double relX, double relY)
+    {
+        if (_pick is null || _client is null)
+            return;
+        var pick = _pick;
+        relX = Math.Clamp(relX, 0, 1);
+        relY = Math.Clamp(relY, 0, 1);
+        string town = pick.Town.Length > 0 ? pick.Town : NearestTownName(hex, relX, relY);
+        try
+        {
+            await _client.CreateAsync(new CreateStockpileRequest(
+                pick.Name, hex.Display, town, pick.Type, pick.Code, pick.IsPublic, relX, relY));
+            CancelPick();
+            Status = $"Stockpile « {pick.Name} » placé 📍";
+            PickCompleted?.Invoke();
+            if (_stockpiles is not null)
+                await _stockpiles.RefreshAsync();
+            await RefreshAsync();
+            Select(hex);
+        }
+        catch (Exception ex)
+        {
+            Status = $"Création impossible : {ex.Message}";
         }
     }
 

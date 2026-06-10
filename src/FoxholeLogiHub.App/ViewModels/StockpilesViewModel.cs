@@ -358,6 +358,9 @@ public sealed class StockpilesViewModel : ObservableObject
         }
     }
 
+    /// <summary>Création hors port/dépôt : on bascule sur la carte pour choisir l'emplacement à la main.</summary>
+    public event Action<PendingMapPick>? PlaceOnMapRequested;
+
     public async Task SubmitFormAsync()
     {
         if (_client is null || Busy)
@@ -365,6 +368,16 @@ public sealed class StockpilesViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(FormName) || string.IsNullOrWhiteSpace(FormHex))
         {
             Status = "Nom et hexagone requis.";
+            return;
+        }
+
+        // Bunker, base de prod, usine… : structures construites/de terrain → l'emplacement précis
+        // compte, on le choisit sur la carte (les ports/dépôts restent ancrés à leur ville).
+        if (_editingId is null && !StockpileTypes.UsesCode(FormType))
+        {
+            Status = "Choisis l'emplacement sur la carte 📍";
+            PlaceOnMapRequested?.Invoke(new PendingMapPick(
+                FormName.Trim(), FormHex.Trim(), FormTown.Trim(), FormType, "", FormIsPublic));
             return;
         }
 
@@ -383,6 +396,13 @@ public sealed class StockpilesViewModel : ObservableObject
         catch (AuthRequiredException) { ClearAuth(); }
         catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
         finally { Busy = false; }
+    }
+
+    /// <summary>Le stockpile a été créé via la carte : on solde le formulaire.</summary>
+    public void OnPlacedExternally()
+    {
+        CancelEdit();
+        Status = "Stockpile placé sur la carte 📍";
     }
 
     public void EditStockpile(StockpileItemViewModel s)

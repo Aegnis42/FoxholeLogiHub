@@ -49,6 +49,17 @@ public partial class MainWindow : Window
             if (_mapViewInitialized && !_mapUserInteracted)
                 ResetMapView();
         };
+        // L'onglet Stockpiles demande un placement : zoom sur l'hexagone choisi.
+        // On attend que le viewport soit mesuré (l'onglet vient d'apparaître) et on bloque
+        // le re-cadrage automatique, sinon il écrase le zoom.
+        _vm.Map.FocusHexRequested += async hex =>
+        {
+            _mapViewInitialized = true;
+            _mapUserInteracted = true;
+            for (int i = 0; i < 30 && MapViewport.ActualWidth <= 0; i++)
+                await System.Threading.Tasks.Task.Delay(50);
+            ZoomToHex(hex);
+        };
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -255,15 +266,9 @@ public partial class MainWindow : Window
             return;
 
         // Clic simple : la souris est capturée, donc on hit-teste manuellement sous le curseur.
-        var hit = VisualTreeHelper.HitTest(MapRoot, e.GetPosition(MapRoot));
+        var pos = e.GetPosition(MapRoot);
+        var hit = VisualTreeHelper.HitTest(MapRoot, pos);
         object? data = (hit?.VisualHit as FrameworkElement)?.DataContext;
-
-        // Clic sur un port/dépôt de stockage : proposer d'y rattacher un stockpile privé.
-        if (data is MapStructViewModel str && str.CanHostStockpile)
-        {
-            _vm.Map.BeginPlacement(str.Hex, str.RelX, str.RelY, str.HostType);
-            return;
-        }
 
         MapHexViewModel? hex = data switch
         {
@@ -274,6 +279,22 @@ public partial class MainWindow : Window
             MapStructViewModel s => s.Hex,
             _ => null,
         };
+
+        // Mode « choisir l'emplacement » (création lancée depuis l'onglet Stockpiles).
+        if (_vm.Map.PickActive)
+        {
+            if (hex is not null)
+                _ = _vm.Map.CompletePickAsync(hex, (pos.X - hex.X) / hex.W, (pos.Y - hex.Y) / hex.H);
+            return;
+        }
+
+        // Clic sur un port/dépôt de stockage : proposer d'y rattacher un stockpile privé.
+        if (data is MapStructViewModel str && str.CanHostStockpile)
+        {
+            _vm.Map.BeginPlacement(str.Hex, str.RelX, str.RelY, str.HostType);
+            return;
+        }
+
         if (hex is not null)
         {
             _vm.Map.Select(hex);
@@ -322,6 +343,7 @@ public partial class MainWindow : Window
 
     private async void OnMapPlacementCreate(object sender, RoutedEventArgs e) => await _vm.Map.ConfirmPlacementAsync();
     private void OnMapPlacementCancel(object sender, RoutedEventArgs e) => _vm.Map.CancelPlacement();
+    private void OnMapPickCancel(object sender, RoutedEventArgs e) => _vm.Map.CancelPick();
 
     private void OnNavDashboard(object sender, RoutedEventArgs e) => _vm.ShowDashboard();
     private void OnNavProfile(object sender, RoutedEventArgs e) => _vm.ShowProfile();

@@ -1795,6 +1795,18 @@
                       </Canvas>
                     </Border>
 
+                    <!-- Bandeau du mode « choisir l'emplacement » -->
+                    <Border Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0"
+                            Background="#F01E2530" CornerRadius="6" Padding="14,8" BorderBrush="#FF4A90D9" BorderThickness="1"
+                            Visibility="{Binding Map.PickActive, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Map.PickBanner}" Foreground="White" FontSize="12.5"
+                                       FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <Button Content="Annuler" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                    Padding="10,4" Margin="12,0,0,0" Click="OnMapPickCancel"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Légende -->
                     <Border Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10"
                             Background="#D915181E" CornerRadius="6" Padding="10,6" IsHitTestVisible="False">

@@ -14,6 +14,7 @@ public sealed class MainViewModel : ObservableObject
 {
     private readonly AccountService _accountService = new();
     private Account? _account;
+    private bool _mapPickWired;
 
     private string _status = "";
     private bool _hasData;
@@ -172,6 +173,19 @@ public sealed class MainViewModel : ObservableObject
             Stockpiles.Initialize(Regiment, Companion);
             Resupply.Initialize(Regiment, Stockpiles);
             Map.Initialize(Stockpiles, Resupply);
+
+            // Création hors port/dépôt depuis l'onglet Stockpiles → placement à la main sur la carte.
+            if (!_mapPickWired)
+            {
+                _mapPickWired = true;
+                Stockpiles.PlaceOnMapRequested += pick =>
+                {
+                    ShowMap();
+                    Map.BeginPickPosition(pick);
+                };
+                Map.PickCompleted += () => Stockpiles.OnPlacedExternally();
+            }
+
             Companion.EnsureStarted();
             _ = Friends.InitializeAsync(_account);
         }
