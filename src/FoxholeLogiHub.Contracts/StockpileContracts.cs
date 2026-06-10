@@ -9,17 +9,21 @@ public static class StockpileTypes
     public const string ProductionBase = "ProductionBase";
     public const string Seaport = "Seaport";
     public const string StorageDepot = "StorageDepot";
+    public const string Bunker = "Bunker";
 
     public static readonly string[] All =
     {
-        StorageDepot, Seaport, Factory, MassProductionFactory, Refinery, ProductionBase,
+        StorageDepot, Seaport, Factory, MassProductionFactory, Refinery, ProductionBase, Bunker,
     };
 
     /// <summary>Un code (mot de passe) ne s'applique qu'aux Port et Dépôt.</summary>
     public static bool UsesCode(string type) => type is Seaport or StorageDepot;
 }
 
-public sealed record CreateStockpileRequest(string Name, string Hex, string Town, string Type, string Code, bool IsPublic);
+/// <summary><see cref="MapX"/>/<see cref="MapY"/> : position 0..1 dans la boîte englobante de
+/// l'hexagone (posée depuis la carte) — null si le stockpile n'a pas été placé sur la carte.</summary>
+public sealed record CreateStockpileRequest(string Name, string Hex, string Town, string Type, string Code, bool IsPublic,
+    double? MapX = null, double? MapY = null);
 public sealed record UpdateStockpileRequest(string Id, string Name, string Hex, string Town, string Type, string Code, bool IsPublic);
 public sealed record DeleteStockpileRequest(string Id);
 public sealed record ShareStockpileRequest(string StockpileId, string RegimentId);
@@ -37,7 +41,7 @@ public sealed record UnshareStockpileRequest(string StockpileId, string Regiment
 public sealed record StockpileDto(
     string Id, string RegimentId, string RegimentName, string Name, string Hex, string Town,
     string Type, string Code, bool IsPublic, bool IsOwn, bool CanManage, List<string> SharedRegimentIds,
-    string TownControl, bool TownScorched);
+    string TownControl, bool TownScorched, double? MapX, double? MapY);
 
 /// <summary>Un item d'un stockpile (quantité + seuils d'alerte). Name/Category dénormalisés.</summary>
 public sealed record StockpileItemDto(string Code, string Name, string Category, int Quantity, int LowThreshold, int CriticalThreshold);

@@ -257,6 +257,14 @@ public partial class MainWindow : Window
         // Clic simple : la souris est capturée, donc on hit-teste manuellement sous le curseur.
         var hit = VisualTreeHelper.HitTest(MapRoot, e.GetPosition(MapRoot));
         object? data = (hit?.VisualHit as FrameworkElement)?.DataContext;
+
+        // Clic sur un port/dépôt de stockage : proposer d'y rattacher un stockpile privé.
+        if (data is MapStructViewModel str && str.CanHostStockpile)
+        {
+            _vm.Map.BeginPlacement(str.Hex, str.RelX, str.RelY, str.HostType);
+            return;
+        }
+
         MapHexViewModel? hex = data switch
         {
             MapHexViewModel h => h,
@@ -272,6 +280,48 @@ public partial class MainWindow : Window
             ZoomToHex(hex); // clic = focus sur la région avec ses détails
         }
     }
+
+    /// <summary>Clic droit : poser un stockpile à cet endroit (bunker / base de production).</summary>
+    private void OnMapRightClick(object sender, MouseButtonEventArgs e)
+    {
+        var pos = e.GetPosition(MapRoot);
+        var hit = VisualTreeHelper.HitTest(MapRoot, pos);
+        object? data = (hit?.VisualHit as FrameworkElement)?.DataContext;
+        MapHexViewModel? hex = data switch
+        {
+            MapHexViewModel h => h,
+            MapCellViewModel c => c.Hex,
+            MapTownViewModel t => t.Hex,
+            MapPinViewModel p => p.Hex,
+            MapStructViewModel s => s.Hex,
+            _ => null,
+        };
+        if (hex is null)
+            return;
+        e.Handled = true;
+
+        double relX = (pos.X - hex.X) / hex.W;
+        double relY = (pos.Y - hex.Y) / hex.H;
+
+        var menu = new ContextMenu();
+        if (data is MapStructViewModel st && st.CanHostStockpile)
+        {
+            var host = new MenuItem { Header = $"➕ Stockpile privé sur ce {(st.Icon == 52 ? "port" : "dépôt")}" };
+            host.Click += (_, _) => _vm.Map.BeginPlacement(st.Hex, st.RelX, st.RelY, st.HostType);
+            menu.Items.Add(host);
+            menu.Items.Add(new Separator());
+        }
+        var bunker = new MenuItem { Header = "🛡 Poser un bunker ici" };
+        bunker.Click += (_, _) => _vm.Map.BeginPlacement(hex, relX, relY, StockpileTypes.Bunker);
+        menu.Items.Add(bunker);
+        var prod = new MenuItem { Header = "🏗 Poser une base de production ici" };
+        prod.Click += (_, _) => _vm.Map.BeginPlacement(hex, relX, relY, StockpileTypes.ProductionBase);
+        menu.Items.Add(prod);
+        menu.IsOpen = true;
+    }
+
+    private async void OnMapPlacementCreate(object sender, RoutedEventArgs e) => await _vm.Map.ConfirmPlacementAsync();
+    private void OnMapPlacementCancel(object sender, RoutedEventArgs e) => _vm.Map.CancelPlacement();
 
     private void OnNavDashboard(object sender, RoutedEventArgs e) => _vm.ShowDashboard();
     private void OnNavProfile(object sender, RoutedEventArgs e) => _vm.ShowProfile();

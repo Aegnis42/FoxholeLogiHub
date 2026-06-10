@@ -130,6 +130,9 @@ public sealed class MapStructViewModel
     public MapStructViewModel(MapHexViewModel hex, WarMapStructDto s)
     {
         Hex = hex;
+        Icon = s.Icon;
+        RelX = s.X;
+        RelY = s.Y;
         var (glyph, label) = Types.TryGetValue(s.Icon, out var t) ? t : ("•", $"Structure {s.Icon}");
         Glyph = glyph;
         Label = label;
@@ -144,12 +147,19 @@ public sealed class MapStructViewModel
     }
 
     public MapHexViewModel Hex { get; }
+    public int Icon { get; }
+    public double RelX { get; }
+    public double RelY { get; }
     public string Glyph { get; }
     public string Label { get; }
     public double X { get; }
     public double Y { get; }
     public Brush TeamBrush { get; }
     public string Tooltip { get; }
+
+    /// <summary>Port ou dépôt de stockage : on peut y rattacher un stockpile d'un clic.</summary>
+    public bool CanHostStockpile => Icon is 33 or 52;
+    public string HostType => Icon == 52 ? StockpileTypes.Seaport : StockpileTypes.StorageDepot;
 }
 
 /// <summary>Un point « ville » sur la carte (position canvas absolue).</summary>
@@ -206,6 +216,18 @@ public sealed class MapPinViewModel
     public double X { get; }
     public double Y { get; }
     public bool IsThreatened => Stockpile.IsThreatened;
+
+    public string Glyph => Stockpile.Type switch
+    {
+        StockpileTypes.Bunker => "🛡",
+        StockpileTypes.ProductionBase => "🏗",
+        StockpileTypes.Factory => "🏭",
+        StockpileTypes.MassProductionFactory => "⚙",
+        StockpileTypes.Refinery => "🛢",
+        StockpileTypes.Seaport => "⚓",
+        _ => "📦",
+    };
+
     public string Tooltip => $"{Stockpile.Name} ({Stockpile.TypeLabel}) — {Stockpile.LocationLabel}"
         + (Stockpile.IsThreatened ? $"\n{Stockpile.ThreatLabel}" : "");
 }
@@ -323,6 +345,7 @@ public sealed class MapViewModel : ObservableObject
         Authed = false;
         Towns.Clear();
         Pins.Clear();
+        CancelPlacement();
         Select(null);
         Status = "Connecte-toi avec Steam.";
     }
@@ -553,10 +576,15 @@ public sealed class MapViewModel : ObservableObject
             if (hex is null)
                 continue;
 
-            // Ancrage : la ville correspondante si on la connaît, sinon le centre (en éventail).
+            // Ancrage : la position exacte si posé depuis la carte, sinon la ville, sinon le centre.
             double x, y;
             var town = Towns.FirstOrDefault(t => t.Hex == hex && Norm(t.Name) == Norm(s.Town));
-            if (town is not null)
+            if (s.MapX is double mx && s.MapY is double my)
+            {
+                x = hex.X + mx * hex.W;
+                y = hex.Y + my * hex.H;
+            }
+            else if (town is not null)
             {
                 x = town.X;
                 y = town.Y;
@@ -570,6 +598,103 @@ public sealed class MapViewModel : ObservableObject
             perHex[hex.Map] = perHex.GetValueOrDefault(hex.Map) + 1;
             Pins.Add(new MapPinViewModel(s, hex, x, y));
         }
+    }
+
+    // ---------- Pose d'un stockpile depuis la carte ----------
+
+    private MapHexViewModel? _placeHex;
+    private double _placeRelX, _placeRelY;
+    private string _placeType = "";
+    private string _placeTown = "";
+    private string _placementName = "";
+    private string _placementCode = "";
+
+    public bool PlacementActive => _placeHex is not null;
+    public string PlacementTitle { get; private set; } = "";
+    public string PlacementInfo { get; private set; } = "";
+    public string PlacementName { get => _placementName; set => Set(ref _placementName, value); }
+    public string PlacementCode { get => _placementCode; set => Set(ref _placementCode, value); }
+    public bool PlacementUsesCode => StockpileTypes.UsesCode(_placeType);
+
+    /// <summary>Ouvre le formulaire de pose (clic droit sur la carte ou clic sur un port/dépôt).</summary>
+    public void BeginPlacement(MapHexViewModel hex, double relX, double relY, string type)
+    {
+        _placeHex = hex;
+        _placeRelX = Math.Clamp(relX, 0, 1);
+        _placeRelY = Math.Clamp(relY, 0, 1);
+        _placeType = type;
+        _placeTown = NearestTownName(hex, _placeRelX, _placeRelY);
+
+        string typeLabel = StockpileCatalog.Label(type);
+        PlacementTitle = $"➕ Nouveau stockpile : {typeLabel}";
+        PlacementInfo = hex.Display
+            + (_placeTown.Length > 0 ? $" · {_placeTown}" : "")
+            + " — privé (visibilité modifiable dans l'onglet Stockpiles).";
+        PlacementName = _placeTown.Length > 0 ? $"{typeLabel} — {_placeTown}" : $"{typeLabel} — {hex.Display}";
+        PlacementCode = "";
+        RaisePlacement();
+        Select(hex);
+    }
+
+    public void CancelPlacement()
+    {
+        _placeHex = null;
+        RaisePlacement();
+    }
+
+    public async Task ConfirmPlacementAsync()
+    {
+        if (_placeHex is null || _client is null)
+            return;
+        if (string.IsNullOrWhiteSpace(PlacementName))
+        {
+            Status = "Donne un nom au stockpile.";
+            return;
+        }
+        var hex = _placeHex;
+        try
+        {
+            await _client.CreateAsync(new CreateStockpileRequest(
+                PlacementName.Trim(), hex.Display, _placeTown, _placeType,
+                PlacementUsesCode ? PlacementCode.Trim() : "", IsPublic: false,
+                _placeRelX, _placeRelY));
+            _placeHex = null;
+            RaisePlacement();
+            Status = $"Stockpile « {PlacementName.Trim()} » créé 📦";
+            if (_stockpiles is not null)
+                await _stockpiles.RefreshAsync(); // recharge la liste → le pin apparaît au refresh carte
+            await RefreshAsync();
+            Select(hex);
+        }
+        catch (Exception ex)
+        {
+            Status = $"Création impossible : {ex.Message}";
+        }
+    }
+
+    private void RaisePlacement()
+    {
+        Raise(nameof(PlacementActive));
+        Raise(nameof(PlacementTitle));
+        Raise(nameof(PlacementInfo));
+        Raise(nameof(PlacementName));
+        Raise(nameof(PlacementCode));
+        Raise(nameof(PlacementUsesCode));
+    }
+
+    private string NearestTownName(MapHexViewModel hex, double relX, double relY)
+    {
+        double px = hex.X + relX * hex.W, py = hex.Y + relY * hex.H;
+        MapTownViewModel? best = null;
+        double bd = double.MaxValue;
+        foreach (var t in Towns)
+        {
+            if (t.Hex != hex)
+                continue;
+            double d = (t.X - px) * (t.X - px) + (t.Y - py) * (t.Y - py);
+            if (d < bd) { bd = d; best = t; }
+        }
+        return best?.Name ?? "";
     }
 
     // ---------- Sélection ----------

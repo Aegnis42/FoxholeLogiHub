@@ -41,6 +41,8 @@ public static class StockpileEndpoints
                 Type = req.Type,
                 Code = StockpileTypes.UsesCode(req.Type) ? Validate.Str(req.Code, 16) : "",
                 IsPublic = req.IsPublic,
+                MapX = req.MapX is double x ? Math.Clamp(x, 0, 1) : null,
+                MapY = req.MapY is double y ? Math.Clamp(y, 0, 1) : null,
                 CreatedBySteamId = me,
                 CreatedAt = now,
                 UpdatedAt = now,
@@ -353,7 +355,7 @@ public static class StockpileEndpoints
             string control = WarStateService.ControlFor(town, myFaction);
             return new StockpileDto(s.Id, s.RegimentId, names.GetValueOrDefault(s.RegimentId, "?"),
                 s.Name, s.Hex, s.Town, s.Type, s.Code, s.IsPublic, isOwn, isOwn && canManage, sharedIds,
-                control, town?.Scorched ?? false);
+                control, town?.Scorched ?? false, s.MapX, s.MapY);
         })
         .OrderByDescending(d => d.IsOwn).ThenBy(d => d.Hex).ThenBy(d => d.Name)
         .ToList();

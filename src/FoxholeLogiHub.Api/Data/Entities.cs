@@ -94,6 +94,9 @@ public sealed class Stockpile
     public string Type { get; set; } = "";
     public string Code { get; set; } = "";   // mot de passe (Port/Dépôt seulement)
     public bool IsPublic { get; set; }
+    // Position 0..1 dans la boîte englobante de l'hexagone (stockpile posé depuis la carte), null sinon.
+    public double? MapX { get; set; }
+    public double? MapY { get; set; }
     public string CreatedBySteamId { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

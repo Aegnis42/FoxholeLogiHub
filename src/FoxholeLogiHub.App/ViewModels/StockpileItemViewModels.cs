@@ -18,6 +18,7 @@ public static class StockpileCatalog
         (StockpileTypes.MassProductionFactory, "MPF"),
         (StockpileTypes.Refinery, "Raffinerie"),
         (StockpileTypes.ProductionBase, "Base de prod."),
+        (StockpileTypes.Bunker, "Bunker"),
     };
 
     public static string Label(string type) => Types.FirstOrDefault(t => t.Value == type).Label ?? type;
@@ -78,6 +79,8 @@ public sealed class StockpileItemViewModel : ObservableObject
         RegimentName = dto.RegimentName;
         TownControl = dto.TownControl;
         TownScorched = dto.TownScorched;
+        MapX = dto.MapX;
+        MapY = dto.MapY;
 
         if (IsOwn && CanManage && !IsPublic)
             foreach (var a in alliances)
@@ -99,6 +102,10 @@ public sealed class StockpileItemViewModel : ObservableObject
 
     public string TownControl { get; }
     public bool TownScorched { get; }
+
+    /// <summary>Position 0..1 dans l'hexagone (stockpile posé depuis la carte), null sinon.</summary>
+    public double? MapX { get; }
+    public double? MapY { get; }
 
     /// <summary>Ville rasée ou aux mains de l'ennemi (API War) → le stockpile est menacé/perdu.</summary>
     public bool IsThreatened => TownScorched || TownControl == WarTownControl.Enemy;
