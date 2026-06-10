@@ -10,6 +10,11 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
+        <!-- Contre-échelle des marqueurs/labels de la carte (partagée : mise à jour par le
+             code-behind à chaque zoom → tous les éléments gardent une taille écran lisible). -->
+        <ScaleTransform x:Key="MapMarkerScale" ScaleX="1" ScaleY="1"/>
+        <ScaleTransform x:Key="MapLabelScale" ScaleX="1" ScaleY="1"/>
+
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="#FFE6E6E6"/>
         </Style>
@@ -1675,7 +1680,8 @@
                                             <TextBlock Text="{Binding Display}" Foreground="#B8FFFFFF" FontSize="11"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                        TextAlignment="Center" TextWrapping="Wrap" MaxWidth="92"
-                                                       IsHitTestVisible="False">
+                                                       IsHitTestVisible="False" RenderTransformOrigin="0.5,0.5"
+                                                       RenderTransform="{StaticResource MapLabelScale}">
                                                 <TextBlock.Effect>
                                                     <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000"/>
                                                 </TextBlock.Effect>
@@ -1698,8 +1704,11 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Ellipse Width="8" Height="8" Fill="{Binding Fill}"
-                                                 Stroke="#FF10131A" StrokeThickness="1" ToolTip="{Binding Tooltip}"/>
+                                        <!-- Ancre 0×0 au point monde : la contre-échelle garde le point à taille écran constante -->
+                                        <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}">
+                                            <Ellipse Canvas.Left="-4" Canvas.Top="-4" Width="8" Height="8" Fill="{Binding Fill}"
+                                                     Stroke="#FF10131A" StrokeThickness="1" ToolTip="{Binding Tooltip}"/>
+                                        </Canvas>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -1717,12 +1726,14 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid ToolTip="{Binding Tooltip}">
-                                            <Ellipse Width="18" Height="18" Fill="#D912151B"
-                                                     Stroke="{Binding TeamBrush}" StrokeThickness="1.5"/>
-                                            <TextBlock Text="{Binding Glyph}" FontSize="9"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Grid>
+                                        <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}">
+                                            <Grid Canvas.Left="-9" Canvas.Top="-9" ToolTip="{Binding Tooltip}">
+                                                <Ellipse Width="18" Height="18" Fill="#D912151B"
+                                                         Stroke="{Binding TeamBrush}" StrokeThickness="1.5"/>
+                                                <TextBlock Text="{Binding Glyph}" FontSize="9"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Canvas>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -1734,18 +1745,21 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemContainerStyle>
                                     <Style TargetType="ContentPresenter">
-                                        <Setter Property="Canvas.Left" Value="{Binding LabelX}"/>
-                                        <Setter Property="Canvas.Top" Value="{Binding LabelY}"/>
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
                                     </Style>
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="8.5"
-                                                   FontWeight="SemiBold" IsHitTestVisible="False">
-                                            <TextBlock.Effect>
-                                                <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000"/>
-                                            </TextBlock.Effect>
-                                        </TextBlock>
+                                        <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}">
+                                            <TextBlock Canvas.Left="7" Canvas.Top="-7" Text="{Binding Name}"
+                                                       Foreground="White" FontSize="9.5"
+                                                       FontWeight="SemiBold" IsHitTestVisible="False">
+                                                <TextBlock.Effect>
+                                                    <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000"/>
+                                                </TextBlock.Effect>
+                                            </TextBlock>
+                                        </Canvas>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -1763,12 +1777,15 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid ToolTip="{Binding Tooltip}">
-                                            <Ellipse Width="20" Height="20" Margin="-2"
-                                                     Fill="#66C03A3A" Stroke="#FFC03A3A" StrokeThickness="1.5"
-                                                     Visibility="{Binding IsThreatened, Converter={StaticResource BoolToVis}}"/>
-                                            <TextBlock Text="📦" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Grid>
+                                        <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}">
+                                            <!-- 📦 posé au-dessus du point d'ancrage (la ville) -->
+                                            <Grid Canvas.Left="-9" Canvas.Top="-22" ToolTip="{Binding Tooltip}">
+                                                <Ellipse Width="20" Height="20" Margin="-2"
+                                                         Fill="#66C03A3A" Stroke="#FFC03A3A" StrokeThickness="1.5"
+                                                         Visibility="{Binding IsThreatened, Converter={StaticResource BoolToVis}}"/>
+                                                <TextBlock Text="📦" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Canvas>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

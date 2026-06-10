@@ -129,8 +129,10 @@ public sealed class MapStructViewModel
         var (glyph, label) = Types.TryGetValue(s.Icon, out var t) ? t : ("•", $"Structure {s.Icon}");
         Glyph = glyph;
         Label = label;
-        X = hex.X + s.X * hex.W - 9;
-        Y = hex.Y + s.Y * hex.H - 9;
+        // Point d'ancrage monde exact — le visuel se centre lui-même dans le template
+        // (contre-échelle : les marqueurs gardent une taille écran constante).
+        X = hex.X + s.X * hex.W;
+        Y = hex.Y + s.Y * hex.H;
         TeamBrush = s.Team == "WARDENS" ? Palette.Wardens
             : s.Team == "COLONIALS" ? Palette.Colonials
             : Palette.MapTownNeutral;
@@ -156,9 +158,8 @@ public sealed class MapTownViewModel
         Team = t.Team;
         Scorched = t.Scorched;
         Tier = t.Tier;
-        const double r = 4;
-        X = hex.X + t.X * hex.W - r;
-        Y = hex.Y + t.Y * hex.H - r;
+        X = hex.X + t.X * hex.W;
+        Y = hex.Y + t.Y * hex.H;
         Fill = t.Scorched ? Palette.Critical
             : t.Team == "WARDENS" ? Palette.Wardens
             : t.Team == "COLONIALS" ? Palette.Colonials
@@ -175,10 +176,6 @@ public sealed class MapTownViewModel
     public Brush Fill { get; }
 
     public string TierStars => Tier > 0 ? new string('★', Tier) : "";
-
-    // Position du label (affiché quand l'hexagone est sélectionné/zoomé).
-    public double LabelX => X + 11;
-    public double LabelY => Y - 3;
 
     public string TeamLabel => Scorched ? "rasée 🔥" : Team switch
     {
@@ -502,19 +499,19 @@ public sealed class MapViewModel : ObservableObject
             if (hex is null)
                 continue;
 
-            // Position : la ville correspondante si on la connaît, sinon le centre (en éventail).
+            // Ancrage : la ville correspondante si on la connaît, sinon le centre (en éventail).
             double x, y;
             var town = Towns.FirstOrDefault(t => t.Hex == hex && Norm(t.Name) == Norm(s.Town));
             if (town is not null)
             {
-                x = town.X - 6;
-                y = town.Y - 22;
+                x = town.X;
+                y = town.Y;
             }
             else
             {
                 int n = perHex.GetValueOrDefault(hex.Map);
-                x = hex.X + hex.W / 2 - 9 + (n % 3) * 16 - 16;
-                y = hex.Y + hex.H / 2 + (n / 3) * 18 - 6;
+                x = hex.X + hex.W / 2 + (n % 3) * 16 - 16;
+                y = hex.Y + hex.H / 2 + (n / 3) * 18;
             }
             perHex[hex.Map] = perHex.GetValueOrDefault(hex.Map) + 1;
             Pins.Add(new MapPinViewModel(s, hex, x, y));

@@ -173,13 +173,14 @@ public sealed class FriendsViewModel : ObservableObject
             Status = $"Connecté · {Friends.Count} ami(s).";
             Authenticated?.Invoke();
         }
-        catch (AuthRequiredException)
+        catch (AuthRequiredException ex)
         {
             _token = null;
             _tokenStore.Clear();
             Connected = false;
             NeedsLogin = true;
-            Status = "Session expirée — reconnecte-toi avec Steam.";
+            Status = "Session expirée — reconnecte-toi avec Steam."
+                + (ex.Message.Length > 0 ? $" ({ex.Message})" : "");
         }
         catch (Exception ex)
         {

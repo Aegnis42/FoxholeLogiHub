@@ -15,7 +15,11 @@ public sealed class FriendException : Exception
 }
 
 /// <summary>Le jeton est absent/expiré : une reconnexion Steam est nécessaire.</summary>
-public sealed class AuthRequiredException : Exception { }
+public sealed class AuthRequiredException : Exception
+{
+    /// <param name="detail">Raison du rejet renvoyée par le serveur (en-tête WWW-Authenticate), si connue.</param>
+    public AuthRequiredException(string? detail = null) : base(detail ?? "") { }
+}
 
 /// <summary>Callbacks d'événements temps réel du serveur.</summary>
 public sealed record PresenceHandlers(
@@ -153,7 +157,11 @@ public sealed class FriendsClient : IAsyncDisposable
             return;
 
         if (resp.StatusCode == HttpStatusCode.Unauthorized)
-            throw new AuthRequiredException();
+        {
+            // L'en-tête WWW-Authenticate précise pourquoi le jeton est rejeté (expiré, signature…).
+            string? detail = resp.Headers.WwwAuthenticate.FirstOrDefault()?.Parameter;
+            throw new AuthRequiredException(detail);
+        }
 
         string message = "Erreur serveur.";
         try

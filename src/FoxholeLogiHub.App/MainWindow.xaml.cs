@@ -42,6 +42,13 @@ public partial class MainWindow : Window
                 Dispatcher.BeginInvoke(new Action(() => ResetMapView()), System.Windows.Threading.DispatcherPriority.ContextIdle);
             }
         };
+        // Le viewport change de taille (maximisation, redimensionnement) : on re-cadre le monde
+        // tant que l'utilisateur n'a pas pris la main (zoom/déplacement/sélection).
+        MapViewport.SizeChanged += (_, _) =>
+        {
+            if (_mapViewInitialized && !_mapUserInteracted)
+                ResetMapView();
+        };
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -89,13 +96,17 @@ public partial class MainWindow : Window
 
     // ---------- Carte du monde (pan/zoom/sélection) ----------
 
-    private bool _mapPanning, _mapMoved, _mapViewInitialized;
+    private bool _mapPanning, _mapMoved, _mapViewInitialized, _mapUserInteracted;
     private Point _mapStart;
     private double _mapStartTx, _mapStartTy;
 
     private void OnNavMap(object sender, RoutedEventArgs e) => _vm.ShowMap();
 
-    private void OnMapReset(object sender, RoutedEventArgs e) => ResetMapView(animate: true);
+    private void OnMapReset(object sender, RoutedEventArgs e)
+    {
+        _mapUserInteracted = false; // retour au cadrage auto (suivra les redimensionnements)
+        ResetMapView(animate: true);
+    }
 
     private void ResetMapView(bool animate = false)
     {
@@ -112,6 +123,43 @@ public partial class MainWindow : Window
             MapScale.ScaleX = MapScale.ScaleY = scale;
             MapTranslate.X = tx;
             MapTranslate.Y = ty;
+            UpdateOverlayScales(scale);
+        }
+    }
+
+    // Contre-échelle des marqueurs (points, pins, structures, labels) : ils gardent une taille
+    // écran constante quel que soit le zoom, dans des bornes pour éviter le fouillis en vue monde.
+    private ScaleTransform? _markerScale, _labelScale;
+
+    private void UpdateOverlayScales(double mapScale, Duration? animated = null)
+    {
+        _markerScale ??= (ScaleTransform)FindResource("MapMarkerScale");
+        _labelScale ??= (ScaleTransform)FindResource("MapLabelScale");
+        double marker = Math.Clamp(1.0 / mapScale, 0.55, 3.0);
+        double label = Math.Clamp(1.0 / mapScale, 1.0, 2.2);
+
+        if (animated is not Duration dur)
+        {
+            _markerScale.ScaleX = _markerScale.ScaleY = marker;
+            _labelScale.ScaleX = _labelScale.ScaleY = label;
+            return;
+        }
+
+        var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+        Animate(_markerScale, marker);
+        Animate(_labelScale, label);
+
+        void Animate(ScaleTransform t, double to)
+        {
+            double from = t.ScaleX;
+            t.ScaleX = t.ScaleY = to; // base = cible (FillBehavior.Stop y revient)
+            var a = new System.Windows.Media.Animation.DoubleAnimation(from, to, dur)
+            {
+                EasingFunction = ease,
+                FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop,
+            };
+            t.BeginAnimation(ScaleTransform.ScaleXProperty, a);
+            t.BeginAnimation(ScaleTransform.ScaleYProperty, a);
         }
     }
 
@@ -120,6 +168,7 @@ public partial class MainWindow : Window
     {
         if (MapViewport.ActualWidth <= 0 || MapViewport.ActualHeight <= 0)
             return;
+        _mapUserInteracted = true;
         const double pad = 1.30; // marge autour de l'hexagone
         double scale = Math.Clamp(
             Math.Min(MapViewport.ActualWidth / (hex.W * pad), MapViewport.ActualHeight / (hex.H * pad)),
@@ -149,10 +198,12 @@ public partial class MainWindow : Window
         MapScale.BeginAnimation(ScaleTransform.ScaleYProperty, A(fromScale, scale));
         MapTranslate.BeginAnimation(TranslateTransform.XProperty, A(fromX, tx));
         MapTranslate.BeginAnimation(TranslateTransform.YProperty, A(fromY, ty));
+        UpdateOverlayScales(scale, dur); // les marqueurs suivent le zoom en douceur
     }
 
     private void OnMapWheel(object sender, MouseWheelEventArgs e)
     {
+        _mapUserInteracted = true;
         double factor = e.Delta > 0 ? 1.15 : 1 / 1.15;
         double newScale = Math.Clamp(MapScale.ScaleX * factor, 0.15, 5.0);
         factor = newScale / MapScale.ScaleX;
@@ -161,6 +212,7 @@ public partial class MainWindow : Window
         MapTranslate.X = m.X - factor * (m.X - MapTranslate.X);
         MapTranslate.Y = m.Y - factor * (m.Y - MapTranslate.Y);
         MapScale.ScaleX = MapScale.ScaleY = newScale;
+        UpdateOverlayScales(newScale);
         e.Handled = true;
     }
 
@@ -184,6 +236,7 @@ public partial class MainWindow : Window
             _mapMoved = true;
         if (_mapMoved)
         {
+            _mapUserInteracted = true;
             MapTranslate.X = _mapStartTx + d.X;
             MapTranslate.Y = _mapStartTy + d.Y;
         }
