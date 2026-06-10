@@ -34,7 +34,7 @@ public static class HexLayout
         ["LinnMercyHex"] = (0, -1),
         ["LochMorHex"] = (1, -1),
         ["LykosIsleHex"] = (-3, 5),
-        ["MarbanHollowHex"] = (-1, 1),
+        ["MarbanHollow"] = (-1, 1), // seule région SANS suffixe « Hex » dans l'API War
         ["MooringCountyHex"] = (-1, -1),
         ["MorgensCrossingHex"] = (-3, 3),
         ["NevishLineHex"] = (0, -3),

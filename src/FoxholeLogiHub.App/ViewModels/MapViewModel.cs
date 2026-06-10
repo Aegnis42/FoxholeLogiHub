@@ -230,10 +230,12 @@ public sealed class MapViewModel : ObservableObject
             return;
         }
 
-        var byMap = Hexes.ToDictionary(h => h.Map, StringComparer.OrdinalIgnoreCase);
+        // Clé normalisée (suffixe « Hex » ignoré) : l'API du jeu et la table de positions ne
+        // s'accordent pas toujours sur le suffixe (cas Marban Hollow).
+        var byMap = Hexes.ToDictionary(h => NormMap(h.Map));
         foreach (var h in map.Hexes)
         {
-            if (!byMap.TryGetValue(h.Map, out var hex))
+            if (!byMap.TryGetValue(NormMap(h.Map), out var hex))
                 continue;
             hex.Towns.AddRange(h.Towns);
             int w = h.Towns.Count(t => t.Team == "WARDENS");
