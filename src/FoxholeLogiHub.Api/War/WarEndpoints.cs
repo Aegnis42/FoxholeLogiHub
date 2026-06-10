@@ -30,7 +30,10 @@ public static class WarEndpoints
                 .Where(towns => towns.Count > 0)
                 .Select(towns => new WarMapHexDto(
                     towns[0].Map,
-                    towns.Select(t => new WarMapTownDto(t.Town, t.X, t.Y, t.TeamId, t.Scorched, t.VictoryBase)).ToList()))
+                    towns.Select(t => new WarMapTownDto(t.Town, t.X, t.Y, t.TeamId, t.Scorched, t.VictoryBase)).ToList(),
+                    snap.StructuresByMap.TryGetValue(towns[0].Map, out var structs)
+                        ? structs.Select(s => new WarMapStructDto(s.IconType, s.X, s.Y, s.TeamId)).ToList()
+                        : new List<WarMapStructDto>()))
                 .ToList();
             return Results.Ok(new WarMapDto(true, hexes));
         }).RequireAuthorization();

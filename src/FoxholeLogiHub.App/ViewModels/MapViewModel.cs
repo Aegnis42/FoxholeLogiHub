@@ -37,13 +37,82 @@ public sealed class MapHexViewModel : ObservableObject
     public PointCollection Points { get; }
 
     public List<WarMapTownDto> Towns { get; } = new();
-    public Brush Fill { get; set; } = Palette.MapNeutral;
+    public List<WarMapStructDto> Structures { get; } = new();
+
+    /// <summary>Sous-régions (zone d'influence de chaque ville, Voronoï découpé dans l'hexagone).</summary>
+    public ObservableCollection<MapCellViewModel> Cells { get; } = new();
+
+    /// <summary>Rempli seulement quand l'hexagone n'a pas de sous-régions (sinon les cellules colorent).</summary>
+    public Brush? Fill => Cells.Count > 0 ? null : Palette.MapNeutral;
 
     public bool IsSelected { get => _isSelected; set { Set(ref _isSelected, value); Raise(nameof(Stroke)); Raise(nameof(StrokeThickness)); } }
     public Brush Stroke => IsSelected ? Brushes.White : Palette.MapStroke;
     public double StrokeThickness => IsSelected ? 2.5 : 1.5;
 
     public void RaiseFill() => Raise(nameof(Fill));
+}
+
+/// <summary>Une sous-région : la zone d'influence d'une ville dans son hexagone (coordonnées locales).</summary>
+public sealed class MapCellViewModel
+{
+    public MapCellViewModel(MapHexViewModel hex, WarMapTownDto town, PointCollection points)
+    {
+        Hex = hex;
+        Town = town;
+        Points = points;
+        Fill = town.Scorched ? Palette.CellScorched
+            : town.Team == "WARDENS" ? Palette.CellWarden
+            : town.Team == "COLONIALS" ? Palette.CellColonial
+            : Palette.CellNeutral;
+    }
+
+    public MapHexViewModel Hex { get; }
+    public WarMapTownDto Town { get; }
+    public PointCollection Points { get; }
+    public Brush Fill { get; }
+    public string Tooltip => $"{Town.Name} — " + (Town.Scorched ? "rasée 🔥"
+        : Town.Team == "WARDENS" ? "Wardens"
+        : Town.Team == "COLONIALS" ? "Colonials" : "neutre");
+}
+
+/// <summary>Une structure logistique affichée quand un hexagone est sélectionné (position canvas absolue).</summary>
+public sealed class MapStructViewModel
+{
+    private static readonly Dictionary<int, (string Glyph, string Label)> Types = new()
+    {
+        [11] = ("🏥", "Hôpital"),
+        [12] = ("🚛", "Usine de véhicules"),
+        [17] = ("🛢", "Raffinerie"),
+        [18] = ("🚢", "Chantier naval"),
+        [19] = ("🔬", "Centre technologique"),
+        [33] = ("🏬", "Dépôt de stockage"),
+        [34] = ("🏭", "Usine"),
+        [39] = ("🔨", "Chantier de construction"),
+        [51] = ("⚙", "MPF"),
+        [52] = ("⚓", "Port"),
+    };
+
+    public MapStructViewModel(MapHexViewModel hex, WarMapStructDto s)
+    {
+        Hex = hex;
+        var (glyph, label) = Types.TryGetValue(s.Icon, out var t) ? t : ("•", $"Structure {s.Icon}");
+        Glyph = glyph;
+        Label = label;
+        X = hex.X + s.X * hex.W - 9;
+        Y = hex.Y + s.Y * hex.H - 9;
+        TeamBrush = s.Team == "WARDENS" ? Palette.Wardens
+            : s.Team == "COLONIALS" ? Palette.Colonials
+            : Palette.MapTownNeutral;
+        Tooltip = $"{label} — " + (s.Team == "WARDENS" ? "Wardens" : s.Team == "COLONIALS" ? "Colonials" : "neutre");
+    }
+
+    public MapHexViewModel Hex { get; }
+    public string Glyph { get; }
+    public string Label { get; }
+    public double X { get; }
+    public double Y { get; }
+    public Brush TeamBrush { get; }
+    public string Tooltip { get; }
 }
 
 /// <summary>Un point « ville » sur la carte (position canvas absolue).</summary>
@@ -71,6 +140,10 @@ public sealed class MapTownViewModel
     public double X { get; }
     public double Y { get; }
     public Brush Fill { get; }
+
+    // Position du label (affiché quand l'hexagone est sélectionné/zoomé).
+    public double LabelX => X + 11;
+    public double LabelY => Y - 3;
 
     public string TeamLabel => Scorched ? "rasée 🔥" : Team switch
     {
@@ -119,6 +192,7 @@ public sealed class MapViewModel : ObservableObject
 
     private bool _authed;
     private string _status = "";
+    private bool _retryPending;
     private MapHexViewModel? _selected;
 
     public ObservableCollection<MapHexViewModel> Hexes { get; } = new();
@@ -126,6 +200,9 @@ public sealed class MapViewModel : ObservableObject
     public ObservableCollection<MapPinViewModel> Pins { get; } = new();
 
     public ObservableCollection<MapTownViewModel> SelectedTowns { get; } = new();
+    public ObservableCollection<MapTownViewModel> SelectedTownLabels { get; } = new();
+    public ObservableCollection<MapStructViewModel> SelectedStructures { get; } = new();
+    public ObservableCollection<string> SelectedStructureSummary { get; } = new();
     public ObservableCollection<StockpileItemViewModel> SelectedStockpiles { get; } = new();
     public ObservableCollection<string> SelectedRequests { get; } = new();
 
@@ -141,6 +218,7 @@ public sealed class MapViewModel : ObservableObject
     public bool NoSelection => _selected is null;
     public bool SelectedHasStockpiles => SelectedStockpiles.Count > 0;
     public bool SelectedHasRequests => SelectedRequests.Count > 0;
+    public bool SelectedHasStructures => SelectedStructureSummary.Count > 0;
 
     public void Initialize(StockpilesViewModel stockpiles, ResupplyViewModel resupply)
     {
@@ -183,10 +261,25 @@ public sealed class MapViewModel : ObservableObject
             RefreshSelection();
             Status = map is { Available: true }
                 ? $"{Towns.Count} villes · {Pins.Count} stockpile(s) · molette = zoom, glisser = déplacer, clic = détail"
-                : "Données de guerre pas encore disponibles (réessaie dans quelques minutes).";
+                : "Données de guerre en cours de chargement…";
+
+            // Cache serveur encore froid (juste après un déploiement) : on retentera tout seul.
+            if (map is not { Available: true } && !_retryPending)
+            {
+                _retryPending = true;
+                _ = RetryLaterAsync();
+            }
         }
         catch (AuthRequiredException) { ClearAuth(); }
         catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+    }
+
+    private async Task RetryLaterAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(45));
+        _retryPending = false;
+        if (Authed)
+            await RefreshAsync();
     }
 
     // ---------- Construction ----------
@@ -221,7 +314,8 @@ public sealed class MapViewModel : ObservableObject
         foreach (var hex in Hexes)
         {
             hex.Towns.Clear();
-            hex.Fill = Palette.MapNeutral;
+            hex.Structures.Clear();
+            hex.Cells.Clear();
         }
         if (map is not { Available: true })
         {
@@ -238,18 +332,79 @@ public sealed class MapViewModel : ObservableObject
             if (!byMap.TryGetValue(NormMap(h.Map), out var hex))
                 continue;
             hex.Towns.AddRange(h.Towns);
-            int w = h.Towns.Count(t => t.Team == "WARDENS");
-            int c = h.Towns.Count(t => t.Team == "COLONIALS");
-            hex.Fill = w > 0 && c > 0 ? Palette.MapContested
-                : w > 0 ? Palette.MapWarden
-                : c > 0 ? Palette.MapColonial
-                : Palette.MapNeutral;
+            hex.Structures.AddRange(h.Structures);
+            BuildCells(hex);
             foreach (var t in h.Towns)
                 Towns.Add(new MapTownViewModel(hex, t));
         }
         foreach (var hex in Hexes)
             hex.RaiseFill();
     }
+
+    /// <summary>
+    /// Sous-régions façon FoxholeStats : partition de Voronoï de l'hexagone autour de ses villes
+    /// (chaque point appartient à la ville la plus proche), découpée par bissectrices successives.
+    /// </summary>
+    private static void BuildCells(MapHexViewModel hex)
+    {
+        hex.Cells.Clear();
+        if (hex.Towns.Count == 0)
+            return;
+
+        var hexPoly = hex.Points.ToList(); // coordonnées locales (0..W, 0..H)
+        var sites = hex.Towns.Select(t => (Town: t, P: new Point(t.X * hex.W, t.Y * hex.H))).ToList();
+
+        foreach (var (town, site) in sites)
+        {
+            List<Point> cell = hexPoly;
+            foreach (var (_, other) in sites)
+            {
+                if (other == site)
+                    continue;
+                cell = ClipCloserTo(cell, site, other);
+                if (cell.Count < 3)
+                    break;
+            }
+            if (cell.Count < 3)
+                continue;
+            var pts = new PointCollection(cell);
+            pts.Freeze();
+            hex.Cells.Add(new MapCellViewModel(hex, town, pts));
+        }
+    }
+
+    /// <summary>Garde la partie de <paramref name="poly"/> plus proche de <paramref name="site"/> que de <paramref name="other"/> (Sutherland–Hodgman contre la bissectrice).</summary>
+    private static List<Point> ClipCloserTo(List<Point> poly, Point site, Point other)
+    {
+        var result = new List<Point>(poly.Count + 2);
+        double mx = (site.X + other.X) / 2, my = (site.Y + other.Y) / 2;
+        double nx = other.X - site.X, ny = other.Y - site.Y; // normale orientée vers « other »
+        double F(Point p) => (p.X - mx) * nx + (p.Y - my) * ny; // ≤ 0 → côté « site »
+
+        for (int i = 0; i < poly.Count; i++)
+        {
+            Point prev = poly[(i + poly.Count - 1) % poly.Count];
+            Point cur = poly[i];
+            double fp = F(prev), fc = F(cur);
+            if (fp <= 0 && fc <= 0)
+            {
+                result.Add(cur);
+            }
+            else if (fp <= 0 && fc > 0)
+            {
+                result.Add(Lerp(prev, cur, fp / (fp - fc)));
+            }
+            else if (fp > 0 && fc <= 0)
+            {
+                result.Add(Lerp(prev, cur, fp / (fp - fc)));
+                result.Add(cur);
+            }
+        }
+        return result;
+    }
+
+    private static Point Lerp(Point a, Point b, double t) =>
+        new(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t);
 
     private void BuildPins()
     {
@@ -298,12 +453,22 @@ public sealed class MapViewModel : ObservableObject
     private void RefreshSelection()
     {
         SelectedTowns.Clear();
+        SelectedTownLabels.Clear();
+        SelectedStructures.Clear();
+        SelectedStructureSummary.Clear();
         SelectedStockpiles.Clear();
         SelectedRequests.Clear();
         if (_selected is not null)
         {
             foreach (var t in Towns.Where(t => t.Hex == _selected).OrderBy(t => t.Name))
+            {
                 SelectedTowns.Add(t);
+                SelectedTownLabels.Add(t);
+            }
+            foreach (var s in _selected.Structures)
+                SelectedStructures.Add(new MapStructViewModel(_selected, s));
+            foreach (var g in SelectedStructures.GroupBy(s => s.Label).OrderBy(g => g.Key))
+                SelectedStructureSummary.Add($"{g.First().Glyph} {g.Key} ×{g.Count()}");
             if (_stockpiles is not null)
                 foreach (var s in _stockpiles.Stockpiles.Where(s => FindHex(s.Hex) == _selected))
                     SelectedStockpiles.Add(s);
@@ -320,6 +485,7 @@ public sealed class MapViewModel : ObservableObject
         Raise(nameof(NoSelection));
         Raise(nameof(SelectedHasStockpiles));
         Raise(nameof(SelectedHasRequests));
+        Raise(nameof(SelectedHasStructures));
     }
 
     // ---------- Noms ----------

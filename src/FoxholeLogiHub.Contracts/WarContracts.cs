@@ -25,8 +25,11 @@ public sealed record WarResetResultDto(int Stockpiles, int Items, int Requests);
 /// <summary>Une ville sur la carte (position relative 0..1 dans la boîte englobante de l'hexagone).</summary>
 public sealed record WarMapTownDto(string Name, double X, double Y, string Team, bool Scorched, bool Victory);
 
-/// <summary>Les villes d'un hexagone (nom de carte API, ex. « DeadLandsHex »).</summary>
-public sealed record WarMapHexDto(string Map, List<WarMapTownDto> Towns);
+/// <summary>Une structure logistique (dépôt, port, usine, raffinerie…) — Icon = iconType de l'API War.</summary>
+public sealed record WarMapStructDto(int Icon, double X, double Y, string Team);
+
+/// <summary>Les villes et structures d'un hexagone (nom de carte API, ex. « DeadLandsHex »).</summary>
+public sealed record WarMapHexDto(string Map, List<WarMapTownDto> Towns, List<WarMapStructDto> Structures);
 
 /// <summary>Données de la carte du monde (contrôle des villes par hexagone, depuis le cache serveur).</summary>
 public sealed record WarMapDto(bool Available, List<WarMapHexDto> Hexes);

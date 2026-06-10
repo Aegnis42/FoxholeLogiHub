@@ -10,6 +10,9 @@ public sealed record WarInfo(int WarNumber, string Winner, long ConquestStartTim
 /// <summary>Une ville (Town Base) avec son contrôle actuel et sa position (0..1 dans l'hexagone).</summary>
 public sealed record TownState(string Map, string Town, string NormTown, string TeamId, bool Scorched, bool VictoryBase, double X, double Y);
 
+/// <summary>Une structure logistique (dépôt, port, usine…) — IconType de l'API War.</summary>
+public sealed record StructState(int IconType, string TeamId, double X, double Y);
+
 /// <summary>Photographie de l'état de la guerre (rafraîchie périodiquement).</summary>
 public sealed class WarSnapshot
 {
@@ -17,6 +20,8 @@ public sealed class WarSnapshot
     public required DateTimeOffset FetchedAt { get; init; }
     /// <summary>Villes par hexagone normalisé (clé = nom de carte API sans « Hex », normalisé).</summary>
     public required Dictionary<string, List<TownState>> TownsByHex { get; init; }
+    /// <summary>Structures logistiques par nom de carte API (« DeadLandsHex »…).</summary>
+    public required Dictionary<string, List<StructState>> StructuresByMap { get; init; }
     public required int WardenVictoryTowns { get; init; }
     public required int ColonialVictoryTowns { get; init; }
 }
@@ -200,6 +205,21 @@ public sealed class WarRefreshService : BackgroundService
     private const int FlagVictoryBase = 0x01, FlagScorched = 0x10;
     private static readonly TimeSpan Period = TimeSpan.FromMinutes(5);
 
+    // Structures logistiques exposées sur la carte (iconTypes de l'API War).
+    private static readonly HashSet<int> StructTypes = new()
+    {
+        11, // Hôpital
+        12, // Usine de véhicules
+        17, // Raffinerie
+        18, // Chantier naval
+        19, // Centre technologique
+        33, // Dépôt de stockage
+        34, // Usine
+        39, // Chantier de construction
+        51, // Usine de production de masse (MPF)
+        52, // Port
+    };
+
     private readonly WarApiClient _api;
     private readonly WarStateService _state;
     private readonly ILogger<WarRefreshService> _logger;
@@ -247,6 +267,7 @@ public sealed class WarRefreshService : BackgroundService
         }
 
         var townsByHex = new Dictionary<string, List<TownState>>();
+        var structsByMap = new Dictionary<string, List<StructState>>();
         int wardens = 0, colonials = 0;
 
         // Petites rafales pour rester poli avec l'API publique.
@@ -266,6 +287,7 @@ public sealed class WarRefreshService : BackgroundService
             foreach (var (map, labels, dynamic) in await Task.WhenAll(tasks))
             {
                 var towns = new List<TownState>();
+                var structures = new List<StructState>();
                 foreach (var (iconType, teamId, x, y, flags) in dynamic)
                 {
                     bool victory = (flags & FlagVictoryBase) != 0;
@@ -274,6 +296,8 @@ public sealed class WarRefreshService : BackgroundService
                         if (teamId == "WARDENS") wardens++;
                         else if (teamId == "COLONIALS") colonials++;
                     }
+                    if (StructTypes.Contains(iconType))
+                        structures.Add(new StructState(iconType, teamId, x, y));
                     if (iconType is < TownBaseT1 or > TownBaseT3)
                         continue;
 
@@ -289,6 +313,7 @@ public sealed class WarRefreshService : BackgroundService
 
                 string hexKey = WarStateService.Normalize(map.EndsWith("Hex") ? map[..^3] : map);
                 townsByHex[hexKey] = towns;
+                structsByMap[map] = structures;
             }
         }
 
@@ -297,6 +322,7 @@ public sealed class WarRefreshService : BackgroundService
             Info = war,
             FetchedAt = DateTimeOffset.UtcNow,
             TownsByHex = townsByHex,
+            StructuresByMap = structsByMap,
             WardenVictoryTowns = wardens,
             ColonialVictoryTowns = colonials,
         });

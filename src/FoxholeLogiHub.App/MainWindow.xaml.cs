@@ -39,7 +39,7 @@ public partial class MainWindow : Window
             if (MapViewport.IsVisible && !_mapViewInitialized)
             {
                 _mapViewInitialized = true;
-                Dispatcher.BeginInvoke(new Action(ResetMapView), System.Windows.Threading.DispatcherPriority.ContextIdle);
+                Dispatcher.BeginInvoke(new Action(() => ResetMapView()), System.Windows.Threading.DispatcherPriority.ContextIdle);
             }
         };
     }
@@ -95,17 +95,60 @@ public partial class MainWindow : Window
 
     private void OnNavMap(object sender, RoutedEventArgs e) => _vm.ShowMap();
 
-    private void OnMapReset(object sender, RoutedEventArgs e) => ResetMapView();
+    private void OnMapReset(object sender, RoutedEventArgs e) => ResetMapView(animate: true);
 
-    private void ResetMapView()
+    private void ResetMapView(bool animate = false)
     {
         if (_vm.Map.CanvasWidth <= 0 || MapViewport.ActualWidth <= 0 || MapViewport.ActualHeight <= 0)
             return;
         double scale = Math.Min(MapViewport.ActualWidth / _vm.Map.CanvasWidth,
                                 MapViewport.ActualHeight / _vm.Map.CanvasHeight) * 0.97;
+        double tx = (MapViewport.ActualWidth - _vm.Map.CanvasWidth * scale) / 2;
+        double ty = (MapViewport.ActualHeight - _vm.Map.CanvasHeight * scale) / 2;
+        if (animate)
+            AnimateMapTo(scale, tx, ty);
+        else
+        {
+            MapScale.ScaleX = MapScale.ScaleY = scale;
+            MapTranslate.X = tx;
+            MapTranslate.Y = ty;
+        }
+    }
+
+    /// <summary>Zoom animé sur un hexagone (façon FoxholeStats : clic = focus région).</summary>
+    private void ZoomToHex(MapHexViewModel hex)
+    {
+        if (MapViewport.ActualWidth <= 0 || MapViewport.ActualHeight <= 0)
+            return;
+        const double pad = 1.30; // marge autour de l'hexagone
+        double scale = Math.Clamp(
+            Math.Min(MapViewport.ActualWidth / (hex.W * pad), MapViewport.ActualHeight / (hex.H * pad)),
+            0.15, 5.0);
+        double cx = hex.X + hex.W / 2, cy = hex.Y + hex.H / 2;
+        AnimateMapTo(scale,
+            MapViewport.ActualWidth / 2 - cx * scale,
+            MapViewport.ActualHeight / 2 - cy * scale);
+    }
+
+    private void AnimateMapTo(double scale, double tx, double ty)
+    {
+        double fromScale = MapScale.ScaleX, fromX = MapTranslate.X, fromY = MapTranslate.Y;
+        // Valeurs de base = cible (FillBehavior.Stop y revient à la fin de l'animation).
         MapScale.ScaleX = MapScale.ScaleY = scale;
-        MapTranslate.X = (MapViewport.ActualWidth - _vm.Map.CanvasWidth * scale) / 2;
-        MapTranslate.Y = (MapViewport.ActualHeight - _vm.Map.CanvasHeight * scale) / 2;
+        MapTranslate.X = tx;
+        MapTranslate.Y = ty;
+
+        var dur = new Duration(TimeSpan.FromMilliseconds(300));
+        var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+        System.Windows.Media.Animation.DoubleAnimation A(double from, double to) => new(from, to, dur)
+        {
+            EasingFunction = ease,
+            FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop,
+        };
+        MapScale.BeginAnimation(ScaleTransform.ScaleXProperty, A(fromScale, scale));
+        MapScale.BeginAnimation(ScaleTransform.ScaleYProperty, A(fromScale, scale));
+        MapTranslate.BeginAnimation(TranslateTransform.XProperty, A(fromX, tx));
+        MapTranslate.BeginAnimation(TranslateTransform.YProperty, A(fromY, ty));
     }
 
     private void OnMapWheel(object sender, MouseWheelEventArgs e)
@@ -161,12 +204,17 @@ public partial class MainWindow : Window
         MapHexViewModel? hex = data switch
         {
             MapHexViewModel h => h,
+            MapCellViewModel c => c.Hex,
             MapTownViewModel t => t.Hex,
             MapPinViewModel p => p.Hex,
+            MapStructViewModel s => s.Hex,
             _ => null,
         };
         if (hex is not null)
+        {
             _vm.Map.Select(hex);
+            ZoomToHex(hex); // clic = focus sur la région avec ses détails
+        }
     }
 
     private void OnNavDashboard(object sender, RoutedEventArgs e) => _vm.ShowDashboard();

@@ -32,6 +32,13 @@ public static class Palette
     public static readonly Brush MapStroke = Make(0x10, 0x13, 0x18);
     public static readonly Brush MapTownNeutral = Make(0x9A, 0xA4, 0xB2);
 
+    // Sous-régions (zones d'influence des villes) — plus saturées, façon FoxholeStats.
+    public static readonly Brush CellWarden = MakeA(0x8C, 0x24, 0x5C, 0x8A);
+    public static readonly Brush CellColonial = MakeA(0x8C, 0x51, 0x6C, 0x42);
+    public static readonly Brush CellNeutral = MakeA(0x46, 0x6B, 0x72, 0x80);
+    public static readonly Brush CellScorched = MakeA(0x86, 0x6E, 0x22, 0x22);
+    public static readonly Brush CellStroke = MakeA(0x50, 0x0E, 0x11, 0x16);
+
     private static Brush Make(byte r, byte g, byte b)
     {
         var brush = new SolidColorBrush(Color.FromRgb(r, g, b));

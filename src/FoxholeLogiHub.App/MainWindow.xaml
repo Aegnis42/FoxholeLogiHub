@@ -1602,8 +1602,9 @@
                 </Grid.RowDefinitions>
 
                 <DockPanel Grid.Row="0" Margin="0,0,0,10">
-                    <Button DockPanel.Dock="Right" Content="⌖ Recentrer" Style="{StaticResource FlatButton}"
-                            Background="#FF333A45" Padding="12,6" VerticalAlignment="Top" Click="OnMapReset"/>
+                    <Button DockPanel.Dock="Right" Content="🌍 Vue monde" Style="{StaticResource FlatButton}"
+                            Background="#FF333A45" Padding="12,6" VerticalAlignment="Top" Click="OnMapReset"
+                            ToolTip="Dézoomer pour voir le monde entier"/>
                     <StackPanel>
                         <TextBlock Text="Carte du monde" FontSize="22" FontWeight="Bold"/>
                         <TextBlock Text="{Binding Map.Status}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,2,0,0"/>
@@ -1652,12 +1653,30 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Width="{Binding W}" Height="{Binding H}">
+                                            <!-- Sous-régions : zone d'influence de chaque ville (Voronoï) -->
+                                            <ItemsControl ItemsSource="{Binding Cells}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Polygon Points="{Binding Points}" Fill="{Binding Fill}"
+                                                                 Stroke="#500E1116" StrokeThickness="0.8"
+                                                                 ToolTip="{Binding Tooltip}"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <!-- Bord de l'hexagone (rempli seulement s'il n'a pas de sous-régions) -->
                                             <Polygon Points="{Binding Points}" Fill="{Binding Fill}"
                                                      Stroke="{Binding Stroke}" StrokeThickness="{Binding StrokeThickness}"/>
                                             <TextBlock Text="{Binding Display}" Foreground="#B8FFFFFF" FontSize="11"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                        TextAlignment="Center" TextWrapping="Wrap" MaxWidth="92"
-                                                       IsHitTestVisible="False"/>
+                                                       IsHitTestVisible="False">
+                                                <TextBlock.Effect>
+                                                    <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000"/>
+                                                </TextBlock.Effect>
+                                            </TextBlock>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -1682,7 +1701,53 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <!-- Couche 3 : stockpiles -->
+                            <!-- Couche 3 : structures de l'hexagone sélectionné -->
+                            <ItemsControl ItemsSource="{Binding Map.SelectedStructures}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ToolTip="{Binding Tooltip}">
+                                            <Ellipse Width="18" Height="18" Fill="#D912151B"
+                                                     Stroke="{Binding TeamBrush}" StrokeThickness="1.5"/>
+                                            <TextBlock Text="{Binding Glyph}" FontSize="9"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Couche 4 : noms des villes de l'hexagone sélectionné -->
+                            <ItemsControl ItemsSource="{Binding Map.SelectedTownLabels}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding LabelX}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding LabelY}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="8.5"
+                                                   FontWeight="SemiBold" IsHitTestVisible="False">
+                                            <TextBlock.Effect>
+                                                <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000"/>
+                                            </TextBlock.Effect>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Couche 5 : stockpiles -->
                             <ItemsControl ItemsSource="{Binding Map.Pins}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
@@ -1744,6 +1809,16 @@
                                                     <TextBlock DockPanel.Dock="Right" Text="{Binding TeamLabel}" Foreground="#FF9AA4B2" FontSize="11"/>
                                                     <TextBlock Text="{Binding Name}" Foreground="#FFE6E6E6" FontSize="12"/>
                                                 </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Text="STRUCTURES" Style="{StaticResource Label}" Margin="0,12,0,4"
+                                               Visibility="{Binding Map.SelectedHasStructures, Converter={StaticResource BoolToVis}}"/>
+                                    <ItemsControl ItemsSource="{Binding Map.SelectedStructureSummary}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding}" Foreground="#FFE6E6E6" FontSize="12" Margin="0,1"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
