@@ -37,12 +37,22 @@ public sealed class FriendsClient : IAsyncDisposable
     private readonly HttpClient _http;
     private readonly string _baseUrl;
     private readonly string _token;
+    private readonly Func<string?>? _liveToken;
     private HubConnection? _hub;
 
-    public FriendsClient(string baseUrl, string token)
+    /// <summary>La connexion temps réel est revenue après une coupure.</summary>
+    public event Action? HubReconnected;
+
+    /// <summary>La connexion temps réel est définitivement tombée (reconnexions épuisées).</summary>
+    public event Action? HubClosed;
+
+    /// <param name="liveToken">Fournit le jeton COURANT à chaque (re)connexion SignalR —
+    /// sans lui, une reconnexion après expiration réutiliserait l'ancien jeton en boucle.</param>
+    public FriendsClient(string baseUrl, string token, Func<string?>? liveToken = null)
     {
         _baseUrl = baseUrl.TrimEnd('/');
         _token = token;
+        _liveToken = liveToken;
         _http = new HttpClient { BaseAddress = new Uri(_baseUrl), Timeout = TimeSpan.FromSeconds(15) };
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
@@ -108,10 +118,13 @@ public sealed class FriendsClient : IAsyncDisposable
         _hub = new HubConnectionBuilder()
             .WithUrl($"{_baseUrl}/hub/presence", options =>
             {
-                options.AccessTokenProvider = () => Task.FromResult<string?>(_token);
+                options.AccessTokenProvider = () => Task.FromResult<string?>(_liveToken?.Invoke() ?? _token);
             })
             .WithAutomaticReconnect()
             .Build();
+
+        _hub.Reconnected += _ => { HubReconnected?.Invoke(); return Task.CompletedTask; };
+        _hub.Closed += _ => { HubClosed?.Invoke(); return Task.CompletedTask; };
 
         _hub.On<string, bool>(PresenceEvents.PresenceChanged, (id, online) => handlers.OnPresenceChanged(id, online));
         _hub.On<List<string>>(PresenceEvents.OnlineFriends, list => handlers.OnOnlineFriends(list));

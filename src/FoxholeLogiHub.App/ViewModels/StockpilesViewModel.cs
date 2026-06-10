@@ -16,6 +16,7 @@ public sealed class StockpilesViewModel : ObservableObject
     private readonly TokenStore _tokenStore = new();
 
     private readonly CaptureService _capture = new();
+    private string _clientKey = "";
     private RegimentViewModel? _regiment;
     private CompanionManager? _companion;
     private StockpileClient? _client;
@@ -168,7 +169,8 @@ public sealed class StockpilesViewModel : ObservableObject
             byte[]? png = _capture.CaptureForegroundWindow();
             if (png is null) { Status = "Capture impossible."; return; }
 
-            var recognized = await new FicClient(_companion.BaseUrl).ExtractAsync(png);
+            using var fic = new FicClient(_companion.BaseUrl);
+            var recognized = await fic.ExtractAsync(png);
             if (recognized.Count == 0)
             {
                 Status = "Aucun item reconnu — capture le panneau stockpile en vue-carte (pas l'UI en base).";
@@ -202,6 +204,8 @@ public sealed class StockpilesViewModel : ObservableObject
         Authed = false;
         Stockpiles.Clear();
         Alerts.Clear();
+        _lastAlerts = new List<StockpileAlertDto>();
+        _clientKey = "";
         RaiseAlertFlags();
         CloseDetail();
         Raise(nameof(HasNoStockpiles));
@@ -220,8 +224,15 @@ public sealed class StockpilesViewModel : ObservableObject
         Busy = true;
         try
         {
-            _client?.Dispose();
-            _client = new StockpileClient(_settingsStore.Load().ApiBaseUrl, token);
+            // Client persistant : on ne le recrée que si l'URL ou le jeton a changé (pooling HTTP conservé).
+            string baseUrl = _settingsStore.Load().ApiBaseUrl;
+            string clientKey = $"{baseUrl}|{token}";
+            if (_client is null || _clientKey != clientKey)
+            {
+                _client?.Dispose();
+                _client = new StockpileClient(baseUrl, token);
+                _clientKey = clientKey;
+            }
             Authed = true;
             RaiseViewFlags();
             ApplyList(await _client.GetListAsync());
@@ -235,15 +246,19 @@ public sealed class StockpilesViewModel : ObservableObject
         finally { Busy = false; }
     }
 
+    /// <summary>Dernières alertes brutes (partagées avec le ravitaillement — évite un double fetch).</summary>
+    public IReadOnlyList<StockpileAlertDto> LastAlerts => _lastAlerts;
+    private List<StockpileAlertDto> _lastAlerts = new();
+
     private async Task LoadAlertsAsync()
     {
         if (_client is null)
             return;
         try
         {
-            var list = await _client.GetAlertsAsync();
+            _lastAlerts = await _client.GetAlertsAsync();
             Alerts.Clear();
-            foreach (var a in list)
+            foreach (var a in _lastAlerts)
                 Alerts.Add(new StockpileAlertViewModel(a));
             RaiseAlertFlags();
         }
@@ -274,7 +289,7 @@ public sealed class StockpilesViewModel : ObservableObject
 
     public async Task SubmitFormAsync()
     {
-        if (_client is null)
+        if (_client is null || Busy)
             return;
         if (string.IsNullOrWhiteSpace(FormName) || string.IsNullOrWhiteSpace(FormHex))
         {
@@ -323,7 +338,7 @@ public sealed class StockpilesViewModel : ObservableObject
 
     public async Task DeleteAsync(StockpileItemViewModel s)
     {
-        if (_client is null)
+        if (_client is null || Busy)
             return;
         Busy = true;
         try
@@ -337,7 +352,7 @@ public sealed class StockpilesViewModel : ObservableObject
 
     public async Task ToggleShareAsync(StockpileShareTargetViewModel target)
     {
-        if (_client is null)
+        if (_client is null || Busy)
             return;
         Busy = true;
         try
@@ -395,7 +410,7 @@ public sealed class StockpilesViewModel : ObservableObject
 
     public async Task SetItemFromFormAsync()
     {
-        if (_client is null || _selectedId is null)
+        if (_client is null || _selectedId is null || Busy)
             return;
         if (string.IsNullOrWhiteSpace(NewItemName)) { Status = "Choisis un item."; return; }
         if (!int.TryParse(NewItemQuantity.Trim(), out int qty) || qty < 0) { Status = "Quantité invalide."; return; }
@@ -428,7 +443,7 @@ public sealed class StockpilesViewModel : ObservableObject
 
     public async Task RemoveLineAsync(StockpileLineViewModel line)
     {
-        if (_client is null || _selectedId is null)
+        if (_client is null || _selectedId is null || Busy)
             return;
         Busy = true;
         try

@@ -1373,9 +1373,11 @@
                                                 <DockPanel Margin="0,8,0,0">
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                                         <Button Content="{Binding ClaimButtonText}" Background="{Binding ClaimButtonBrush}"
-                                                                Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0" FontSize="11" Click="OnClaimResupply"/>
+                                                                Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0" FontSize="11" Click="OnClaimResupply"
+                                                                Visibility="{Binding CanClaim, Converter={StaticResource BoolToVis}}"/>
                                                         <Button Content="✓ Livré" Background="#FF2F6B43" Style="{StaticResource FlatButton}"
-                                                                Padding="12,5" Margin="0,0,4,0" FontSize="11" Click="OnDoneResupply"/>
+                                                                Padding="12,5" Margin="0,0,4,0" FontSize="11" Click="OnDoneResupply"
+                                                                Visibility="{Binding CanComplete, Converter={StaticResource BoolToVis}}"/>
                                                         <Button Content="×" Background="#FF3A3030" Style="{StaticResource FlatButton}"
                                                                 Padding="9,5" FontSize="11" Click="OnDeleteResupply"
                                                                 Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
@@ -1524,11 +1526,11 @@
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                                         <Button Content="{Binding ClaimButtonText}" Background="{Binding ClaimButtonBrush}" Style="{StaticResource FlatButton}"
                                                                 Padding="12,5" Margin="0,0,4,0" FontSize="11" Click="OnClaimResupply"
-                                                                Visibility="{Binding IsOpen, Converter={StaticResource BoolToVis}}"/>
+                                                                Visibility="{Binding CanClaim, Converter={StaticResource BoolToVis}}"/>
                                                         <Button Content="✓ Livré" Background="#FF2F6B43" Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0"
-                                                                FontSize="11" Click="OnDoneResupply" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVis}}"/>
+                                                                FontSize="11" Click="OnDoneResupply" Visibility="{Binding CanComplete, Converter={StaticResource BoolToVis}}"/>
                                                         <Button Content="Rouvrir" Background="#FF333A45" Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0"
-                                                                FontSize="11" Click="OnReopenResupply" Visibility="{Binding IsDone, Converter={StaticResource BoolToVis}}"/>
+                                                                FontSize="11" Click="OnReopenResupply" Visibility="{Binding CanReopen, Converter={StaticResource BoolToVis}}"/>
                                                         <Button Content="×" Background="#FF3A3030" Style="{StaticResource FlatButton}" Padding="9,5" FontSize="11"
                                                                 Click="OnDeleteResupply" Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>

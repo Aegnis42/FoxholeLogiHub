@@ -41,8 +41,8 @@ public sealed class FriendItemViewModel : ObservableObject
     public string StatusText => Online ? "En ligne" : "Hors ligne";
 
     public Brush StatusBrush => Online
-        ? new SolidColorBrush(Color.FromRgb(0x4C, 0xC2, 0x6A))
-        : new SolidColorBrush(Color.FromRgb(0x6B, 0x72, 0x80));
+        ? Palette.Online
+        : Palette.Offline;
 
     public Brush FactionBrush => FactionColors.For(Faction);
 }
@@ -74,8 +74,8 @@ internal static class FactionColors
 {
     public static Brush For(string faction) => faction switch
     {
-        "Wardens" => new SolidColorBrush(Color.FromRgb(0x24, 0x5C, 0x8A)),
-        "Colonials" => new SolidColorBrush(Color.FromRgb(0x51, 0x6C, 0x42)),
-        _ => new SolidColorBrush(Color.FromRgb(0x44, 0x4A, 0x55)),
+        "Wardens" => Palette.Wardens,
+        "Colonials" => Palette.Colonials,
+        _ => Palette.FactionNeutral,
     };
 }

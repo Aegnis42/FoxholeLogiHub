@@ -54,8 +54,8 @@ public sealed class StockpileShareTargetViewModel : ObservableObject
 
     public string ButtonText => IsShared ? $"✓ {RegimentName}" : RegimentName;
     public Brush ButtonBrush => IsShared
-        ? new SolidColorBrush(Color.FromRgb(0x2F, 0x6B, 0x43))
-        : new SolidColorBrush(Color.FromRgb(0x33, 0x3A, 0x45));
+        ? Palette.GreenDark
+        : Palette.Slate;
 }
 
 /// <summary>Un stockpile affiché dans la liste.</summary>
@@ -97,8 +97,8 @@ public sealed class StockpileItemViewModel : ObservableObject
     public bool HasCode => !string.IsNullOrEmpty(Code);
     public string VisibilityLabel => IsPublic ? "Public" : "Privé";
     public Brush VisibilityBrush => IsPublic
-        ? new SolidColorBrush(Color.FromRgb(0x2F, 0x6B, 0x43))
-        : new SolidColorBrush(Color.FromRgb(0x5A, 0x4A, 0x2A));
+        ? Palette.GreenDark
+        : Palette.BrownOpen;
     public bool ShowShareSection => IsOwn && CanManage && !IsPublic && ShareTargets.Count > 0;
     public bool ShowForeignRegiment => !IsOwn;
 }
@@ -108,7 +108,13 @@ public static class ItemIcons
 {
     private static readonly string Dir = System.IO.Path.Combine(AppContext.BaseDirectory, "Data", "icons");
 
-    public static ImageSource? Load(string code)
+    // Cache : une icône n'est lue qu'une fois sur disque (les cartes en redemandent à chaque refresh).
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ImageSource?> Cache =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public static ImageSource? Load(string code) => Cache.GetOrAdd(code, LoadUncached);
+
+    private static ImageSource? LoadUncached(string code)
     {
         bool crated = code.EndsWith("@crate", StringComparison.Ordinal);
         string baseCode = crated ? code[..^6] : code;
@@ -219,10 +225,10 @@ public sealed class StockpileLineViewModel : ObservableObject
 
     public Brush StatusBrush => Status switch
     {
-        "critical" => new SolidColorBrush(Color.FromRgb(0xC0, 0x3A, 0x3A)),
-        "low" => new SolidColorBrush(Color.FromRgb(0xC8, 0x8A, 0x2E)),
-        "good" => new SolidColorBrush(Color.FromRgb(0x3A, 0x8A, 0x4F)),
-        _ => new SolidColorBrush(Color.FromRgb(0x3A, 0x41, 0x4C)),
+        "critical" => Palette.Critical,
+        "low" => Palette.Warning,
+        "good" => Palette.Good,
+        _ => Palette.Neutral,
     };
 }
 
@@ -291,8 +297,8 @@ public sealed class StockpileAlertViewModel : ObservableObject
     }
 
     public Brush SeverityBrush => IsCritical
-        ? new SolidColorBrush(Color.FromRgb(0xC0, 0x3A, 0x3A))
-        : new SolidColorBrush(Color.FromRgb(0xC8, 0x8A, 0x2E));
+        ? Palette.Critical
+        : Palette.Warning;
 }
 
 /// <summary>Un ingrédient d'une recette (icône + nom + quantité).</summary>

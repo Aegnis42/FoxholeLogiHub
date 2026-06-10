@@ -146,7 +146,13 @@ public sealed class FriendsViewModel : ObservableObject
 
             if (_client is not null)
                 await _client.DisposeAsync();
-            _client = new FriendsClient(_settings.ApiBaseUrl, _token);
+            _client = new FriendsClient(_settings.ApiBaseUrl, _token, () => _tokenStore.Load());
+            _client.HubReconnected += () => OnUi(() => { Connected = true; Status = $"Reconnecté · {Friends.Count} ami(s)."; });
+            _client.HubClosed += () => OnUi(() =>
+            {
+                Connected = false;
+                Status = "Connexion temps réel perdue — vérifie ta connexion puis relance l'app si besoin.";
+            });
 
             UserDto me = await _client.UpsertUserAsync(_account.DisplayName, _account.Faction.ToString());
             MyFriendCode = Format(me.FriendCode);
@@ -193,6 +199,8 @@ public sealed class FriendsViewModel : ObservableObject
             Status = "Pas encore connecté.";
             return;
         }
+        if (Busy)
+            return;
 
         string code = AddCodeInput.Trim();
         if (string.IsNullOrWhiteSpace(code))
@@ -224,7 +232,7 @@ public sealed class FriendsViewModel : ObservableObject
 
     private async Task RespondAsync(FriendRequestItemViewModel request, bool accept)
     {
-        if (_client is null)
+        if (_client is null || Busy)
             return;
 
         Busy = true;
@@ -249,7 +257,7 @@ public sealed class FriendsViewModel : ObservableObject
 
     public async Task RemoveFriendAsync(FriendItemViewModel friend)
     {
-        if (_client is null)
+        if (_client is null || Busy)
             return;
 
         Busy = true;

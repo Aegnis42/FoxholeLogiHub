@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.IO;
-using System.Net.Sockets;
+using System.Net.Http;
 
 namespace FoxholeLogiHub.App.Services;
 
@@ -36,15 +36,15 @@ public sealed class CompanionManager : IDisposable
         }
     }
 
+    // Sonde HTTP (pas un simple test TCP) : toute réponse HTTP prouve qu'un serveur écoute —
+    // un autre process qui occuperait juste le port ne répondrait pas en HTTP.
     private static bool IsListening()
     {
         try
         {
-            using var client = new TcpClient();
-            var result = client.BeginConnect("127.0.0.1", Port, null, null);
-            bool ok = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(300));
-            if (ok) client.EndConnect(result);
-            return ok;
+            using var http = new HttpClient { Timeout = TimeSpan.FromMilliseconds(600) };
+            using var resp = http.Send(new HttpRequestMessage(HttpMethod.Get, $"http://127.0.0.1:{Port}/"));
+            return true; // même un 404 = serveur HTTP présent
         }
         catch
         {

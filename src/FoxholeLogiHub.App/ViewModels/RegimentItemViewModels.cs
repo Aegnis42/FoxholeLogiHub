@@ -35,8 +35,8 @@ public sealed class RegimentMemberItemViewModel : ObservableObject
     public string Initial => string.IsNullOrEmpty(DisplayName) ? "?" : DisplayName[..1].ToUpperInvariant();
     public Brush FactionBrush => FactionColors.For(Faction);
     public Brush StatusBrush => Online
-        ? new SolidColorBrush(Color.FromRgb(0x4C, 0xC2, 0x6A))
-        : new SolidColorBrush(Color.FromRgb(0x6B, 0x72, 0x80));
+        ? Palette.Online
+        : Palette.Offline;
     public string RoleBadge => IsOwner ? $"{RoleName} ★" : RoleName;
 }
 

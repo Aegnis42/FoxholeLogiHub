@@ -14,8 +14,9 @@ public sealed class ResupplyViewModel : ObservableObject
     private readonly SettingsStore _settingsStore = new();
     private readonly TokenStore _tokenStore = new();
     private RegimentViewModel? _regiment;
+    private StockpilesViewModel? _stockpiles;
     private ResupplyClient? _client;
-    private StockpileClient? _stockClient;
+    private string _clientKey = "";
 
     private bool _authed;
     private bool _busy;
@@ -93,12 +94,16 @@ public sealed class ResupplyViewModel : ObservableObject
         Raise(nameof(HasNeeds)); Raise(nameof(Summary));
     }
 
-    public void Initialize(RegimentViewModel regiment) => _regiment = regiment;
+    public void Initialize(RegimentViewModel regiment, StockpilesViewModel stockpiles)
+    {
+        _regiment = regiment;
+        _stockpiles = stockpiles;
+    }
 
     public void ClearAuth()
     {
         _client?.Dispose(); _client = null;
-        _stockClient?.Dispose(); _stockClient = null;
+        _clientKey = "";
         Authed = false;
         OpenRequests.Clear(); TakenRequests.Clear(); Needs.Clear();
         RaiseCounts();
@@ -113,14 +118,20 @@ public sealed class ResupplyViewModel : ObservableObject
         Busy = true;
         try
         {
+            // Client persistant : recréé seulement si l'URL ou le jeton change (pooling HTTP conservé).
             string baseUrl = _settingsStore.Load().ApiBaseUrl;
-            _client?.Dispose(); _client = new ResupplyClient(baseUrl, token);
-            _stockClient?.Dispose(); _stockClient = new StockpileClient(baseUrl, token);
+            string clientKey = $"{baseUrl}|{token}";
+            if (_client is null || _clientKey != clientKey)
+            {
+                _client?.Dispose();
+                _client = new ResupplyClient(baseUrl, token);
+                _clientKey = clientKey;
+            }
             Authed = true;
             RaiseViewFlags();
 
             ApplyRequests(await _client.GetListAsync());
-            await LoadNeedsAsync();
+            LoadNeeds();
             Status = HasRegiment ? Summary : "Rejoins un régiment pour gérer le ravitaillement.";
         }
         catch (AuthRequiredException) { ClearAuth(); }
@@ -128,18 +139,15 @@ public sealed class ResupplyViewModel : ObservableObject
         finally { Busy = false; }
     }
 
-    private async Task LoadNeedsAsync()
+    // Les manques viennent des alertes déjà chargées par le module Stockpiles (rafraîchi avant
+    // nous par le shell) — pas de second appel réseau.
+    private void LoadNeeds()
     {
-        if (_stockClient is null) return;
-        try
-        {
-            var alerts = await _stockClient.GetAlertsAsync();
-            Needs.Clear();
-            foreach (var a in alerts.Where(a => a.IsOwn).OrderBy(a => a.Severity == "critical" ? 0 : 1).ThenBy(a => a.Name))
-                Needs.Add(new ResupplyNeedViewModel(a));
-            RaiseCounts();
-        }
-        catch { /* manques non bloquants */ }
+        Needs.Clear();
+        var alerts = _stockpiles?.LastAlerts ?? Array.Empty<StockpileAlertDto>();
+        foreach (var a in alerts.Where(a => a.IsOwn).OrderBy(a => a.Severity == "critical" ? 0 : 1).ThenBy(a => a.Name))
+            Needs.Add(new ResupplyNeedViewModel(a));
+        RaiseCounts();
     }
 
     private void ApplyRequests(List<ResupplyRequestDto> list)
@@ -185,7 +193,7 @@ public sealed class ResupplyViewModel : ObservableObject
 
     public async Task CreateFromFormAsync()
     {
-        if (_client is null) return;
+        if (_client is null || Busy) return;
         if (DraftItems.Count == 0) { Status = "Ajoute au moins un item à la demande."; return; }
         var items = DraftItems.Select(i => new ResupplyItemDto(i.Code, i.Name, i.Category, i.Quantity)).ToList();
         Busy = true;
@@ -213,7 +221,7 @@ public sealed class ResupplyViewModel : ObservableObject
 
     private async Task ActAsync(Func<Task<List<ResupplyRequestDto>>> action)
     {
-        if (_client is null) return;
+        if (_client is null || Busy) return;
         Busy = true;
         try { ApplyRequests(await action()); }
         catch (FriendException fex) { Status = fex.Message; }

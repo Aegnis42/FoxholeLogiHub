@@ -95,8 +95,8 @@ public sealed class ResupplyNeedViewModel : ObservableObject
         get { string loc = string.IsNullOrEmpty(Town) ? Hex : $"{Hex} · {Town}"; return $"{StockpileName} — {loc}"; }
     }
     public Brush DeficitBrush => IsCritical
-        ? new SolidColorBrush(Color.FromRgb(0xC0, 0x3A, 0x3A))
-        : new SolidColorBrush(Color.FromRgb(0xC8, 0x8A, 0x2E));
+        ? Palette.Critical
+        : Palette.Warning;
 }
 
 /// <summary>Une demande de ravitaillement (nom, lieu, items) + son plan de production.</summary>
@@ -166,26 +166,33 @@ public sealed class ResupplyRequestViewModel : ObservableObject
     public bool ShowPriority => Priority > 0;
     public Brush PriorityBrush => Priority switch
     {
-        ResupplyPriority.Urgent => new SolidColorBrush(Color.FromRgb(0xC0, 0x3A, 0x3A)),
-        ResupplyPriority.High => new SolidColorBrush(Color.FromRgb(0xC8, 0x8A, 0x2E)),
-        _ => new SolidColorBrush(Color.FromRgb(0x3A, 0x41, 0x4C)),
+        ResupplyPriority.Urgent => Palette.Critical,
+        ResupplyPriority.High => Palette.Warning,
+        _ => Palette.Neutral,
     };
 
     public string StatusLabel => Status switch
     { ResupplyStatus.Done => "Livrée", ResupplyStatus.Claimed => "Pris en charge", _ => "Ouverte" };
     public Brush StatusBrush => Status switch
     {
-        ResupplyStatus.Done => new SolidColorBrush(Color.FromRgb(0x3A, 0x8A, 0x4F)),
-        ResupplyStatus.Claimed => new SolidColorBrush(Color.FromRgb(0x2A, 0x6E, 0x8F)),
-        _ => new SolidColorBrush(Color.FromRgb(0x5A, 0x4A, 0x2A)),
+        ResupplyStatus.Done => Palette.Good,
+        ResupplyStatus.Claimed => Palette.BlueInfo,
+        _ => Palette.BrownOpen,
     };
 
     public string CreatedInfo => $"par {CreatedByName}";
     public string ClaimInfo => HasClaim ? $"Pris par {ClaimedByName}" : "";
     public string ClaimButtonText => MineClaim ? "✓ Je m'en occupe" : (HasClaim ? "Reprendre" : "Prendre en charge");
     public Brush ClaimButtonBrush => MineClaim
-        ? new SolidColorBrush(Color.FromRgb(0x2F, 0x6B, 0x43))
-        : new SolidColorBrush(Color.FromRgb(0x33, 0x3A, 0x45));
+        ? Palette.GreenDark
+        : Palette.Slate;
+
+    // Ce que l'utilisateur courant a le droit de faire (aligné sur les règles serveur) :
+    // prendre = libre si personne dessus ; reprendre = soi-même ou le régiment propriétaire ;
+    // livrer/rouvrir = régiment propriétaire ou preneur en charge.
+    public bool CanClaim => IsOpen && (!HasClaim || MineClaim || IsMine);
+    public bool CanComplete => IsOpen && (IsMine || MineClaim);
+    public bool CanReopen => IsDone && (IsMine || MineClaim);
 
     // Visibilité + propriétaire
     public string VisibilityLabel => Visibility switch
@@ -196,9 +203,9 @@ public sealed class ResupplyRequestViewModel : ObservableObject
     };
     public Brush VisibilityBrush => Visibility switch
     {
-        ResupplyVisibility.Public => new SolidColorBrush(Color.FromRgb(0x4A, 0x5A, 0x2A)),
-        ResupplyVisibility.Alliance => new SolidColorBrush(Color.FromRgb(0x2A, 0x4A, 0x5A)),
-        _ => new SolidColorBrush(Color.FromRgb(0x3A, 0x41, 0x4C)),
+        ResupplyVisibility.Public => Palette.VisPublic,
+        ResupplyVisibility.Alliance => Palette.VisAlliance,
+        _ => Palette.Neutral,
     };
     public bool ShowOwner => !IsMine;
     public string OwnerLabel => $"Demande de {OwnerRegimentName}";

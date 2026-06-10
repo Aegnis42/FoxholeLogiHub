@@ -1,10 +1,11 @@
-using System.Security.Claims;
-using FoxholeLogiHub.Api.Auth;
+using FoxholeLogiHub.Api.Common;
 using FoxholeLogiHub.Api.Data;
 using FoxholeLogiHub.Api.Presence;
 using FoxholeLogiHub.Contracts;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using static FoxholeLogiHub.Api.Common.RegimentGuards;
+using ClaimsPrincipal = System.Security.Claims.ClaimsPrincipal;
 
 namespace FoxholeLogiHub.Api.Stockpiles;
 
@@ -25,24 +26,26 @@ public static class StockpileEndpoints
                 return Results.Forbid();
             if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Hex) || string.IsNullOrWhiteSpace(req.Type))
                 return Results.BadRequest(new ApiError("Nom, hexagone et type requis."));
+            if (!StockpileTypes.All.Contains(req.Type))
+                return Results.BadRequest(new ApiError("Type de stockpile inconnu."));
 
             var now = DateTimeOffset.UtcNow;
             db.Stockpiles.Add(new Stockpile
             {
                 Id = Guid.NewGuid().ToString("N"),
                 RegimentId = ctx.Value.reg.Id,
-                Name = req.Name.Trim(),
-                Hex = req.Hex.Trim(),
-                Town = (req.Town ?? "").Trim(),
+                Name = Validate.Str(req.Name, 64),
+                Hex = Validate.Str(req.Hex, 48),
+                Town = Validate.Str(req.Town, 64),
                 Type = req.Type,
-                Code = StockpileTypes.UsesCode(req.Type) ? (req.Code ?? "").Trim() : "",
+                Code = StockpileTypes.UsesCode(req.Type) ? Validate.Str(req.Code, 16) : "",
                 IsPublic = req.IsPublic,
                 CreatedBySteamId = me,
                 CreatedAt = now,
                 UpdatedAt = now,
             });
             await db.SaveChangesAsync();
-            await NotifyAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
             return Results.Ok(await BuildListAsync(db, me));
         }).RequireAuthorization();
 
@@ -55,16 +58,18 @@ public static class StockpileEndpoints
             var s = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.Id && x.RegimentId == ctx.Value.reg.Id);
             if (s is null)
                 return Results.NotFound(new ApiError("Stockpile introuvable."));
+            if (!StockpileTypes.All.Contains(req.Type))
+                return Results.BadRequest(new ApiError("Type de stockpile inconnu."));
 
-            s.Name = req.Name.Trim();
-            s.Hex = req.Hex.Trim();
-            s.Town = (req.Town ?? "").Trim();
+            s.Name = Validate.Str(req.Name, 64);
+            s.Hex = Validate.Str(req.Hex, 48);
+            s.Town = Validate.Str(req.Town, 64);
             s.Type = req.Type;
-            s.Code = StockpileTypes.UsesCode(req.Type) ? (req.Code ?? "").Trim() : "";
+            s.Code = StockpileTypes.UsesCode(req.Type) ? Validate.Str(req.Code, 16) : "";
             s.IsPublic = req.IsPublic;
             s.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
-            await NotifyAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
             return Results.Ok(await BuildListAsync(db, me));
         }).RequireAuthorization();
 
@@ -81,7 +86,7 @@ public static class StockpileEndpoints
             db.StockpileShares.RemoveRange(db.StockpileShares.Where(sh => sh.StockpileId == s.Id));
             db.Stockpiles.Remove(s);
             await db.SaveChangesAsync();
-            await NotifyAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
             return Results.Ok(await BuildListAsync(db, me));
         }).RequireAuthorization();
 
@@ -104,8 +109,8 @@ public static class StockpileEndpoints
                 db.StockpileShares.Add(new StockpileShare { StockpileId = s.Id, RegimentId = req.RegimentId });
                 await db.SaveChangesAsync();
             }
-            await NotifyAsync(hub, db, ctx.Value.reg.Id);
-            await NotifyAsync(hub, db, req.RegimentId);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
+            await NotifyRegimentAsync(hub, db, req.RegimentId, PresenceEvents.StockpilesChanged);
             return Results.Ok(await BuildListAsync(db, me));
         }).RequireAuthorization();
 
@@ -121,8 +126,8 @@ public static class StockpileEndpoints
 
             db.StockpileShares.RemoveRange(db.StockpileShares.Where(sh => sh.StockpileId == s.Id && sh.RegimentId == req.RegimentId));
             await db.SaveChangesAsync();
-            await NotifyAsync(hub, db, ctx.Value.reg.Id);
-            await NotifyAsync(hub, db, req.RegimentId);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
+            await NotifyRegimentAsync(hub, db, req.RegimentId, PresenceEvents.StockpilesChanged);
             return Results.Ok(await BuildListAsync(db, me));
         }).RequireAuthorization();
 
@@ -155,6 +160,7 @@ public static class StockpileEndpoints
             if (string.IsNullOrWhiteSpace(code))
                 return Results.BadRequest(new ApiError("Item requis."));
 
+            code = Validate.Str(code, 64);
             var item = await db.StockpileItems.FirstOrDefaultAsync(i => i.StockpileId == sp.Id && i.Code == code);
             if (req.Quantity <= 0)
             {
@@ -166,23 +172,23 @@ public static class StockpileEndpoints
                 db.StockpileItems.Add(new StockpileItem
                 {
                     StockpileId = sp.Id, Code = code,
-                    Name = string.IsNullOrWhiteSpace(req.Name) ? code : req.Name.Trim(),
-                    Category = (req.Category ?? "").Trim(), Quantity = req.Quantity,
-                    LowThreshold = Math.Max(0, req.LowThreshold), CriticalThreshold = Math.Max(0, req.CriticalThreshold),
+                    Name = string.IsNullOrWhiteSpace(req.Name) ? code : Validate.Str(req.Name, 96),
+                    Category = Validate.Str(req.Category, 48), Quantity = Validate.Qty(req.Quantity),
+                    LowThreshold = Validate.Qty(req.LowThreshold), CriticalThreshold = Validate.Qty(req.CriticalThreshold),
                 });
             }
             else
             {
-                item.Quantity = req.Quantity;
-                item.Name = string.IsNullOrWhiteSpace(req.Name) ? code : req.Name.Trim();
-                item.Category = (req.Category ?? "").Trim();
-                item.LowThreshold = Math.Max(0, req.LowThreshold);
-                item.CriticalThreshold = Math.Max(0, req.CriticalThreshold);
+                item.Quantity = Validate.Qty(req.Quantity);
+                item.Name = string.IsNullOrWhiteSpace(req.Name) ? code : Validate.Str(req.Name, 96);
+                item.Category = Validate.Str(req.Category, 48);
+                item.LowThreshold = Validate.Qty(req.LowThreshold);
+                item.CriticalThreshold = Validate.Qty(req.CriticalThreshold);
             }
 
             sp.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
-            await NotifyAsync(hub, db, sp.RegimentId);
+            await NotifyRegimentAsync(hub, db, sp.RegimentId, PresenceEvents.StockpilesChanged);
             return Results.Ok(await ItemsAsync(db, sp.Id));
         }).RequireAuthorization();
 
@@ -196,6 +202,8 @@ public static class StockpileEndpoints
             var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
             if (sp is null)
                 return Results.NotFound(new ApiError("Stockpile introuvable."));
+            if (req.Items is null || req.Items.Count > Validate.MaxImportItems)
+                return Results.BadRequest(new ApiError($"Import invalide (maximum {Validate.MaxImportItems} items)."));
 
             // Préserve les seuils d'alerte existants (par code) — un ré-import ne doit pas les effacer.
             var existingItems = await db.StockpileItems.Where(i => i.StockpileId == sp.Id).ToListAsync();
@@ -204,10 +212,10 @@ public static class StockpileEndpoints
                 .ToDictionary(g => g.Key, g => (g.First().LowThreshold, g.First().CriticalThreshold), StringComparer.OrdinalIgnoreCase);
             db.StockpileItems.RemoveRange(existingItems);
 
-            // Dédoublonne par code (FIR peut renvoyer le même item plusieurs fois) → somme.
-            var deduped = req.Items
+            // Dédoublonne par code (FIR peut renvoyer le même item plusieurs fois) → somme bornée.
+            var newItems = req.Items
                 .Where(i => !string.IsNullOrWhiteSpace(i.Code) && i.Quantity > 0)
-                .GroupBy(i => i.Code.Trim(), StringComparer.OrdinalIgnoreCase)
+                .GroupBy(i => Validate.Str(i.Code, 64), StringComparer.OrdinalIgnoreCase)
                 .Select(g =>
                 {
                     var first = g.First();
@@ -216,17 +224,30 @@ public static class StockpileEndpoints
                     {
                         StockpileId = sp.Id,
                         Code = g.Key,
-                        Name = string.IsNullOrWhiteSpace(first.Name) ? g.Key : first.Name.Trim(),
-                        Category = (first.Category ?? "").Trim(),
-                        Quantity = g.Sum(x => x.Quantity),
+                        Name = string.IsNullOrWhiteSpace(first.Name) ? g.Key : Validate.Str(first.Name, 96),
+                        Category = Validate.Str(first.Category, 48),
+                        Quantity = (int)Math.Min(g.Sum(x => (long)Validate.Qty(x.Quantity)), Validate.MaxQuantity),
                         LowThreshold = th.LowThreshold,
                         CriticalThreshold = th.CriticalThreshold,
                     };
+                })
+                .ToList();
+
+            // Un item suivi (seuils définis) absent de la capture ne disparaît pas : il reste à
+            // quantité 0 (→ alerte critique « plus en stock ») au lieu de perdre ses seuils.
+            var importedCodes = new HashSet<string>(newItems.Select(i => i.Code), StringComparer.OrdinalIgnoreCase);
+            foreach (var old in existingItems.Where(o =>
+                         (o.LowThreshold > 0 || o.CriticalThreshold > 0) && !importedCodes.Contains(o.Code)))
+                newItems.Add(new StockpileItem
+                {
+                    StockpileId = sp.Id, Code = old.Code, Name = old.Name, Category = old.Category,
+                    Quantity = 0, LowThreshold = old.LowThreshold, CriticalThreshold = old.CriticalThreshold,
                 });
-            db.StockpileItems.AddRange(deduped);
+
+            db.StockpileItems.AddRange(newItems);
             sp.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
-            await NotifyAsync(hub, db, sp.RegimentId);
+            await NotifyRegimentAsync(hub, db, sp.RegimentId, PresenceEvents.StockpilesChanged);
             return Results.Ok(await ItemsAsync(db, sp.Id));
         }).RequireAuthorization();
 
@@ -331,39 +352,4 @@ public static class StockpileEndpoints
         .ToList();
     }
 
-    private static async Task<List<string>> AlliedIdsAsync(AppDbContext db, string regId)
-    {
-        var rows = await db.RegimentAlliances
-            .Where(a => a.Accepted && (a.RegimentAId == regId || a.RegimentBId == regId)).ToListAsync();
-        return rows.Select(a => a.RegimentAId == regId ? a.RegimentBId : a.RegimentAId).Distinct().ToList();
-    }
-
-    private static async Task NotifyAsync(IHubContext<PresenceHub> hub, AppDbContext db, string regimentId)
-    {
-        var memberIds = await db.RegimentMembers.Where(m => m.RegimentId == regimentId).Select(m => m.SteamId).ToListAsync();
-        if (memberIds.Count > 0)
-            await hub.Clients.Users(memberIds).SendAsync(PresenceEvents.StockpilesChanged);
-    }
-
-    // --- Helpers (identité + appartenance + permission) ---
-
-    private static string Me(ClaimsPrincipal p) =>
-        p.FindFirstValue(TokenService.SteamIdClaim) ?? throw new InvalidOperationException("Jeton sans Steam ID.");
-
-    private static async Task<(Regiment reg, RegimentMember member)?> MyRegimentAsync(AppDbContext db, string steamId)
-    {
-        var member = await db.RegimentMembers.FirstOrDefaultAsync(m => m.SteamId == steamId);
-        if (member is null)
-            return null;
-        var reg = await db.Regiments.FirstOrDefaultAsync(r => r.Id == member.RegimentId);
-        return reg is null ? null : (reg, member);
-    }
-
-    private static async Task<bool> HasPermAsync(AppDbContext db, Regiment reg, RegimentMember member, string steamId, RegimentPermission perm)
-    {
-        if (reg.OwnerSteamId == steamId)
-            return true;
-        var role = await db.RegimentRoles.FirstOrDefaultAsync(r => r.Id == member.RoleId);
-        return role is not null && ((RegimentPermission)role.Permissions & perm) == perm;
-    }
 }

@@ -1,106 +1,98 @@
 # FoxholeLogiHub
 
-Outil de logistique pour **Foxhole** : gestion de stockpile, demandes de ravitaillement,
-comptes, amis et régiments. Application de bureau **C# / .NET 8 / WPF** (Windows). L'app est
-**locale** ; un petit **backend** (ASP.NET Core) est utilisé uniquement pour les fonctions
-sociales (amis + présence temps réel).
+Outil de logistique pour **Foxhole** : stockpiles partagés (avec import automatique par capture
+d'écran), alertes de stock, demandes de ravitaillement collaboratives, régiments, alliances et amis.
 
-## État actuel
+Application de bureau **C# / .NET 8 / WPF** (Windows) + backend **ASP.NET Core** (déployé sur
+Railway, PostgreSQL) pour tout ce qui est partagé : identité, social, régiment, stockpiles,
+ravitaillement, temps réel (SignalR).
 
-✅ **Module 1 — Lecture du fichier de sauvegarde joueur (`.sav`)**
+## Fonctionnalités
 
-L'app lit directement la sauvegarde locale de Foxhole et en extrait :
+- **Connexion Steam (OpenID)** au lancement : identité vérifiée, JWT signé par le serveur —
+  aucun mot de passe ne transite par l'app.
+- **Profil** : pseudo + avatar récupérés hors-ligne depuis le client Steam local, faction/serveur/
+  loadouts lus dans la sauvegarde du jeu (`.sav`, format GVAS UE4).
+- **Amis** : code d'ami, demandes/acceptation, avatars, **présence en ligne temps réel**.
+- **Régiment** : création avec code d'invitation, **rôles à permissions** configurables par le chef
+  (membres, rôles, invitations, alliances, stockpiles), invitations d'amis, **alliances** entre
+  régiments.
+- **Stockpiles** : liés à un hexagone + type (Dépôt, Port, Usine, MPF, Raffinerie, Base de prod.),
+  code (mot de passe) pour Port/Dépôt, **public** (visible des alliés) ou **privé** (partageable
+  allié par allié). Contenu en **cartes par item** (icône, quantité) groupées par catégorie.
+- **Import automatique du contenu** : hotkey **F8** en jeu (panneau stockpile en vue carte) →
+  capture → reconnaissance par le **companion FIR** (`fic.exe`, robuste aux mods d'icônes) →
+  contenu remplacé. Les doublons caisse/unité sont fusionnés, les seuils d'alerte sont préservés.
+- **Alertes de stock** : seuils **bas** / **critique** par item, tableau de bord groupé par
+  stockpile (les stockpiles publics ne génèrent pas d'alerte).
+- **Ravitaillement** : demandes **multi-items** (nom, hexagone, coordonnées, priorité, note),
+  visibilité **privée régiment / alliance / publique**, prise en charge inter-régiment, statuts
+  (ouverte → prise en charge → livrée), et **plan de production** automatique pour les demandes
+  prises (crafts par bâtiment, ressources à récolter, véhicules de transport estimés).
+- **Fiches d'items** : 423 items du jeu (données extraites du catalogue FIR) avec catégorie
+  corrigée, calibre, taille de caisse et **recettes par bâtiment** (Usine, MPF, Raffinerie,
+  Bétonnière, Métallurgie, …) avec temps et puissance (MW).
 
-| Donnée | Champ source dans le `.sav` |
-|---|---|
-| Steam ID | `UserData.sav` + nom du fichier `<steamid>.sav` |
-| Faction (Wardens / Colonials) | `LastFactionId` |
-| Dernier serveur / shard | `LastJoinedServerName`, `LastShardId` |
-| Langue | `ClientLanguage` |
-| Guerres rejointes | `WarIdsJoinedList` |
-| Loadouts (items + quantités + slots) | `LoadoutSaveData` |
+## D'où viennent les données
 
-✅ **Module 2 — Compte & page profil**
+Foxhole ne stocke pas tout en local — chaque donnée a sa source :
 
-Compte identifié par le **Steam ID**. Page profil avec **avatar** + **pseudo modifiable** + badge
-faction. Pseudo et avatar récupérés **100 % hors-ligne** depuis le client Steam local
-(`config/loginusers.vdf` et `config/avatarcache/<steamid>.png`). Compte persisté dans
-`%APPDATA%\FoxholeLogiHub\account.json`.
-
-✅ **Module 3 — Amis & présence temps réel**
-
-Système d'amis avec **code d'ami** à partager. Liste d'amis affichant le **statut en ligne en
-temps réel** (SignalR). Nécessite le backend (voir ci-dessous).
-
-## D'où viennent les données (architecture)
-
-Foxhole ne stocke **pas** tout en local. Sources distinctes :
-
-- **Faction, serveur, loadouts, guerres** → fichier `.sav` local (format GVAS / Unreal Engine 4.24).
-  **← implémenté**
-- **Pseudo + avatar** → fichiers locaux du client Steam (VDF + cache d'avatar). **← implémenté**
-- **Amis + présence** → impossible en local (présence = état partagé temps réel) → **backend**
-  ASP.NET Core + SignalR. **← implémenté**
-- **Régiment / squad** → service externe du jeu (`FExternalWarService`). **← à venir**
-- **Contenu des stockpiles** → aucune trace locale → lecture par **OCR de l'écran** (pas de lecture
-  mémoire ni de sniff réseau : risque de ban). **← à venir**
-
-Emplacement des fichiers du jeu :
-`%LOCALAPPDATA%\Foxhole\Saved\SaveGames\` (sauvegardes) et `...\Saved\Logs\War.log`.
+- **Faction, serveur, loadouts, guerres** → `.sav` local (GVAS / UE 4.24) — *parser maison*.
+- **Pseudo + avatar** → fichiers locaux du client Steam (`loginusers.vdf`, `avatarcache`).
+- **Contenu des stockpiles** → aucune trace locale (réplication chiffrée) → **capture d'écran +
+  reconnaissance FIR**. Pas de lecture mémoire ni de sniff réseau (risque de ban).
+- **Social / régiment / ravitaillement** → notre backend (état partagé multi-joueurs).
 
 ## Structure du dépôt
 
 ```
 src/
-  FoxholeLogiHub.Core/        Domaine + parser GVAS + Steam + services (UI-agnostique, Windows)
-    Gvas/                     Parser bas niveau du format de sauvegarde UE4
-    Steam/                    Localisation Steam, parseur VDF, profil (pseudo/avatar)
-    Models/                   Modèles métier (PlayerSave, Account, Loadout, Faction…)
-    Services/                 Localisation fichiers, comptes, réglages
-  FoxholeLogiHub.Contracts/   DTOs partagés client/serveur (cross-plateforme, sans dépendance)
-  FoxholeLogiHub.Api/         Backend ASP.NET Core : amis (EF Core/SQLite) + présence (SignalR)
-  FoxholeLogiHub.App/         Application WPF (MVVM-lite)
+  FoxholeLogiHub.Core/        Parser GVAS + Steam local + comptes/réglages (UI-agnostique)
+  FoxholeLogiHub.Contracts/   DTOs partagés client/serveur (sans dépendance)
+  FoxholeLogiHub.Api/         Backend ASP.NET Core : auth Steam→JWT, amis, régiments,
+                              stockpiles, ravitaillement, hub SignalR (EF Core : SQLite local,
+                              PostgreSQL en prod via migrations)
+  FoxholeLogiHub.App/         Application WPF (MVVM-lite) + companion fic.exe + icônes d'items
 tests/
-  FoxholeLogiHub.Core.Tests/  Tests d'intégration (parser .sav, profil Steam, compte)
+  FoxholeLogiHub.Core.Tests/  Parser .sav, profil Steam, compte
+  FoxholeLogiHub.Api.Tests/   Tests d'intégration HTTP (WebApplicationFactory + SQLite) :
+                              matrices de permissions et de visibilité, partage, alertes, imports
 tools/
-  PresenceSim/                Simulateur d'un ami connecté (test de la présence)
+  PresenceSim/                Simulateur d'un ami connecté
 ```
 
-## Lancer
+## Lancer en local
 
 ```powershell
-# 1. Backend (pour les amis/présence) — écoute sur http://localhost:5080
+# 1. Backend — écoute sur http://localhost:5080 (SQLite foxhole.db, secret JWT de dev)
 dotnet run --project src/FoxholeLogiHub.Api
 
 # 2. Application
 dotnet run --project src/FoxholeLogiHub.App
 
-# Tests (ignorés si Foxhole/Steam absents)
+# Tests
 dotnet test
 ```
 
-L'URL du serveur est dans `%APPDATA%\FoxholeLogiHub\settings.json` (`apiBaseUrl`, défaut
-`http://localhost:5080`). En prod, pointer vers l'URL Railway.
+L'URL du serveur utilisée par l'app est dans `%APPDATA%\FoxholeLogiHub\settings.json`
+(`apiBaseUrl`). Le jeton de session est stocké chiffré (DPAPI) dans `token.bin`.
 
-## Backend (API)
+## Déploiement (Railway)
 
-Endpoints principaux :
+Voir `DEPLOY.md`. Points clés :
 
-| Méthode | Route | Rôle |
-|---|---|---|
-| `POST` | `/api/users` | Crée/met à jour l'utilisateur, renvoie son **code d'ami** |
-| `POST` | `/api/friends/add` | Ajoute un ami par code (amitié mutuelle immédiate) |
-| `GET`  | `/api/friends/{steamId}` | Liste des amis + statut en ligne |
-| `POST` | `/api/friends/remove` | Retire un ami |
-| Hub | `/hub/presence?steamId=…` | Présence temps réel (SignalR) |
-
-- Base de données : **SQLite** en local (`foxhole.db`). En prod (Railway) : PostgreSQL à brancher.
-- Le port est lu depuis la variable d'env `PORT` (sinon 5080) — compatible Railway.
-- ⚠️ Pas encore d'authentification : le Steam ID est déclaratif (confiance). Auth Steam à durcir.
+- `Dockerfile` à la racine (build de l'API seule), déclenché par push GitHub.
+- Variables d'env : `DATABASE_URL` (PostgreSQL, fourni par Railway), **`JWT_SECRET` (obligatoire
+  — l'API refuse de démarrer en prod sans secret)**, `PORT` (fourni).
+- Schéma géré par **migrations EF Core** appliquées au démarrage (pas de perte de données).
+- Garde-fous : validation/troncature des entrées, bornes de quantités, **rate limiting** par
+  utilisateur, handler global d'exceptions.
 
 ## Notes techniques
 
-- Le format GVAS encode `FPropertyTag.Size` sur un **`int32`** (et non `int64`) — point clé du parser.
-- Lecture **seule** du `.sav` : le fichier du jeu n'est jamais modifié.
-- Un `.sav` réel contient le Steam ID et des identifiants de périphériques → exclu du dépôt
-  (voir `.gitignore`).
+- GVAS : `FPropertyTag.Size` est un **`int32`** (pas `int64`) — piège classique du format.
+- Le `.sav` du jeu est lu **en lecture seule** et jamais committé (contient le Steam ID).
+- En local l'API utilise `EnsureCreated` (SQLite) : après un changement de schéma, supprimer
+  `foxhole.db`. En prod, les migrations s'appliquent automatiquement.
+- Le companion `fic.exe` (reconnaissance d'images, projet FIR) est lancé/arrêté par l'app et
+  écoute sur `127.0.0.1:8099`.

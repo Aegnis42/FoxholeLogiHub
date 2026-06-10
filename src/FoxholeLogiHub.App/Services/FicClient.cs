@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace FoxholeLogiHub.App.Services;
 
 /// <summary>Client du companion FIR : envoie une capture, reçoit les items reconnus (codename + quantité).</summary>
-public sealed class FicClient
+public sealed class FicClient : IDisposable
 {
     private readonly HttpClient _http;
 
@@ -13,6 +13,8 @@ public sealed class FicClient
     {
         _http = new HttpClient { BaseAddress = new Uri(baseUrl.TrimEnd('/')), Timeout = TimeSpan.FromSeconds(30) };
     }
+
+    public void Dispose() => _http.Dispose();
 
     public async Task<List<(string Code, int Quantity, bool IsCrated)>> ExtractAsync(byte[] png)
     {

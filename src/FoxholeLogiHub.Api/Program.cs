@@ -1,11 +1,14 @@
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using FoxholeLogiHub.Api;
 using FoxholeLogiHub.Api.Auth;
+using FoxholeLogiHub.Api.Common;
 using FoxholeLogiHub.Api.Data;
 using FoxholeLogiHub.Api.Presence;
 using FoxholeLogiHub.Contracts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -36,9 +39,34 @@ builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
 
 // Authentification : JWT signé par le serveur, lié au Steam ID vérifié via Steam OpenID.
-string jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
-    ?? "dev-only-insecure-secret-change-me-0123456789abcdef";
+// En prod (Postgres fourni), un secret fort est OBLIGATOIRE : on refuse de démarrer plutôt
+// que de se replier silencieusement sur le secret de dev (public dans le dépôt).
+string? jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    if (postgres is not null)
+        throw new InvalidOperationException(
+            "JWT_SECRET manquant : définis un secret fort (variables d'environnement) avant de démarrer en production.");
+    jwtSecret = "dev-only-insecure-secret-change-me-0123456789abcdef";
+}
 builder.Services.AddSingleton(new TokenService(jwtSecret));
+
+// Rate limiting global : par utilisateur authentifié (sinon par IP). Large pour l'usage normal
+// (un refresh complet = ~6 requêtes), bloquant pour le spam.
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.User.FindFirstValue(TokenService.SteamIdClaim)
+                ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 240,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -78,6 +106,17 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
+// Filet global : toute exception non gérée est loggée et renvoyée comme ApiError JSON cohérent
+// (au lieu d'un 500 vide), sans fuiter le détail de l'erreur au client.
+app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
+{
+    Exception? ex = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+    context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Api")
+        .LogError(ex, "Exception non gérée : {Method} {Path}", context.Request.Method, context.Request.Path);
+    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    await context.Response.WriteAsJsonAsync(new ApiError("Erreur interne du serveur."));
+}));
+
 // Schéma : en prod (Postgres) via migrations EF (Migrate) — les changements de modèle se
 // déploient sans perte de données. En local (SQLite) via EnsureCreated (les migrations sont
 // spécifiques à Postgres). RESET_DB=1 reste un filet de secours (vide la base).
@@ -102,6 +141,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapGet("/", () => Results.Ok(new { service = "FoxholeLogiHub.Api", status = "ok" }));
@@ -146,8 +186,8 @@ app.MapPost("/api/users", async (UpsertUserRequest req, ClaimsPrincipal principa
         db.Users.Add(user);
     }
 
-    user.DisplayName = string.IsNullOrWhiteSpace(req.DisplayName) ? steamId : req.DisplayName.Trim();
-    user.Faction = string.IsNullOrWhiteSpace(req.Faction) ? "Unknown" : req.Faction;
+    user.DisplayName = string.IsNullOrWhiteSpace(req.DisplayName) ? steamId : Validate.Str(req.DisplayName, 64);
+    user.Faction = string.IsNullOrWhiteSpace(req.Faction) ? "Unknown" : Validate.Str(req.Faction, 32);
     user.LastSeenAt = DateTimeOffset.UtcNow;
     await db.SaveChangesAsync();
 
@@ -381,3 +421,6 @@ static string? TryGetPostgresConnectionString()
     };
     return csb.ConnectionString;
 }
+
+/// <summary>Rend la classe Program visible des tests d'intégration (WebApplicationFactory).</summary>
+public partial class Program { }

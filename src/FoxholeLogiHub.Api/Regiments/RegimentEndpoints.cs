@@ -1,10 +1,11 @@
-using System.Security.Claims;
-using FoxholeLogiHub.Api.Auth;
+using FoxholeLogiHub.Api.Common;
 using FoxholeLogiHub.Api.Data;
 using FoxholeLogiHub.Api.Presence;
 using FoxholeLogiHub.Contracts;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using static FoxholeLogiHub.Api.Common.RegimentGuards;
+using ClaimsPrincipal = System.Security.Claims.ClaimsPrincipal;
 
 namespace FoxholeLogiHub.Api.Regiments;
 
@@ -29,9 +30,9 @@ public static class RegimentEndpoints
             var reg = new Regiment
             {
                 Id = Guid.NewGuid().ToString("N"),
-                Name = req.Name.Trim(),
-                Tag = (req.Tag ?? "").Trim(),
-                Faction = string.IsNullOrWhiteSpace(req.Faction) ? "Unknown" : req.Faction,
+                Name = Validate.Str(req.Name, 64),
+                Tag = Validate.Str(req.Tag, 8),
+                Faction = string.IsNullOrWhiteSpace(req.Faction) ? "Unknown" : Validate.Str(req.Faction, 32),
                 InviteCode = await UniqueCodeAsync(db),
                 OwnerSteamId = me,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -71,7 +72,7 @@ public static class RegimentEndpoints
             int defaultRoleId = await db.RegimentRoles.Where(r => r.RegimentId == reg.Id && r.IsDefault).Select(r => r.Id).FirstAsync();
             db.RegimentMembers.Add(new RegimentMember { RegimentId = reg.Id, SteamId = me, RoleId = defaultRoleId, JoinedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, reg.Id);
+            await NotifyRegimentAsync(hub, db, reg.Id, PresenceEvents.RegimentChanged);
 
             return Results.Ok(await BuildDtoAsync(db, tracker, reg, me));
         }).RequireAuthorization();
@@ -87,7 +88,7 @@ public static class RegimentEndpoints
 
             db.RegimentMembers.Remove(ctx.Value.member);
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.RegimentChanged);
             return Results.NoContent();
         }).RequireAuthorization();
 
@@ -122,10 +123,10 @@ public static class RegimentEndpoints
             if (string.IsNullOrWhiteSpace(req.Name))
                 return Results.BadRequest(new ApiError("Nom requis."));
 
-            ctx.Value.reg.Name = req.Name.Trim();
-            ctx.Value.reg.Tag = (req.Tag ?? "").Trim();
+            ctx.Value.reg.Name = Validate.Str(req.Name, 64);
+            ctx.Value.reg.Tag = Validate.Str(req.Tag, 8);
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.RegimentChanged);
             return Results.Ok(await BuildDtoAsync(db, tracker, ctx.Value.reg, me));
         }).RequireAuthorization();
 
@@ -148,9 +149,11 @@ public static class RegimentEndpoints
             var ctx = await MyRegimentAsync(db, me);
             if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageRoles))
                 return Results.Forbid();
-            db.RegimentRoles.Add(new RegimentRole { RegimentId = ctx.Value.reg.Id, Name = req.Name.Trim(), Permissions = req.Permissions });
+            if (string.IsNullOrWhiteSpace(req.Name))
+                return Results.BadRequest(new ApiError("Nom du rôle requis."));
+            db.RegimentRoles.Add(new RegimentRole { RegimentId = ctx.Value.reg.Id, Name = Validate.Str(req.Name, 48), Permissions = req.Permissions });
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.RegimentChanged);
             return Results.Ok(await BuildDtoAsync(db, tracker, ctx.Value.reg, me));
         }).RequireAuthorization();
 
@@ -163,10 +166,10 @@ public static class RegimentEndpoints
             var role = await db.RegimentRoles.FirstOrDefaultAsync(r => r.Id == req.RoleId && r.RegimentId == ctx.Value.reg.Id);
             if (role is null)
                 return Results.NotFound(new ApiError("Rôle introuvable."));
-            role.Name = req.Name.Trim();
+            role.Name = Validate.Str(req.Name, 48);
             role.Permissions = req.Permissions;
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.RegimentChanged);
             return Results.Ok(await BuildDtoAsync(db, tracker, ctx.Value.reg, me));
         }).RequireAuthorization();
 
@@ -183,11 +186,12 @@ public static class RegimentEndpoints
                 return Results.BadRequest(new ApiError("Le rôle par défaut ne peut pas être supprimé."));
 
             int defaultRoleId = await db.RegimentRoles.Where(r => r.RegimentId == ctx.Value.reg.Id && r.IsDefault).Select(r => r.Id).FirstAsync();
-            foreach (var m in db.RegimentMembers.Where(m => m.RegimentId == ctx.Value.reg.Id && m.RoleId == role.Id))
+            var affected = await db.RegimentMembers.Where(m => m.RegimentId == ctx.Value.reg.Id && m.RoleId == role.Id).ToListAsync();
+            foreach (var m in affected)
                 m.RoleId = defaultRoleId;
             db.RegimentRoles.Remove(role);
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.RegimentChanged);
             return Results.Ok(await BuildDtoAsync(db, tracker, ctx.Value.reg, me));
         }).RequireAuthorization();
 
@@ -207,7 +211,7 @@ public static class RegimentEndpoints
                 return Results.NotFound(new ApiError("Membre ou rôle introuvable."));
             target.RoleId = role.Id;
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.RegimentChanged);
             return Results.Ok(await BuildDtoAsync(db, tracker, ctx.Value.reg, me));
         }).RequireAuthorization();
 
@@ -225,7 +229,7 @@ public static class RegimentEndpoints
             db.RegimentMembers.Remove(target);
             await db.SaveChangesAsync();
             await hub.Clients.User(req.MemberSteamId).SendAsync(PresenceEvents.RegimentChanged); // l'exclu rafraîchit
-            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id);
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.RegimentChanged);
             return Results.Ok(await BuildDtoAsync(db, tracker, ctx.Value.reg, me));
         }).RequireAuthorization();
 
@@ -292,7 +296,7 @@ public static class RegimentEndpoints
                 int defaultRoleId = await db.RegimentRoles.Where(r => r.RegimentId == reg.Id && r.IsDefault).Select(r => r.Id).FirstAsync();
                 db.RegimentMembers.Add(new RegimentMember { RegimentId = reg.Id, SteamId = me, RoleId = defaultRoleId, JoinedAt = DateTimeOffset.UtcNow });
                 await db.SaveChangesAsync();
-                await NotifyRegimentAsync(hub, db, reg.Id);
+                await NotifyRegimentAsync(hub, db, reg.Id, PresenceEvents.RegimentChanged);
             }
             else
             {
@@ -325,7 +329,7 @@ public static class RegimentEndpoints
 
             db.RegimentAlliances.Add(new RegimentAlliance { RegimentAId = a, RegimentBId = b, ProposedByRegimentId = a, Accepted = false, CreatedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, target.Id);
+            await NotifyRegimentAsync(hub, db, target.Id, PresenceEvents.RegimentChanged);
             return Results.NoContent();
         }).RequireAuthorization();
 
@@ -348,8 +352,8 @@ public static class RegimentEndpoints
             else
                 db.RegimentAlliances.Remove(alliance);
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, mine);
-            await NotifyRegimentAsync(hub, db, other);
+            await NotifyRegimentAsync(hub, db, mine, PresenceEvents.RegimentChanged);
+            await NotifyRegimentAsync(hub, db, other, PresenceEvents.RegimentChanged);
             return Results.NoContent();
         }).RequireAuthorization();
 
@@ -364,33 +368,13 @@ public static class RegimentEndpoints
                 (x.RegimentAId == mine && x.RegimentBId == other) || (x.RegimentAId == other && x.RegimentBId == mine));
             db.RegimentAlliances.RemoveRange(rows);
             await db.SaveChangesAsync();
-            await NotifyRegimentAsync(hub, db, mine);
-            await NotifyRegimentAsync(hub, db, other);
+            await NotifyRegimentAsync(hub, db, mine, PresenceEvents.RegimentChanged);
+            await NotifyRegimentAsync(hub, db, other, PresenceEvents.RegimentChanged);
             return Results.NoContent();
         }).RequireAuthorization();
     }
 
-    // ---------- Helpers ----------
-
-    private static string Me(ClaimsPrincipal p) =>
-        p.FindFirstValue(TokenService.SteamIdClaim) ?? throw new InvalidOperationException("Jeton sans Steam ID.");
-
-    private static async Task<(Regiment reg, RegimentMember member)?> MyRegimentAsync(AppDbContext db, string steamId)
-    {
-        var member = await db.RegimentMembers.FirstOrDefaultAsync(m => m.SteamId == steamId);
-        if (member is null)
-            return null;
-        var reg = await db.Regiments.FirstOrDefaultAsync(r => r.Id == member.RegimentId);
-        return reg is null ? null : (reg, member);
-    }
-
-    private static async Task<bool> HasPermAsync(AppDbContext db, Regiment reg, RegimentMember member, string steamId, RegimentPermission perm)
-    {
-        if (reg.OwnerSteamId == steamId)
-            return true;
-        var role = await db.RegimentRoles.FirstOrDefaultAsync(r => r.Id == member.RoleId);
-        return role is not null && ((RegimentPermission)role.Permissions & perm) == perm;
-    }
+    // ---------- Helpers (spécifiques aux régiments — le reste vient de RegimentGuards) ----------
 
     private static async Task<string> UniqueCodeAsync(AppDbContext db)
     {
@@ -401,13 +385,6 @@ public static class RegimentEndpoints
                 return code;
         }
         throw new InvalidOperationException("Impossible de générer un code de régiment unique.");
-    }
-
-    private static async Task NotifyRegimentAsync(IHubContext<PresenceHub> hub, AppDbContext db, string regimentId)
-    {
-        var memberIds = await db.RegimentMembers.Where(m => m.RegimentId == regimentId).Select(m => m.SteamId).ToListAsync();
-        if (memberIds.Count > 0)
-            await hub.Clients.Users(memberIds).SendAsync(PresenceEvents.RegimentChanged);
     }
 
     private static async Task<RegimentDto> BuildDtoAsync(AppDbContext db, ConnectionTracker tracker, Regiment reg, string meSteamId)

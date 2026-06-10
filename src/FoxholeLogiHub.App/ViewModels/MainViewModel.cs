@@ -132,8 +132,8 @@ public sealed class MainViewModel : ObservableObject
             Faction = _account.Faction.ToString();
             FactionBrush = _account.Faction switch
             {
-                FactionId.Wardens => new SolidColorBrush(Color.FromRgb(0x24, 0x5C, 0x8A)),
-                FactionId.Colonials => new SolidColorBrush(Color.FromRgb(0x51, 0x6C, 0x42)),
+                FactionId.Wardens => Palette.Wardens,
+                FactionId.Colonials => Palette.Colonials,
                 _ => Brushes.DimGray,
             };
 
@@ -152,7 +152,7 @@ public sealed class MainViewModel : ObservableObject
             // Démarre la connexion au serveur d'amis (présence temps réel) ; régiment+stockpiles suivent.
             Regiment.Initialize(_account, Friends);
             Stockpiles.Initialize(Regiment, Companion);
-            Resupply.Initialize(Regiment);
+            Resupply.Initialize(Regiment, Stockpiles);
             Companion.EnsureStarted();
             _ = Friends.InitializeAsync(_account);
         }
