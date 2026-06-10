@@ -1653,6 +1653,9 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Width="{Binding W}" Height="{Binding H}">
+                                            <!-- Fond de carte officiel (terrain), découpé en hexagone -->
+                                            <Image Source="{Binding Tile}" Stretch="Fill" Clip="{Binding HexClip}"
+                                                   IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality"/>
                                             <!-- Sous-régions : zone d'influence de chaque ville (Voronoï) -->
                                             <ItemsControl ItemsSource="{Binding Cells}">
                                                 <ItemsControl.ItemsPanel>
@@ -1781,10 +1784,10 @@
                             <TextBlock Text="Wardens" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
                             <Ellipse Width="10" Height="10" Fill="#FF516C42" VerticalAlignment="Center"/>
                             <TextBlock Text="Colonials" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
-                            <Ellipse Width="10" Height="10" Fill="#FFC88A2E" VerticalAlignment="Center"/>
-                            <TextBlock Text="Contesté" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
+                            <Ellipse Width="10" Height="10" Fill="#FF6E2222" VerticalAlignment="Center"/>
+                            <TextBlock Text="Rasée" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
                             <TextBlock Text="📦 Stockpile" Foreground="#FFB8C4D0" FontSize="11"/>
-                            <TextBlock Text="· molette = zoom · glisser = déplacer" Foreground="#FF6B7280" FontSize="11" Margin="10,0,0,0"/>
+                            <TextBlock Text="· molette = zoom · glisser = déplacer · clic = région" Foreground="#FF6B7280" FontSize="11" Margin="10,0,0,0"/>
                         </StackPanel>
                     </Border>
 
@@ -1807,7 +1810,7 @@
                                                 <DockPanel Margin="0,1">
                                                     <Ellipse Width="9" Height="9" Fill="{Binding Fill}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                                     <TextBlock DockPanel.Dock="Right" Text="{Binding TeamLabel}" Foreground="#FF9AA4B2" FontSize="11"/>
-                                                    <TextBlock Text="{Binding Name}" Foreground="#FFE6E6E6" FontSize="12"/>
+                                                    <TextBlock Text="{Binding PanelName}" Foreground="#FFE6E6E6" FontSize="12"/>
                                                 </DockPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

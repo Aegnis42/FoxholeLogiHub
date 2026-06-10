@@ -22,8 +22,11 @@ public sealed record WarStatusDto(
 /// <summary>Résultat du reset de fin de guerre (données du régiment purgées).</summary>
 public sealed record WarResetResultDto(int Stockpiles, int Items, int Requests);
 
-/// <summary>Une ville sur la carte (position relative 0..1 dans la boîte englobante de l'hexagone).</summary>
-public sealed record WarMapTownDto(string Name, double X, double Y, string Team, bool Scorched, bool Victory);
+/// <summary>
+/// Une zone de région sur la carte (label « Major » : position relative 0..1 dans l'hexagone).
+/// <see cref="Tier"/> = 1-3 pour une Town Base, 0 pour relique/fortin/zone sans base.
+/// </summary>
+public sealed record WarMapTownDto(string Name, double X, double Y, string Team, bool Scorched, bool Victory, int Tier);
 
 /// <summary>Une structure logistique (dépôt, port, usine, raffinerie…) — Icon = iconType de l'API War.</summary>
 public sealed record WarMapStructDto(int Icon, double X, double Y, string Team);

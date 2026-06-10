@@ -26,6 +26,28 @@ public sealed class MapHexViewModel : ObservableObject
             new Point(0.75 * W, H), new Point(0.25 * W, H), new Point(0, H / 2),
         };
         Points.Freeze();
+
+        // Géométrie de découpe pour le fond de carte (la tuile est rectangulaire).
+        var clip = new StreamGeometry();
+        using (var ctx = clip.Open())
+        {
+            ctx.BeginFigure(Points[0], true, true);
+            ctx.PolyLineTo(Points.Skip(1).ToList(), true, true);
+        }
+        clip.Freeze();
+        HexClip = clip;
+    }
+
+    private ImageSource? _tile;
+
+    /// <summary>Fond de carte officiel (terrain) — null tant que la tuile n'est pas en cache.</summary>
+    public ImageSource? Tile => _tile;
+    public Geometry HexClip { get; }
+
+    public void SetTile(ImageSource? tile)
+    {
+        _tile = tile;
+        Raise(nameof(Tile));
     }
 
     public string Map { get; }
@@ -70,7 +92,8 @@ public sealed class MapCellViewModel
     public WarMapTownDto Town { get; }
     public PointCollection Points { get; }
     public Brush Fill { get; }
-    public string Tooltip => $"{Town.Name} — " + (Town.Scorched ? "rasée 🔥"
+    public string Tooltip => (Town.Tier > 0 ? new string('★', Town.Tier) + " " : "")
+        + $"{Town.Name} — " + (Town.Scorched ? "rasée 🔥"
         : Town.Team == "WARDENS" ? "Wardens"
         : Town.Team == "COLONIALS" ? "Colonials" : "neutre");
 }
@@ -85,11 +108,19 @@ public sealed class MapStructViewModel
         [17] = ("🛢", "Raffinerie"),
         [18] = ("🚢", "Chantier naval"),
         [19] = ("🔬", "Centre technologique"),
+        [27] = ("🏰", "Fortin"),
         [33] = ("🏬", "Dépôt de stockage"),
         [34] = ("🏭", "Usine"),
         [39] = ("🔨", "Chantier de construction"),
+        [45] = ("⛪", "Base relique"),
+        [46] = ("⛪", "Base relique"),
+        [47] = ("⛪", "Base relique"),
         [51] = ("⚙", "MPF"),
         [52] = ("⚓", "Port"),
+        [88] = ("✈", "Dépôt d'aéronefs"),
+        [89] = ("🛩", "Usine d'aéronefs"),
+        [91] = ("🛫", "Piste d'aviation"),
+        [92] = ("🛫", "Piste d'aviation T2"),
     };
 
     public MapStructViewModel(MapHexViewModel hex, WarMapStructDto s)
@@ -124,6 +155,7 @@ public sealed class MapTownViewModel
         Name = t.Name;
         Team = t.Team;
         Scorched = t.Scorched;
+        Tier = t.Tier;
         const double r = 4;
         X = hex.X + t.X * hex.W - r;
         Y = hex.Y + t.Y * hex.H - r;
@@ -137,9 +169,12 @@ public sealed class MapTownViewModel
     public string Name { get; }
     public string Team { get; }
     public bool Scorched { get; }
+    public int Tier { get; }
     public double X { get; }
     public double Y { get; }
     public Brush Fill { get; }
+
+    public string TierStars => Tier > 0 ? new string('★', Tier) : "";
 
     // Position du label (affiché quand l'hexagone est sélectionné/zoomé).
     public double LabelX => X + 11;
@@ -151,7 +186,8 @@ public sealed class MapTownViewModel
         "COLONIALS" => "Colonials",
         _ => "neutre",
     };
-    public string Tooltip => $"{Name} — {TeamLabel}";
+    public string Tooltip => (TierStars.Length > 0 ? TierStars + " " : "") + $"{Name} — {TeamLabel}";
+    public string PanelName => (TierStars.Length > 0 ? TierStars + " " : "") + Name;
 }
 
 /// <summary>Un pin « stockpile » sur la carte.</summary>
@@ -185,8 +221,10 @@ public sealed class MapViewModel : ObservableObject
 
     private readonly SettingsStore _settingsStore = new();
     private readonly TokenStore _tokenStore = new();
+    private readonly MapTileService _tiles = new();
     private StockpileClient? _client;
     private string _clientKey = "";
+    private bool _tilesStarted;
     private StockpilesViewModel? _stockpiles;
     private ResupplyViewModel? _resupply;
 
@@ -259,6 +297,7 @@ public sealed class MapViewModel : ObservableObject
             ApplyControl(map);
             BuildPins();
             RefreshSelection();
+            StartTileDownload();
             Status = map is { Available: true }
                 ? $"{Towns.Count} villes · {Pins.Count} stockpile(s) · molette = zoom, glisser = déplacer, clic = détail"
                 : "Données de guerre en cours de chargement…";
@@ -280,6 +319,50 @@ public sealed class MapViewModel : ObservableObject
         _retryPending = false;
         if (Authed)
             await RefreshAsync();
+    }
+
+    /// <summary>
+    /// Télécharge les fonds de carte officiels en arrière-plan (une fois ; ~190 Mo au premier
+    /// lancement, puis tout vient du cache disque) et les applique en vignettes 256 px.
+    /// </summary>
+    private void StartTileDownload()
+    {
+        if (_tilesStarted)
+            return;
+        _tilesStarted = true;
+        _ = Task.Run(async () =>
+        {
+            int done = 0, missing = 0;
+            var hexes = Hexes.ToList();
+            var tasks = hexes.Select(async hex =>
+            {
+                string? path = await _tiles.EnsureAsync(hex.Map);
+                if (path is null)
+                {
+                    Interlocked.Increment(ref missing);
+                    return;
+                }
+                var thumb = MapTileService.LoadImage(path, 256);
+                hex.SetTile(thumb);
+                int n = Interlocked.Increment(ref done);
+                if (n % 8 == 0 && n < hexes.Count)
+                    Status = $"Fonds de carte : {n}/{hexes.Count}…";
+            }).ToList();
+            await Task.WhenAll(tasks);
+            if (missing > 0)
+                _tilesStarted = false; // réseau coupé ? on retentera au prochain refresh
+        });
+    }
+
+    /// <summary>Charge la tuile pleine résolution pour l'hexagone zoomé.</summary>
+    private async Task LoadHiResTileAsync(MapHexViewModel hex)
+    {
+        string? path = await _tiles.EnsureAsync(hex.Map);
+        if (path is null)
+            return;
+        var full = await Task.Run(() => MapTileService.LoadImage(path, 1024));
+        if (full is not null)
+            hex.SetTile(full);
     }
 
     // ---------- Construction ----------
@@ -446,7 +529,10 @@ public sealed class MapViewModel : ObservableObject
             _selected.IsSelected = false;
         _selected = hex;
         if (_selected is not null)
+        {
             _selected.IsSelected = true;
+            _ = LoadHiResTileAsync(_selected); // fond net au zoom
+        }
         RefreshSelection();
     }
 

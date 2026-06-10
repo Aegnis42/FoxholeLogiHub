@@ -7,8 +7,12 @@ namespace FoxholeLogiHub.Api.War;
 /// <summary>Infos de guerre brutes (endpoint /worldconquest/war).</summary>
 public sealed record WarInfo(int WarNumber, string Winner, long ConquestStartTime, long? ConquestEndTime, int RequiredVictoryTowns);
 
-/// <summary>Une ville (Town Base) avec son contrôle actuel et sa position (0..1 dans l'hexagone).</summary>
-public sealed record TownState(string Map, string Town, string NormTown, string TeamId, bool Scorched, bool VictoryBase, double X, double Y);
+/// <summary>
+/// Une zone de région (un label « Major » de la carte — base officielle des Region Zones) avec
+/// le contrôle de la base qui s'y trouve (Town Base tier 1-3, base relique ou fortin).
+/// Tier = 1-3 pour une Town Base, 0 sinon (relique/fortin/zone sans base).
+/// </summary>
+public sealed record TownState(string Map, string Town, string NormTown, string TeamId, bool Scorched, bool VictoryBase, double X, double Y, int Tier);
 
 /// <summary>Une structure logistique (dépôt, port, usine…) — IconType de l'API War.</summary>
 public sealed record StructState(int IconType, string TeamId, double X, double Y);
@@ -213,12 +217,20 @@ public sealed class WarRefreshService : BackgroundService
         17, // Raffinerie
         18, // Chantier naval
         19, // Centre technologique
+        27, // Fortin (Keep)
         33, // Dépôt de stockage
         34, // Usine
         39, // Chantier de construction
+        45, 46, 47, // Bases reliques 1-3
         51, // Usine de production de masse (MPF)
         52, // Port
+        88, // Dépôt d'aéronefs
+        89, // Usine d'aéronefs
+        91, 92, // Pistes d'aviation T1/T2
     };
+
+    /// <summary>Bases qui définissent le contrôle d'une zone : Town Base 1-3, base relique 1-3, fortin.</summary>
+    private static bool IsZoneBase(int icon) => icon is >= TownBaseT1 and <= TownBaseT3 or >= 45 and <= 47 or 27;
 
     private readonly WarApiClient _api;
     private readonly WarStateService _state;
@@ -286,8 +298,11 @@ public sealed class WarRefreshService : BackgroundService
 
             foreach (var (map, labels, dynamic) in await Task.WhenAll(tasks))
             {
-                var towns = new List<TownState>();
                 var structures = new List<StructState>();
+
+                // 1) Chaque base de zone est assignée à son label « Major » le plus proche
+                //    (priorité aux Town Bases sur les reliques/fortins si plusieurs bases par zone).
+                var baseByLabel = new Dictionary<int, (int Icon, string Team, int Flags)>();
                 foreach (var (iconType, teamId, x, y, flags) in dynamic)
                 {
                     bool victory = (flags & FlagVictoryBase) != 0;
@@ -298,17 +313,37 @@ public sealed class WarRefreshService : BackgroundService
                     }
                     if (StructTypes.Contains(iconType))
                         structures.Add(new StructState(iconType, teamId, x, y));
-                    if (iconType is < TownBaseT1 or > TownBaseT3)
+                    if (!IsZoneBase(iconType) || labels.Count == 0)
                         continue;
 
-                    // La ville = le label « Major » le plus proche de la Town Base.
-                    var nearest = labels
-                        .OrderBy(l => (l.X - x) * (l.X - x) + (l.Y - y) * (l.Y - y))
-                        .FirstOrDefault();
-                    if (nearest.Text is null or "")
+                    int li = 0;
+                    double best = double.MaxValue;
+                    for (int i = 0; i < labels.Count; i++)
+                    {
+                        double d = (labels[i].X - x) * (labels[i].X - x) + (labels[i].Y - y) * (labels[i].Y - y);
+                        if (d < best) { best = d; li = i; }
+                    }
+                    bool isTownBase = iconType is >= TownBaseT1 and <= TownBaseT3;
+                    if (!baseByLabel.TryGetValue(li, out var existing)
+                        || (isTownBase && existing.Icon is < TownBaseT1 or > TownBaseT3))
+                        baseByLabel[li] = (iconType, teamId, flags);
+                }
+
+                // 2) Une zone par label « Major » (base officielle des Region Zones) — même sans base.
+                var towns = new List<TownState>();
+                for (int i = 0; i < labels.Count; i++)
+                {
+                    var (text, lx, ly) = labels[i];
+                    if (string.IsNullOrEmpty(text))
                         continue;
-                    towns.Add(new TownState(map, nearest.Text, WarStateService.Normalize(nearest.Text),
-                        teamId, (flags & FlagScorched) != 0, victory, x, y));
+                    baseByLabel.TryGetValue(i, out var b);
+                    bool hasBase = b.Icon != 0;
+                    int tier = hasBase && b.Icon is >= TownBaseT1 and <= TownBaseT3 ? b.Icon - TownBaseT1 + 1 : 0;
+                    towns.Add(new TownState(map, text, WarStateService.Normalize(text),
+                        hasBase ? b.Team : "NONE",
+                        hasBase && (b.Flags & FlagScorched) != 0,
+                        hasBase && (b.Flags & FlagVictoryBase) != 0,
+                        lx, ly, tier));
                 }
 
                 string hexKey = WarStateService.Normalize(map.EndsWith("Hex") ? map[..^3] : map);
