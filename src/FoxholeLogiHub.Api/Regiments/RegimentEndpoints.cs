@@ -141,6 +141,31 @@ public static class RegimentEndpoints
             return Results.Ok(new { inviteCode = ctx.Value.reg.InviteCode });
         }).RequireAuthorization();
 
+        // Fin de guerre : purge les données logistiques du régiment (stockpiles + contenus + partages
+        // + demandes de ravitaillement) pour repartir propre. Réservé au CHEF — le client propose
+        // une archive locale avant d'appeler.
+        app.MapPost("/api/regiments/war-reset", async (ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || ctx.Value.reg.OwnerSteamId != me)
+                return Results.BadRequest(new ApiError("Seul le chef peut lancer le reset de fin de guerre."));
+
+            string regId = ctx.Value.reg.Id;
+            var spIds = await db.Stockpiles.Where(s => s.RegimentId == regId).Select(s => s.Id).ToListAsync();
+            int items = await db.StockpileItems.Where(i => spIds.Contains(i.StockpileId)).ExecuteDeleteAsync();
+            await db.StockpileShares.Where(sh => spIds.Contains(sh.StockpileId)).ExecuteDeleteAsync();
+            int stockpiles = await db.Stockpiles.Where(s => s.RegimentId == regId).ExecuteDeleteAsync();
+
+            var reqIds = await db.ResupplyRequests.Where(r => r.RegimentId == regId).Select(r => r.Id).ToListAsync();
+            await db.ResupplyRequestItems.Where(i => reqIds.Contains(i.RequestId)).ExecuteDeleteAsync();
+            int requests = await db.ResupplyRequests.Where(r => r.RegimentId == regId).ExecuteDeleteAsync();
+
+            await NotifyRegimentAsync(hub, db, regId, PresenceEvents.StockpilesChanged);
+            await NotifyRegimentAsync(hub, db, regId, PresenceEvents.ResupplyChanged);
+            return Results.Ok(new WarResetResultDto(stockpiles, items, requests));
+        }).RequireAuthorization();
+
         // --- Rôles ---
 
         app.MapPost("/api/regiments/roles", async (CreateRoleRequest req, ClaimsPrincipal p, AppDbContext db, ConnectionTracker tracker, IHubContext<PresenceHub> hub) =>

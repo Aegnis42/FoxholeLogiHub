@@ -220,7 +220,9 @@
 
                 <StackPanel Grid.Row="0" Margin="0,0,0,14">
                     <TextBlock Text="Tableau de bord" FontSize="22" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding Stockpiles.AlertsSummary}" Foreground="#FF9AA4B2" FontSize="13" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding Stockpiles.WarBanner}" Foreground="#FF7FA8D9" FontSize="12" Margin="0,4,0,0"
+                               Visibility="{Binding Stockpiles.HasWar, Converter={StaticResource BoolToVis}}"/>
+                    <TextBlock Text="{Binding Stockpiles.AlertsSummary}" Foreground="#FF9AA4B2" FontSize="13" Margin="0,3,0,0"/>
                 </StackPanel>
 
                 <!-- Non connecté -->
@@ -230,11 +232,35 @@
 
                 <!-- Alertes -->
                 <Grid Grid.Row="1" Visibility="{Binding Stockpiles.Authed, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Text="Aucune alerte. Définis des seuils bas/critique sur tes items (onglet Stockpiles) pour les voir apparaître ici."
-                               Foreground="#FF6B7280" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Top"
-                               Visibility="{Binding Stockpiles.NoAlerts, Converter={StaticResource BoolToVis}}"/>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  Visibility="{Binding Stockpiles.HasAlerts, Converter={StaticResource BoolToVis}}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                      <StackPanel>
+                        <!-- Stockpiles menacés (contrôle des villes via l'API War) -->
+                        <StackPanel Margin="0,0,0,8" Visibility="{Binding Stockpiles.HasThreats, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="🚨 STOCKPILES MENACÉS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <ItemsControl ItemsSource="{Binding Stockpiles.ThreatenedStockpiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FF2A1B1B" BorderBrush="#FFC03A3A" BorderThickness="1"
+                                                CornerRadius="8" Margin="0,0,0,6" Padding="12,8">
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Right" Background="{Binding ThreatBrush}" CornerRadius="4"
+                                                        Padding="8,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ThreatLabel}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                                                </Border>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding LocationLabel}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <TextBlock Text="Aucune alerte. Définis des seuils bas/critique sur tes items (onglet Stockpiles) pour les voir apparaître ici."
+                                   Foreground="#FF6B7280" FontSize="13" TextWrapping="Wrap"
+                                   Visibility="{Binding Stockpiles.NoAlerts, Converter={StaticResource BoolToVis}}"/>
                         <ItemsControl ItemsSource="{Binding Stockpiles.AlertsView}">
                             <ItemsControl.GroupStyle>
                                 <GroupStyle>
@@ -282,6 +308,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                      </StackPanel>
                     </ScrollViewer>
                 </Grid>
             </Grid>
@@ -674,6 +701,10 @@
                                             <Button Content="Régénérer le code" Style="{StaticResource FlatButton}"
                                                     Background="#FF333A45" Padding="10,5" Margin="0,0,0,6" Click="OnRegenCode"
                                                     Visibility="{Binding CanInvite, Converter={StaticResource BoolToVis}}"/>
+                                            <Button Content="🏁 Fin de guerre (reset)" Style="{StaticResource FlatButton}"
+                                                    Background="#FF4A3A2A" Padding="10,5" Margin="0,0,0,6" Click="OnWarReset"
+                                                    Visibility="{Binding IAmOwner, Converter={StaticResource BoolToVis}}"
+                                                    ToolTip="Archive en JSON local puis supprime tous les stockpiles et demandes du régiment (nouvelle guerre)"/>
                                             <Button Content="Supprimer le régiment" Style="{StaticResource FlatButton}"
                                                     Background="#FF5A2A2A" Padding="10,5" Click="OnDeleteRegiment"
                                                     Visibility="{Binding IAmOwner, Converter={StaticResource BoolToVis}}"/>
@@ -952,6 +983,11 @@
                                                                 <Border DockPanel.Dock="Right" Background="{Binding VisibilityBrush}" CornerRadius="4"
                                                                         Padding="8,3" VerticalAlignment="Top">
                                                                     <TextBlock Text="{Binding VisibilityLabel}" Foreground="White" FontSize="11"/>
+                                                                </Border>
+                                                                <Border DockPanel.Dock="Right" Background="{Binding ThreatBrush}" CornerRadius="4"
+                                                                        Padding="8,3" Margin="0,0,6,0" VerticalAlignment="Top"
+                                                                        Visibility="{Binding IsThreatened, Converter={StaticResource BoolToVis}}">
+                                                                    <TextBlock Text="{Binding ThreatLabel}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                                                                 </Border>
                                                                 <Button DockPanel.Dock="Right" Content="Items" Style="{StaticResource FlatButton}"
                                                                         Background="#FF333A45" Padding="10,4" Margin="0,0,8,0" VerticalAlignment="Top"

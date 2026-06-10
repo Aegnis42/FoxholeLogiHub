@@ -247,6 +247,7 @@ public sealed class RegimentViewModel : ObservableObject
     public Task LeaveAsync() => RunVoidAsync(() => _client!.LeaveAsync(), "Tu as quitté le régiment.");
     public Task DeleteAsync() => RunVoidAsync(() => _client!.DeleteAsync(), "Régiment supprimé.");
     public Task RegenerateCodeAsync() => RunVoidAsync(() => _client!.RegenerateCodeAsync(), "Nouveau code généré.");
+    public Task WarResetAsync() => RunVoidAsync(() => _client!.WarResetAsync(), "Fin de guerre : stockpiles et demandes réinitialisés.");
 
     public async Task CreateRoleAsync()
     {

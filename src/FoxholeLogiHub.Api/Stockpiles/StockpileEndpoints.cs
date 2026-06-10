@@ -1,6 +1,7 @@
 using FoxholeLogiHub.Api.Common;
 using FoxholeLogiHub.Api.Data;
 using FoxholeLogiHub.Api.Presence;
+using FoxholeLogiHub.Api.War;
 using FoxholeLogiHub.Contracts;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,10 @@ public static class StockpileEndpoints
 {
     public static void MapStockpileEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/stockpiles", async (ClaimsPrincipal p, AppDbContext db) =>
-            Results.Ok(await BuildListAsync(db, Me(p)))).RequireAuthorization();
+        app.MapGet("/api/stockpiles", async (ClaimsPrincipal p, AppDbContext db, WarStateService war) =>
+            Results.Ok(await BuildListAsync(db, Me(p), war))).RequireAuthorization();
 
-        app.MapPost("/api/stockpiles", async (CreateStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        app.MapPost("/api/stockpiles", async (CreateStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub, WarStateService war) =>
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
@@ -46,10 +47,10 @@ public static class StockpileEndpoints
             });
             await db.SaveChangesAsync();
             await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
-            return Results.Ok(await BuildListAsync(db, me));
+            return Results.Ok(await BuildListAsync(db, me, war));
         }).RequireAuthorization();
 
-        app.MapPut("/api/stockpiles", async (UpdateStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        app.MapPut("/api/stockpiles", async (UpdateStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub, WarStateService war) =>
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
@@ -70,10 +71,10 @@ public static class StockpileEndpoints
             s.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
             await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
-            return Results.Ok(await BuildListAsync(db, me));
+            return Results.Ok(await BuildListAsync(db, me, war));
         }).RequireAuthorization();
 
-        app.MapPost("/api/stockpiles/delete", async (DeleteStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        app.MapPost("/api/stockpiles/delete", async (DeleteStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub, WarStateService war) =>
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
@@ -87,10 +88,10 @@ public static class StockpileEndpoints
             db.Stockpiles.Remove(s);
             await db.SaveChangesAsync();
             await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
-            return Results.Ok(await BuildListAsync(db, me));
+            return Results.Ok(await BuildListAsync(db, me, war));
         }).RequireAuthorization();
 
-        app.MapPost("/api/stockpiles/share", async (ShareStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        app.MapPost("/api/stockpiles/share", async (ShareStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub, WarStateService war) =>
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
@@ -111,10 +112,10 @@ public static class StockpileEndpoints
             }
             await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
             await NotifyRegimentAsync(hub, db, req.RegimentId, PresenceEvents.StockpilesChanged);
-            return Results.Ok(await BuildListAsync(db, me));
+            return Results.Ok(await BuildListAsync(db, me, war));
         }).RequireAuthorization();
 
-        app.MapPost("/api/stockpiles/unshare", async (UnshareStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        app.MapPost("/api/stockpiles/unshare", async (UnshareStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub, WarStateService war) =>
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
@@ -128,7 +129,7 @@ public static class StockpileEndpoints
             await db.SaveChangesAsync();
             await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
             await NotifyRegimentAsync(hub, db, req.RegimentId, PresenceEvents.StockpilesChanged);
-            return Results.Ok(await BuildListAsync(db, me));
+            return Results.Ok(await BuildListAsync(db, me, war));
         }).RequireAuthorization();
 
         // --- Contenu (items) ---
@@ -315,13 +316,14 @@ public static class StockpileEndpoints
         return await db.StockpileShares.AnyAsync(s => s.StockpileId == sp.Id && s.RegimentId == myRegId);
     }
 
-    private static async Task<List<StockpileDto>> BuildListAsync(AppDbContext db, string me)
+    private static async Task<List<StockpileDto>> BuildListAsync(AppDbContext db, string me, WarStateService war)
     {
         var ctx = await MyRegimentAsync(db, me);
         if (ctx is null)
             return new List<StockpileDto>();
 
         string myRegId = ctx.Value.reg.Id;
+        string myFaction = ctx.Value.reg.Faction;
         bool canManage = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles);
 
         var own = await db.Stockpiles.Where(s => s.RegimentId == myRegId).ToListAsync();
@@ -345,8 +347,13 @@ public static class StockpileEndpoints
             var sharedIds = isOwn
                 ? shares.Where(sh => sh.StockpileId == s.Id).Select(sh => sh.RegimentId).ToList()
                 : new List<string>();
+
+            // Contrôle de la ville selon l'API War (relatif à NOTRE faction) — « unknown » si indispo.
+            var town = war.FindTown(s.Hex, s.Town);
+            string control = WarStateService.ControlFor(town, myFaction);
             return new StockpileDto(s.Id, s.RegimentId, names.GetValueOrDefault(s.RegimentId, "?"),
-                s.Name, s.Hex, s.Town, s.Type, s.Code, s.IsPublic, isOwn, isOwn && canManage, sharedIds);
+                s.Name, s.Hex, s.Town, s.Type, s.Code, s.IsPublic, isOwn, isOwn && canManage, sharedIds,
+                control, town?.Scorched ?? false);
         })
         .OrderByDescending(d => d.IsOwn).ThenBy(d => d.Hex).ThenBy(d => d.Name)
         .ToList();

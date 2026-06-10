@@ -37,6 +37,14 @@ public sealed class StockpileClient : IDisposable
         return (await resp.Content.ReadFromJsonAsync<List<StockpileAlertDto>>()) ?? new();
     }
 
+    /// <summary>État de la guerre en cours (numéro, jour, points de victoire) — cache serveur.</summary>
+    public async Task<WarStatusDto?> GetWarStatusAsync()
+    {
+        HttpResponseMessage resp = await _http.GetAsync("/api/war");
+        await EnsureAsync(resp);
+        return await resp.Content.ReadFromJsonAsync<WarStatusDto>();
+    }
+
     public async Task<List<StockpileItemDto>> GetItemsAsync(string stockpileId)
     {
         HttpResponseMessage resp = await _http.GetAsync($"/api/stockpiles/{stockpileId}/items");

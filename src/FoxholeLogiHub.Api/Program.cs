@@ -38,6 +38,11 @@ builder.Services.AddSingleton<IUserIdProvider, SteamIdUserIdProvider>();
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
 
+// État de la guerre (API publique Foxhole) : cache partagé + rafraîchissement périodique.
+builder.Services.AddSingleton<FoxholeLogiHub.Api.War.WarApiClient>();
+builder.Services.AddSingleton<FoxholeLogiHub.Api.War.WarStateService>();
+builder.Services.AddHostedService<FoxholeLogiHub.Api.War.WarRefreshService>();
+
 // Authentification : JWT signé par le serveur, lié au Steam ID vérifié via Steam OpenID.
 // En prod (Postgres fourni), un secret fort est OBLIGATOIRE : on refuse de démarrer plutôt
 // que de se replier silencieusement sur le secret de dev (public dans le dépôt).
@@ -343,6 +348,7 @@ app.MapPost("/api/friends/remove", async (RemoveFriendRequest req, ClaimsPrincip
 FoxholeLogiHub.Api.Regiments.RegimentEndpoints.MapRegimentEndpoints(app);
 FoxholeLogiHub.Api.Stockpiles.StockpileEndpoints.MapStockpileEndpoints(app);
 FoxholeLogiHub.Api.Resupply.ResupplyEndpoints.MapResupplyEndpoints(app);
+FoxholeLogiHub.Api.War.WarEndpoints.MapWarEndpoints(app);
 
 app.MapHub<PresenceHub>("/hub/presence");
 

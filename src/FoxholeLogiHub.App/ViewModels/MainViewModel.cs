@@ -61,6 +61,17 @@ public sealed class MainViewModel : ObservableObject
         await Resupply.RefreshAsync();
     }
 
+    /// <summary>Fin de guerre : archive locale (JSON) puis purge serveur, puis rafraîchit tout.</summary>
+    public async Task<string?> WarResetAsync()
+    {
+        string? archive = null;
+        try { archive = await Stockpiles.ExportWarArchiveAsync(Resupply); }
+        catch { /* la purge ne doit pas être bloquée par l'archive */ }
+        await Regiment.WarResetAsync();
+        await RefreshStockAndResupplyAsync();
+        return archive;
+    }
+
     // --- Navigation ---
     public bool IsDashboardActive => _activeTab == "Dashboard";
     public bool IsProfileActive => _activeTab == "Profil";

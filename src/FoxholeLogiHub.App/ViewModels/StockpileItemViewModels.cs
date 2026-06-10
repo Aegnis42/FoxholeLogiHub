@@ -22,6 +22,7 @@ public static class StockpileCatalog
 
     public static string Label(string type) => Types.FirstOrDefault(t => t.Value == type).Label ?? type;
 
+    // Les 53 régions (alignées sur /worldconquest/maps de l'API War — « The Moors » = MooringCountyHex).
     public static readonly string[] Hexes =
     {
         "Deadlands", "Callahan's Passage", "Marban Hollow", "Umbral Wildwood", "The Moors",
@@ -31,7 +32,9 @@ public static class StockpileCatalog
         "Godcrofts", "Endless Shore", "Ash Fields", "Terminus", "The Clahstra", "The Drowned Vale",
         "Shackled Chasm", "Acrithia", "Red River", "Kalokai", "Nevish Line", "Clanshead Valley",
         "Morgen's Crossing", "Weathered Expanse", "Speaking Woods", "Basin Sionnach", "Sableport",
-        "Kings Cage", "Mooring County", "Callum's Cape", "Stema Landing", "The Fingers",
+        "Kings Cage", "Callum's Cape", "Stema Landing", "The Fingers",
+        "Kuura Strand", "Gutter", "Wresta", "Tyrant Foothills", "Pipers Enclave", "Lykos Isle",
+        "Reavers Pass", "Pari Peak", "Olavis Wake", "Palantine Berm", "Onyx",
     };
 }
 
@@ -73,6 +76,8 @@ public sealed class StockpileItemViewModel : ObservableObject
         IsOwn = dto.IsOwn;
         CanManage = dto.CanManage;
         RegimentName = dto.RegimentName;
+        TownControl = dto.TownControl;
+        TownScorched = dto.TownScorched;
 
         if (IsOwn && CanManage && !IsPublic)
             foreach (var a in alliances)
@@ -91,6 +96,16 @@ public sealed class StockpileItemViewModel : ObservableObject
     public string RegimentName { get; }
 
     public ObservableCollection<StockpileShareTargetViewModel> ShareTargets { get; } = new();
+
+    public string TownControl { get; }
+    public bool TownScorched { get; }
+
+    /// <summary>Ville rasée ou aux mains de l'ennemi (API War) → le stockpile est menacé/perdu.</summary>
+    public bool IsThreatened => TownScorched || TownControl == WarTownControl.Enemy;
+    public string ThreatLabel => TownScorched ? "🔥 Ville rasée"
+        : TownControl == WarTownControl.Enemy ? "⚠ Ville ennemie"
+        : "";
+    public Brush ThreatBrush => Palette.Critical;
 
     public string TypeLabel => StockpileCatalog.Label(Type);
     public string LocationLabel => string.IsNullOrEmpty(Town) ? Hex : $"{Hex} · {Town}";

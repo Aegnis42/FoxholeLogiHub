@@ -59,6 +59,21 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 
+    private async void OnWarReset(object sender, RoutedEventArgs e)
+    {
+        var confirm = MessageBox.Show(
+            "Fin de guerre : TOUS les stockpiles du régiment (avec leur contenu) et TOUTES les demandes de ravitaillement seront supprimés.\n\n" +
+            "Une archive JSON sera d'abord enregistrée localement (dossier archives).\n\nContinuer ?",
+            "Fin de guerre", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        string? archive = await _vm.WarResetAsync();
+        if (archive is not null)
+            MessageBox.Show($"Archive enregistrée :\n{archive}", "Fin de guerre",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     private void OnNavDashboard(object sender, RoutedEventArgs e) => _vm.ShowDashboard();
     private void OnNavProfile(object sender, RoutedEventArgs e) => _vm.ShowProfile();
     private void OnNavFriends(object sender, RoutedEventArgs e) => _vm.ShowFriends();

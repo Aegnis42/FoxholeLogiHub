@@ -45,6 +45,7 @@ public sealed class StockpilesViewModel : ObservableObject
     private string _editingCategory = "";
 
     public ObservableCollection<StockpileItemViewModel> Stockpiles { get; } = new();
+    public ObservableCollection<StockpileItemViewModel> ThreatenedStockpiles { get; } = new();
     public ObservableCollection<StockpileLineViewModel> Items { get; } = new();
     public ObservableCollection<StockpileAlertViewModel> Alerts { get; } = new();
     public ICollectionView ItemsView { get; }
@@ -67,6 +68,12 @@ public sealed class StockpilesViewModel : ObservableObject
     public bool HasAlerts => Alerts.Count > 0;
     public bool NoAlerts => Alerts.Count == 0;
     public bool HasCritical => CriticalCount > 0;
+    public bool HasThreats => ThreatenedStockpiles.Count > 0;
+
+    // Bannière de guerre (API publique, cache serveur) — affichée sur le Dashboard.
+    private string _warBanner = "";
+    public string WarBanner { get => _warBanner; private set { Set(ref _warBanner, value); Raise(nameof(HasWar)); } }
+    public bool HasWar => _warBanner.Length > 0;
     public string AlertsSummary => Authed
         ? (HasAlerts ? $"{CriticalCount} critique(s) · {LowCount} bas" : "Aucune alerte — tout est au-dessus des seuils. ✅")
         : "Connecte-toi pour voir tes alertes.";
@@ -75,6 +82,7 @@ public sealed class StockpilesViewModel : ObservableObject
     {
         Raise(nameof(CriticalCount)); Raise(nameof(LowCount));
         Raise(nameof(HasAlerts)); Raise(nameof(NoAlerts)); Raise(nameof(HasCritical)); Raise(nameof(AlertsSummary));
+        Raise(nameof(HasThreats));
     }
 
     private ItemDetailViewModel? _itemDetail;
@@ -203,9 +211,11 @@ public sealed class StockpilesViewModel : ObservableObject
         _client = null;
         Authed = false;
         Stockpiles.Clear();
+        ThreatenedStockpiles.Clear();
         Alerts.Clear();
         _lastAlerts = new List<StockpileAlertDto>();
         _clientKey = "";
+        WarBanner = "";
         RaiseAlertFlags();
         CloseDetail();
         Raise(nameof(HasNoStockpiles));
@@ -239,6 +249,7 @@ public sealed class StockpilesViewModel : ObservableObject
             if (IsStockpileSelected)
                 await LoadItemsAsync();
             await LoadAlertsAsync();
+            await LoadWarStatusAsync();
             Status = HasRegiment ? $"{Stockpiles.Count} stockpile(s)." : "Rejoins un régiment pour gérer des stockpiles.";
         }
         catch (AuthRequiredException) { ClearAuth(); }
@@ -266,13 +277,73 @@ public sealed class StockpilesViewModel : ObservableObject
         catch { /* les alertes ne doivent pas bloquer le reste */ }
     }
 
+    private async Task LoadWarStatusAsync()
+    {
+        if (_client is null)
+            return;
+        try
+        {
+            var war = await _client.GetWarStatusAsync();
+            WarBanner = war is { Available: true }
+                ? $"⚔ Guerre {war.WarNumber} · Jour {war.DayOfWar} · Villes de victoire : Wardens {war.WardenVictoryTowns} — Colonials {war.ColonialVictoryTowns} (objectif {war.RequiredVictoryTowns})"
+                : "";
+        }
+        catch { /* la bannière de guerre n'est jamais bloquante */ }
+    }
+
+    /// <summary>
+    /// Archive locale (JSON) des stockpiles du régiment (avec contenu) et des demandes en cours,
+    /// à appeler avant un reset de fin de guerre.
+    /// </summary>
+    public async Task<string?> ExportWarArchiveAsync(ResupplyViewModel resupply)
+    {
+        if (_client is null)
+            return null;
+
+        var stockpiles = new List<object>();
+        foreach (var s in Stockpiles.Where(s => s.IsOwn))
+        {
+            List<StockpileItemDto> items = new();
+            try { items = await _client.GetItemsAsync(s.Id); }
+            catch { /* archive partielle plutôt que pas d'archive */ }
+            stockpiles.Add(new { s.Name, s.Hex, s.Town, s.Type, s.Code, s.IsPublic, items });
+        }
+
+        static object Req(ResupplyRequestViewModel r) => new
+        {
+            r.Title, r.Hex, r.Coords, r.Status,
+            items = r.Items.Select(i => new { i.Code, i.Name, i.Quantity }).ToList(),
+        };
+        var payload = new
+        {
+            exportedAt = DateTimeOffset.Now,
+            war = WarBanner,
+            stockpiles,
+            requests = resupply.OpenRequests.Select(Req).Concat(resupply.TakenRequests.Select(Req)).ToList(),
+        };
+
+        string dir = System.IO.Path.Combine(AppPaths.DataDirectory, "archives");
+        System.IO.Directory.CreateDirectory(dir);
+        string path = System.IO.Path.Combine(dir, $"guerre-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+        System.IO.File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(payload,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        return path;
+    }
+
     private void ApplyList(List<StockpileDto> list)
     {
         var allies = _regiment?.AcceptedAllies ?? new List<(string, string)>();
         Stockpiles.Clear();
+        ThreatenedStockpiles.Clear();
         foreach (var dto in list)
-            Stockpiles.Add(new StockpileItemViewModel(dto, allies));
+        {
+            var vm = new StockpileItemViewModel(dto, allies);
+            Stockpiles.Add(vm);
+            if (vm.IsThreatened)
+                ThreatenedStockpiles.Add(vm);
+        }
         Raise(nameof(HasNoStockpiles));
+        Raise(nameof(HasThreats));
 
         if (_selectedId is not null)
         {

@@ -30,9 +30,14 @@ public sealed record UnshareStockpileRequest(string StockpileId, string Regiment
 /// <see cref="CanManage"/> = je peux l'éditer ; <see cref="SharedRegimentIds"/> = régiments alliés
 /// avec qui il est partagé (rempli seulement pour mes stockpiles).
 /// </summary>
+/// <summary>
+/// <see cref="TownControl"/> : contrôle de la ville selon l'API War (valeurs de <see cref="WarTownControl"/>),
+/// relatif à la faction du régiment de l'appelant ; <see cref="TownScorched"/> = ville rasée.
+/// </summary>
 public sealed record StockpileDto(
     string Id, string RegimentId, string RegimentName, string Name, string Hex, string Town,
-    string Type, string Code, bool IsPublic, bool IsOwn, bool CanManage, List<string> SharedRegimentIds);
+    string Type, string Code, bool IsPublic, bool IsOwn, bool CanManage, List<string> SharedRegimentIds,
+    string TownControl, bool TownScorched);
 
 /// <summary>Un item d'un stockpile (quantité + seuils d'alerte). Name/Category dénormalisés.</summary>
 public sealed record StockpileItemDto(string Code, string Name, string Category, int Quantity, int LowThreshold, int CriticalThreshold);

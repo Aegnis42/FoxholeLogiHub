@@ -72,6 +72,14 @@ public sealed class RegimentClient : IDisposable
     public Task RespondInviteAsync(string regimentId, bool accept) =>
         SendAsync(HttpMethod.Post, "/api/regiments/invites/respond", new RespondRegimentInviteRequest(regimentId, accept));
 
+    /// <summary>Fin de guerre (chef) : purge stockpiles + demandes du régiment côté serveur.</summary>
+    public async Task<WarResetResultDto> WarResetAsync()
+    {
+        HttpResponseMessage resp = await _http.PostAsync("/api/regiments/war-reset", null);
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<WarResetResultDto>()) ?? new WarResetResultDto(0, 0, 0);
+    }
+
     public Task ProposeAllianceAsync(string code) =>
         SendAsync(HttpMethod.Post, "/api/regiments/alliances/propose", new ProposeAllianceRequest(code));
     public Task RespondAllianceAsync(string otherId, bool accept) =>

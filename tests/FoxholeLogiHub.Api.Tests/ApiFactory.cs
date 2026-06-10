@@ -16,8 +16,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"foxhole-test-{Guid.NewGuid():N}.db");
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder) =>
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
         builder.UseSetting("ConnectionStrings:Default", $"Data Source={_dbPath}");
+        builder.UseSetting("DisableWarApi", "1"); // pas d'appels à l'API publique Foxhole depuis les tests
+    }
 
     /// <summary>Client HTTP authentifié pour un Steam ID arbitraire.</summary>
     public HttpClient ClientFor(string steamId)
