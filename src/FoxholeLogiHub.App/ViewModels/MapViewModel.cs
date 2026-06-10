@@ -69,9 +69,13 @@ public sealed class MapHexViewModel : ObservableObject
 
     public bool IsSelected { get => _isSelected; set { Set(ref _isSelected, value); Raise(nameof(Stroke)); Raise(nameof(StrokeThickness)); } }
     public Brush Stroke => IsSelected ? Brushes.White : Palette.MapStroke;
-    public double StrokeThickness => IsSelected ? 2.5 : 1.5;
+
+    /// <summary>Facteur de contre-échelle des bordures (poussé par la carte à chaque zoom).</summary>
+    public static double StrokeScale = 1.0;
+    public double StrokeThickness => (IsSelected ? 2.2 : 1.3) * StrokeScale;
 
     public void RaiseFill() => Raise(nameof(Fill));
+    public void RaiseStroke() => Raise(nameof(StrokeThickness));
 }
 
 /// <summary>Une sous-région : la zone d'influence d'une ville dans son hexagone (coordonnées locales).</summary>
@@ -228,15 +232,20 @@ public sealed class MapViewModel : ObservableObject
     private bool _authed;
     private string _status = "";
     private bool _retryPending;
+    private bool _deepZoom;
+    private double _viewScale = 1.0;
     private MapHexViewModel? _selected;
 
     public ObservableCollection<MapHexViewModel> Hexes { get; } = new();
     public ObservableCollection<MapTownViewModel> Towns { get; } = new();
     public ObservableCollection<MapPinViewModel> Pins { get; } = new();
 
+    // Couches d'habillage de la carte : en zoom profond elles couvrent TOUS les hexagones
+    // visibles, sinon seulement l'hexagone sélectionné.
+    public ObservableCollection<MapTownViewModel> TownLabels { get; } = new();
+    public ObservableCollection<MapStructViewModel> MapStructures { get; } = new();
+
     public ObservableCollection<MapTownViewModel> SelectedTowns { get; } = new();
-    public ObservableCollection<MapTownViewModel> SelectedTownLabels { get; } = new();
-    public ObservableCollection<MapStructViewModel> SelectedStructures { get; } = new();
     public ObservableCollection<string> SelectedStructureSummary { get; } = new();
     public ObservableCollection<StockpileItemViewModel> SelectedStockpiles { get; } = new();
     public ObservableCollection<string> SelectedRequests { get; } = new();
@@ -254,6 +263,51 @@ public sealed class MapViewModel : ObservableObject
     public bool SelectedHasStockpiles => SelectedStockpiles.Count > 0;
     public bool SelectedHasRequests => SelectedRequests.Count > 0;
     public bool SelectedHasStructures => SelectedStructureSummary.Count > 0;
+
+    /// <summary>Épaisseur des bissectrices de zones, contre-échelonnée (≈1 px écran).</summary>
+    public double CellStrokeThickness => 0.9 * Math.Min(1.0 / _viewScale, 3.0);
+
+    /// <summary>
+    /// Appelé par la vue à chaque changement de zoom : ajuste les épaisseurs de traits et bascule
+    /// les couches labels/structures en mode « zoom profond » (tous les hexagones) au-delà de 1.6×.
+    /// </summary>
+    public void SetViewScale(double scale)
+    {
+        _viewScale = Math.Max(scale, 0.01);
+        Raise(nameof(CellStrokeThickness));
+        MapHexViewModel.StrokeScale = Math.Min(1.0 / _viewScale, 2.6);
+        foreach (var hex in Hexes)
+            hex.RaiseStroke();
+
+        bool deep = scale >= 1.6;
+        if (deep != _deepZoom)
+        {
+            _deepZoom = deep;
+            RebuildOverlays();
+        }
+    }
+
+    /// <summary>Labels de villes + structures : tout le monde en zoom profond, sinon l'hexagone sélectionné.</summary>
+    private void RebuildOverlays()
+    {
+        TownLabels.Clear();
+        MapStructures.Clear();
+        if (_deepZoom)
+        {
+            foreach (var t in Towns)
+                TownLabels.Add(t);
+            foreach (var hex in Hexes)
+                foreach (var s in hex.Structures)
+                    MapStructures.Add(new MapStructViewModel(hex, s));
+        }
+        else if (_selected is not null)
+        {
+            foreach (var t in Towns.Where(t => t.Hex == _selected))
+                TownLabels.Add(t);
+            foreach (var s in _selected.Structures)
+                MapStructures.Add(new MapStructViewModel(_selected, s));
+        }
+    }
 
     public void Initialize(StockpilesViewModel stockpiles, ResupplyViewModel resupply)
     {
@@ -320,7 +374,7 @@ public sealed class MapViewModel : ObservableObject
 
     /// <summary>
     /// Télécharge les fonds de carte officiels en arrière-plan (une fois ; ~190 Mo au premier
-    /// lancement, puis tout vient du cache disque) et les applique en vignettes 256 px.
+    /// lancement, puis tout vient du cache disque) et les applique en vignettes 512 px.
     /// </summary>
     private void StartTileDownload()
     {
@@ -339,7 +393,7 @@ public sealed class MapViewModel : ObservableObject
                     Interlocked.Increment(ref missing);
                     return;
                 }
-                var thumb = MapTileService.LoadImage(path, 256);
+                var thumb = MapTileService.LoadImage(path, 512);
                 hex.SetTile(thumb);
                 int n = Interlocked.Increment(ref done);
                 if (n % 8 == 0 && n < hexes.Count)
@@ -536,21 +590,16 @@ public sealed class MapViewModel : ObservableObject
     private void RefreshSelection()
     {
         SelectedTowns.Clear();
-        SelectedTownLabels.Clear();
-        SelectedStructures.Clear();
         SelectedStructureSummary.Clear();
         SelectedStockpiles.Clear();
         SelectedRequests.Clear();
+        RebuildOverlays();
         if (_selected is not null)
         {
             foreach (var t in Towns.Where(t => t.Hex == _selected).OrderBy(t => t.Name))
-            {
                 SelectedTowns.Add(t);
-                SelectedTownLabels.Add(t);
-            }
-            foreach (var s in _selected.Structures)
-                SelectedStructures.Add(new MapStructViewModel(_selected, s));
-            foreach (var g in SelectedStructures.GroupBy(s => s.Label).OrderBy(g => g.Key))
+            var structs = _selected.Structures.Select(s => new MapStructViewModel(_selected, s)).ToList();
+            foreach (var g in structs.GroupBy(s => s.Label).OrderBy(g => g.Key))
                 SelectedStructureSummary.Add($"{g.First().Glyph} {g.Key} ×{g.Count()}");
             if (_stockpiles is not null)
                 foreach (var s in _stockpiles.Stockpiles.Where(s => FindHex(s.Hex) == _selected))

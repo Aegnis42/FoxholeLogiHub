@@ -1669,7 +1669,8 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Polygon Points="{Binding Points}" Fill="{Binding Fill}"
-                                                                 Stroke="#500E1116" StrokeThickness="0.8"
+                                                                 Stroke="#500E1116"
+                                                                 StrokeThickness="{Binding DataContext.Map.CellStrokeThickness, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                  ToolTip="{Binding Tooltip}"/>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -1713,8 +1714,8 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <!-- Couche 3 : structures de l'hexagone sélectionné -->
-                            <ItemsControl ItemsSource="{Binding Map.SelectedStructures}">
+                            <!-- Couche 3 : structures (hexagone sélectionné, ou tous en zoom profond) -->
+                            <ItemsControl ItemsSource="{Binding Map.MapStructures}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
@@ -1738,8 +1739,8 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <!-- Couche 4 : noms des villes de l'hexagone sélectionné -->
-                            <ItemsControl ItemsSource="{Binding Map.SelectedTownLabels}">
+                            <!-- Couche 4 : noms des villes (hexagone sélectionné, ou tous en zoom profond) -->
+                            <ItemsControl ItemsSource="{Binding Map.TownLabels}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>

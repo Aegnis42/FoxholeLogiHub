@@ -135,8 +135,11 @@ public partial class MainWindow : Window
     {
         _markerScale ??= (ScaleTransform)FindResource("MapMarkerScale");
         _labelScale ??= (ScaleTransform)FindResource("MapLabelScale");
-        double marker = Math.Clamp(1.0 / mapScale, 0.55, 3.0);
-        double label = Math.Clamp(1.0 / mapScale, 1.0, 2.2);
+        // Taille écran CONSTANTE à tout niveau de zoom : seule la vue monde (très dézoomée)
+        // est bornée pour éviter des marqueurs géants.
+        double marker = Math.Min(1.0 / mapScale, 3.0);
+        double label = Math.Min(1.0 / mapScale, 2.2);
+        _vm.Map.SetViewScale(mapScale);
 
         if (animated is not Duration dur)
         {
@@ -172,7 +175,7 @@ public partial class MainWindow : Window
         const double pad = 1.30; // marge autour de l'hexagone
         double scale = Math.Clamp(
             Math.Min(MapViewport.ActualWidth / (hex.W * pad), MapViewport.ActualHeight / (hex.H * pad)),
-            0.15, 5.0);
+            0.15, 12.0);
         double cx = hex.X + hex.W / 2, cy = hex.Y + hex.H / 2;
         AnimateMapTo(scale,
             MapViewport.ActualWidth / 2 - cx * scale,
@@ -205,7 +208,7 @@ public partial class MainWindow : Window
     {
         _mapUserInteracted = true;
         double factor = e.Delta > 0 ? 1.15 : 1 / 1.15;
-        double newScale = Math.Clamp(MapScale.ScaleX * factor, 0.15, 5.0);
+        double newScale = Math.Clamp(MapScale.ScaleX * factor, 0.15, 12.0);
         factor = newScale / MapScale.ScaleX;
         Point m = e.GetPosition(MapViewport);
         // garde le point sous le curseur fixe pendant le zoom
