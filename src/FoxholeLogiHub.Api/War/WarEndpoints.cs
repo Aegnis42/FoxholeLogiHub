@@ -18,5 +18,21 @@ public static class WarEndpoints
                 true, snap.Info.WarNumber, day, snap.Info.Winner,
                 snap.Info.RequiredVictoryTowns, snap.WardenVictoryTowns, snap.ColonialVictoryTowns));
         }).RequireAuthorization();
+
+        // Carte du monde : contrôle des villes par hexagone (positions relatives incluses).
+        app.MapGet("/api/war/map", (WarStateService state) =>
+        {
+            var snap = state.Current;
+            if (snap is null)
+                return Results.Ok(new WarMapDto(false, new List<WarMapHexDto>()));
+
+            var hexes = snap.TownsByHex.Values
+                .Where(towns => towns.Count > 0)
+                .Select(towns => new WarMapHexDto(
+                    towns[0].Map,
+                    towns.Select(t => new WarMapTownDto(t.Town, t.X, t.Y, t.TeamId, t.Scorched, t.VictoryBase)).ToList()))
+                .ToList();
+            return Results.Ok(new WarMapDto(true, hexes));
+        }).RequireAuthorization();
     }
 }

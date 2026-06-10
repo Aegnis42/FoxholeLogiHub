@@ -24,9 +24,24 @@ public static class Palette
     public static readonly Brush Colonials = Make(0x51, 0x6C, 0x42);    // vert Colonials
     public static readonly Brush FactionNeutral = Make(0x44, 0x4A, 0x55);
 
+    // Remplissages de la carte (semi-transparents pour laisser respirer le fond).
+    public static readonly Brush MapWarden = MakeA(0x6E, 0x24, 0x5C, 0x8A);
+    public static readonly Brush MapColonial = MakeA(0x6E, 0x51, 0x6C, 0x42);
+    public static readonly Brush MapContested = MakeA(0x58, 0xC8, 0x8A, 0x2E);
+    public static readonly Brush MapNeutral = MakeA(0x2E, 0x6B, 0x72, 0x80);
+    public static readonly Brush MapStroke = Make(0x10, 0x13, 0x18);
+    public static readonly Brush MapTownNeutral = Make(0x9A, 0xA4, 0xB2);
+
     private static Brush Make(byte r, byte g, byte b)
     {
         var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
+
+    private static Brush MakeA(byte a, byte r, byte g, byte b)
+    {
+        var brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
         brush.Freeze();
         return brush;
     }

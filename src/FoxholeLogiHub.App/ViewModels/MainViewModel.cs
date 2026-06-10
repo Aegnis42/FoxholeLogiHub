@@ -32,6 +32,7 @@ public sealed class MainViewModel : ObservableObject
     public RegimentViewModel Regiment { get; } = new();
     public StockpilesViewModel Stockpiles { get; } = new();
     public ResupplyViewModel Resupply { get; } = new();
+    public MapViewModel Map { get; } = new();
     public CompanionManager Companion { get; } = new();
     public ObservableCollection<Loadout> Loadouts { get; } = new();
 
@@ -39,7 +40,7 @@ public sealed class MainViewModel : ObservableObject
     {
         // Le module amis porte la connexion temps réel ; on relaie aux modules régiment/stockpiles/ravito.
         Friends.Authenticated += () => _ = RefreshSocialAsync();
-        Friends.LoggedOut += () => { Regiment.ClearAuth(); Stockpiles.ClearAuth(); Resupply.ClearAuth(); };
+        Friends.LoggedOut += () => { Regiment.ClearAuth(); Stockpiles.ClearAuth(); Resupply.ClearAuth(); Map.ClearAuth(); };
         Friends.RegimentChanged += () => _ = RefreshSocialAsync();
         Friends.RegimentInviteReceived += () => _ = Regiment.ReloadInvitesAsync();
         // Les stockpiles changent → mettre à jour aussi les manques du ravitaillement.
@@ -47,18 +48,21 @@ public sealed class MainViewModel : ObservableObject
         Friends.ResupplyChanged += () => _ = Resupply.RefreshAsync();
     }
 
-    // Régiment d'abord (ses alliances servent au partage des stockpiles), puis stockpiles, puis ravito.
+    // Régiment d'abord (ses alliances servent au partage des stockpiles), puis stockpiles, puis ravito,
+    // puis la carte (qui lit les stockpiles + demandes déjà chargés).
     private async Task RefreshSocialAsync()
     {
         await Regiment.RefreshAsync();
         await Stockpiles.RefreshAsync();
         await Resupply.RefreshAsync();
+        await Map.RefreshAsync();
     }
 
     private async Task RefreshStockAndResupplyAsync()
     {
         await Stockpiles.RefreshAsync();
         await Resupply.RefreshAsync();
+        await Map.RefreshAsync();
     }
 
     /// <summary>Fin de guerre : archive locale (JSON) puis purge serveur, puis rafraîchit tout.</summary>
@@ -80,6 +84,7 @@ public sealed class MainViewModel : ObservableObject
     public bool IsStockpilesActive => _activeTab == "Stockpiles";
     public bool IsResupplyActive => _activeTab == "Ravitaillement";
     public bool IsTakenActive => _activeTab == "Prises";
+    public bool IsMapActive => _activeTab == "Carte";
 
     public void ShowDashboard() => SetTab("Dashboard");
     public void ShowProfile() => SetTab("Profil");
@@ -88,6 +93,7 @@ public sealed class MainViewModel : ObservableObject
     public void ShowStockpiles() => SetTab("Stockpiles");
     public void ShowResupply() => SetTab("Ravitaillement");
     public void ShowTaken() => SetTab("Prises");
+    public void ShowMap() => SetTab("Carte");
 
     private void SetTab(string tab)
     {
@@ -101,6 +107,7 @@ public sealed class MainViewModel : ObservableObject
         Raise(nameof(IsStockpilesActive));
         Raise(nameof(IsResupplyActive));
         Raise(nameof(IsTakenActive));
+        Raise(nameof(IsMapActive));
     }
 
     // --- Profil ---
@@ -164,6 +171,7 @@ public sealed class MainViewModel : ObservableObject
             Regiment.Initialize(_account, Friends);
             Stockpiles.Initialize(Regiment, Companion);
             Resupply.Initialize(Regiment, Stockpiles);
+            Map.Initialize(Stockpiles, Resupply);
             Companion.EnsureStarted();
             _ = Friends.InitializeAsync(_account);
         }

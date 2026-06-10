@@ -100,6 +100,18 @@
                             </Border>
                         </StackPanel>
                     </Button>
+                    <Button Content="🗺  Carte" Click="OnNavMap">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMapActive}" Value="True">
+                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Content="👤  Profil" Click="OnNavProfile">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
@@ -1581,6 +1593,192 @@
                     </ScrollViewer>
                 </Grid>
               </Grid>
+            </Grid>
+            <!-- ====================== CARTE DU MONDE ====================== -->
+            <Grid Visibility="{Binding IsMapActive, Converter={StaticResource BoolToVis}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                    <Button DockPanel.Dock="Right" Content="⌖ Recentrer" Style="{StaticResource FlatButton}"
+                            Background="#FF333A45" Padding="12,6" VerticalAlignment="Top" Click="OnMapReset"/>
+                    <StackPanel>
+                        <TextBlock Text="Carte du monde" FontSize="22" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Map.Status}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam pour voir la carte." Foreground="#FF6B7280" FontSize="14"
+                           Visibility="{Binding Map.ShowAuthNeeded, Converter={StaticResource BoolToVis}}"/>
+
+                <Grid Grid.Row="1" Visibility="{Binding Map.Authed, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="265"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Zone carte : molette = zoom, glisser = déplacer, clic = sélectionner -->
+                    <Border Grid.Column="0" x:Name="MapViewport" Background="#FF0E1116" CornerRadius="8"
+                            ClipToBounds="True" Cursor="Hand"
+                            MouseWheel="OnMapWheel"
+                            PreviewMouseLeftButtonDown="OnMapMouseDown"
+                            PreviewMouseMove="OnMapMouseMove"
+                            PreviewMouseLeftButtonUp="OnMapMouseUp">
+                      <!-- Canvas intermédiaire : slot de mesure infini → pas de LayoutClip sur la grille
+                           transformée (sinon WPF rogne le monde à la taille du viewport AVANT le zoom). -->
+                      <Canvas>
+                        <Grid x:Name="MapRoot" Width="{Binding Map.CanvasWidth}" Height="{Binding Map.CanvasHeight}"
+                              HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent">
+                            <Grid.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="MapScale" ScaleX="0.45" ScaleY="0.45"/>
+                                    <TranslateTransform x:Name="MapTranslate"/>
+                                </TransformGroup>
+                            </Grid.RenderTransform>
+
+                            <!-- Couche 1 : hexagones -->
+                            <ItemsControl ItemsSource="{Binding Map.Hexes}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Width="{Binding W}" Height="{Binding H}">
+                                            <Polygon Points="{Binding Points}" Fill="{Binding Fill}"
+                                                     Stroke="{Binding Stroke}" StrokeThickness="{Binding StrokeThickness}"/>
+                                            <TextBlock Text="{Binding Display}" Foreground="#B8FFFFFF" FontSize="11"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="92"
+                                                       IsHitTestVisible="False"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Couche 2 : villes -->
+                            <ItemsControl ItemsSource="{Binding Map.Towns}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Ellipse Width="8" Height="8" Fill="{Binding Fill}"
+                                                 Stroke="#FF10131A" StrokeThickness="1" ToolTip="{Binding Tooltip}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Couche 3 : stockpiles -->
+                            <ItemsControl ItemsSource="{Binding Map.Pins}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ToolTip="{Binding Tooltip}">
+                                            <Ellipse Width="20" Height="20" Margin="-2"
+                                                     Fill="#66C03A3A" Stroke="#FFC03A3A" StrokeThickness="1.5"
+                                                     Visibility="{Binding IsThreatened, Converter={StaticResource BoolToVis}}"/>
+                                            <TextBlock Text="📦" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                      </Canvas>
+                    </Border>
+
+                    <!-- Légende -->
+                    <Border Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10"
+                            Background="#D915181E" CornerRadius="6" Padding="10,6" IsHitTestVisible="False">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="10" Height="10" Fill="#FF245C8A" VerticalAlignment="Center"/>
+                            <TextBlock Text="Wardens" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
+                            <Ellipse Width="10" Height="10" Fill="#FF516C42" VerticalAlignment="Center"/>
+                            <TextBlock Text="Colonials" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
+                            <Ellipse Width="10" Height="10" Fill="#FFC88A2E" VerticalAlignment="Center"/>
+                            <TextBlock Text="Contesté" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
+                            <TextBlock Text="📦 Stockpile" Foreground="#FFB8C4D0" FontSize="11"/>
+                            <TextBlock Text="· molette = zoom · glisser = déplacer" Foreground="#FF6B7280" FontSize="11" Margin="10,0,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Panneau de détail -->
+                    <Border Grid.Column="1" Background="#FF1B1E24" CornerRadius="8" Margin="10,0,0,0" Padding="12">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="Clique un hexagone pour voir ses villes, tes stockpiles et tes demandes sur place."
+                                           Foreground="#FF6B7280" FontSize="12" TextWrapping="Wrap"
+                                           Visibility="{Binding Map.NoSelection, Converter={StaticResource BoolToVis}}"/>
+
+                                <StackPanel Visibility="{Binding Map.HasSelection, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding Map.SelectedName}" FontSize="17" FontWeight="Bold" Foreground="White"
+                                               TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                                    <TextBlock Text="VILLES" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                                    <ItemsControl ItemsSource="{Binding Map.SelectedTowns}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel Margin="0,1">
+                                                    <Ellipse Width="9" Height="9" Fill="{Binding Fill}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding TeamLabel}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                    <TextBlock Text="{Binding Name}" Foreground="#FFE6E6E6" FontSize="12"/>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Text="STOCKPILES ICI" Style="{StaticResource Label}" Margin="0,12,0,4"
+                                               Visibility="{Binding Map.SelectedHasStockpiles, Converter={StaticResource BoolToVis}}"/>
+                                    <ItemsControl ItemsSource="{Binding Map.SelectedStockpiles}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,1">
+                                                    <TextBlock Foreground="#FFE6E6E6" FontSize="12">
+                                                        <Run Text="📦 "/><Run Text="{Binding Name, Mode=OneWay}"/>
+                                                        <Run Text="{Binding TypeLabel, Mode=OneWay}" Foreground="#FF9AA4B2"/>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding ThreatLabel}" Foreground="#FFC03A3A" FontSize="11" Margin="18,0,0,0"
+                                                               Visibility="{Binding IsThreatened, Converter={StaticResource BoolToVis}}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Text="DEMANDES ICI" Style="{StaticResource Label}" Margin="0,12,0,4"
+                                               Visibility="{Binding Map.SelectedHasRequests, Converter={StaticResource BoolToVis}}"/>
+                                    <ItemsControl ItemsSource="{Binding Map.SelectedRequests}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding}" Foreground="#FFE6E6E6" FontSize="12" TextWrapping="Wrap" Margin="0,1"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
             </Grid>
         </Grid>
 

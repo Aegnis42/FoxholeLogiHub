@@ -7,8 +7,8 @@ namespace FoxholeLogiHub.Api.War;
 /// <summary>Infos de guerre brutes (endpoint /worldconquest/war).</summary>
 public sealed record WarInfo(int WarNumber, string Winner, long ConquestStartTime, long? ConquestEndTime, int RequiredVictoryTowns);
 
-/// <summary>Une ville (Town Base) avec son contrôle actuel.</summary>
-public sealed record TownState(string Map, string Town, string NormTown, string TeamId, bool Scorched, bool VictoryBase);
+/// <summary>Une ville (Town Base) avec son contrôle actuel et sa position (0..1 dans l'hexagone).</summary>
+public sealed record TownState(string Map, string Town, string NormTown, string TeamId, bool Scorched, bool VictoryBase, double X, double Y);
 
 /// <summary>Photographie de l'état de la guerre (rafraîchie périodiquement).</summary>
 public sealed class WarSnapshot
@@ -284,7 +284,7 @@ public sealed class WarRefreshService : BackgroundService
                     if (nearest.Text is null or "")
                         continue;
                     towns.Add(new TownState(map, nearest.Text, WarStateService.Normalize(nearest.Text),
-                        teamId, (flags & FlagScorched) != 0, victory));
+                        teamId, (flags & FlagScorched) != 0, victory, x, y));
                 }
 
                 string hexKey = WarStateService.Normalize(map.EndsWith("Hex") ? map[..^3] : map);

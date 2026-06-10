@@ -2,7 +2,9 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using FoxholeLogiHub.App.ViewModels;
 using FoxholeLogiHub.Contracts;
 
@@ -29,6 +31,17 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _vm;
         Loaded += (_, _) => _vm.Load();
+
+        // Ajuste la vue de la carte à sa première apparition (le viewport n'est mesuré
+        // qu'une fois l'onglet visible).
+        MapViewport.IsVisibleChanged += (_, _) =>
+        {
+            if (MapViewport.IsVisible && !_mapViewInitialized)
+            {
+                _mapViewInitialized = true;
+                Dispatcher.BeginInvoke(new Action(ResetMapView), System.Windows.Threading.DispatcherPriority.ContextIdle);
+            }
+        };
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -72,6 +85,88 @@ public partial class MainWindow : Window
         if (archive is not null)
             MessageBox.Show($"Archive enregistrée :\n{archive}", "Fin de guerre",
                 MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    // ---------- Carte du monde (pan/zoom/sélection) ----------
+
+    private bool _mapPanning, _mapMoved, _mapViewInitialized;
+    private Point _mapStart;
+    private double _mapStartTx, _mapStartTy;
+
+    private void OnNavMap(object sender, RoutedEventArgs e) => _vm.ShowMap();
+
+    private void OnMapReset(object sender, RoutedEventArgs e) => ResetMapView();
+
+    private void ResetMapView()
+    {
+        if (_vm.Map.CanvasWidth <= 0 || MapViewport.ActualWidth <= 0 || MapViewport.ActualHeight <= 0)
+            return;
+        double scale = Math.Min(MapViewport.ActualWidth / _vm.Map.CanvasWidth,
+                                MapViewport.ActualHeight / _vm.Map.CanvasHeight) * 0.97;
+        MapScale.ScaleX = MapScale.ScaleY = scale;
+        MapTranslate.X = (MapViewport.ActualWidth - _vm.Map.CanvasWidth * scale) / 2;
+        MapTranslate.Y = (MapViewport.ActualHeight - _vm.Map.CanvasHeight * scale) / 2;
+    }
+
+    private void OnMapWheel(object sender, MouseWheelEventArgs e)
+    {
+        double factor = e.Delta > 0 ? 1.15 : 1 / 1.15;
+        double newScale = Math.Clamp(MapScale.ScaleX * factor, 0.15, 5.0);
+        factor = newScale / MapScale.ScaleX;
+        Point m = e.GetPosition(MapViewport);
+        // garde le point sous le curseur fixe pendant le zoom
+        MapTranslate.X = m.X - factor * (m.X - MapTranslate.X);
+        MapTranslate.Y = m.Y - factor * (m.Y - MapTranslate.Y);
+        MapScale.ScaleX = MapScale.ScaleY = newScale;
+        e.Handled = true;
+    }
+
+    private void OnMapMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        _mapPanning = true;
+        _mapMoved = false;
+        _mapStart = e.GetPosition(MapViewport);
+        _mapStartTx = MapTranslate.X;
+        _mapStartTy = MapTranslate.Y;
+        MapViewport.CaptureMouse();
+    }
+
+    private void OnMapMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_mapPanning)
+            return;
+        Point p = e.GetPosition(MapViewport);
+        Vector d = p - _mapStart;
+        if (Math.Abs(d.X) > 4 || Math.Abs(d.Y) > 4)
+            _mapMoved = true;
+        if (_mapMoved)
+        {
+            MapTranslate.X = _mapStartTx + d.X;
+            MapTranslate.Y = _mapStartTy + d.Y;
+        }
+    }
+
+    private void OnMapMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_mapPanning)
+            return;
+        _mapPanning = false;
+        MapViewport.ReleaseMouseCapture();
+        if (_mapMoved)
+            return;
+
+        // Clic simple : la souris est capturée, donc on hit-teste manuellement sous le curseur.
+        var hit = VisualTreeHelper.HitTest(MapRoot, e.GetPosition(MapRoot));
+        object? data = (hit?.VisualHit as FrameworkElement)?.DataContext;
+        MapHexViewModel? hex = data switch
+        {
+            MapHexViewModel h => h,
+            MapTownViewModel t => t.Hex,
+            MapPinViewModel p => p.Hex,
+            _ => null,
+        };
+        if (hex is not null)
+            _vm.Map.Select(hex);
     }
 
     private void OnNavDashboard(object sender, RoutedEventArgs e) => _vm.ShowDashboard();

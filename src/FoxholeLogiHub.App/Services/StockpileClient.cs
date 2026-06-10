@@ -45,6 +45,14 @@ public sealed class StockpileClient : IDisposable
         return await resp.Content.ReadFromJsonAsync<WarStatusDto>();
     }
 
+    /// <summary>Carte du monde : contrôle des villes par hexagone (cache serveur).</summary>
+    public async Task<WarMapDto?> GetWarMapAsync()
+    {
+        HttpResponseMessage resp = await _http.GetAsync("/api/war/map");
+        await EnsureAsync(resp);
+        return await resp.Content.ReadFromJsonAsync<WarMapDto>();
+    }
+
     public async Task<List<StockpileItemDto>> GetItemsAsync(string stockpileId)
     {
         HttpResponseMessage resp = await _http.GetAsync($"/api/stockpiles/{stockpileId}/items");

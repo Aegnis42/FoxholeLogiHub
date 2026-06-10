@@ -25,6 +25,15 @@ public sealed class WarTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Carte_indisponible_sans_rafraichissement()
+    {
+        var (a, _) = await UserWithRegimentAsync(_factory, "Alpha", "ALP");
+        var map = await GetAsync<WarMapDto>(a, "/api/war/map");
+        Assert.False(map.Available);
+        Assert.Empty(map.Hexes);
+    }
+
+    [Fact]
     public async Task Stockpile_sans_donnees_war_est_en_controle_inconnu()
     {
         var (a, _) = await UserWithRegimentAsync(_factory, "Alpha", "ALP");
