@@ -202,11 +202,13 @@
     </Style>
 
     <!-- ============ Champs de saisie ============ -->
+    <!-- Hauteur unique de TOUS les champs (TextBox et ComboBox) : 36 px, contenu centré. -->
     <Style TargetType="TextBox">
         <Setter Property="Background" Value="{StaticResource B.Input}"/>
         <Setter Property="Foreground" Value="{StaticResource B.Text}"/>
         <Setter Property="BorderBrush" Value="{StaticResource B.Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="MinHeight" Value="36"/>
         <Setter Property="Padding" Value="8,6"/>
         <Setter Property="CaretBrush" Value="{StaticResource B.Accent}"/>
         <Setter Property="SelectionBrush" Value="{StaticResource B.AccentDeep}"/>
@@ -293,6 +295,7 @@
         <Setter Property="Background" Value="{StaticResource B.Input}"/>
         <Setter Property="Foreground" Value="{StaticResource B.Text}"/>
         <Setter Property="BorderBrush" Value="{StaticResource B.Border}"/>
+        <Setter Property="MinHeight" Value="36"/>
         <Setter Property="Padding" Value="9,6"/>
         <Setter Property="MaxDropDownHeight" Value="340"/>
         <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
@@ -326,7 +329,7 @@
                                               ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                               VerticalAlignment="Center" IsHitTestVisible="False"/>
                             <TextBox x:Name="PART_EditableTextBox" Grid.Column="0" Visibility="Collapsed"
-                                     Background="Transparent" BorderThickness="0" Padding="0"
+                                     Background="Transparent" BorderThickness="0" Padding="0" MinHeight="0"
                                      VerticalContentAlignment="Center"
                                      Foreground="{TemplateBinding Foreground}"
                                      CaretBrush="{StaticResource B.Accent}"

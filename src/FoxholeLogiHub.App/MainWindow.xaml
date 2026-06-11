@@ -543,14 +543,14 @@
                                     <StackPanel>
                                         <TextBlock Text="CRÉER UN RÉGIMENT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
                                         <TextBox Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Nom du régiment" Margin="0,0,0,8"
-                                                 FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
+                                                 FontSize="15" Padding="8,7" Background="#FF10161F" Foreground="White"
                                                  BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                  ToolTip="Nom du régiment"/>
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Créer" Style="{StaticResource FlatButton}"
                                                     Background="#FF2D63D8" Padding="16,8" Margin="10,0,0,0" Click="OnCreateRegiment"/>
                                             <TextBox Text="{Binding NewTag, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="TAG"
-                                                     FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
+                                                     FontSize="15" Padding="8,7" Background="#FF10161F" Foreground="White"
                                                      BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      ToolTip="Tag court, ex. FOX"/>
                                         </DockPanel>
@@ -564,7 +564,7 @@
                                             <Button DockPanel.Dock="Right" Content="Rejoindre" Style="{StaticResource FlatButton}"
                                                     Padding="16,8" Margin="10,0,0,0" Click="OnJoinRegiment"/>
                                             <TextBox Text="{Binding JoinCode, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Code d’invitation"
-                                                     FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
+                                                     FontSize="15" Padding="8,7" Background="#FF10161F" Foreground="White"
                                                      BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      VerticalContentAlignment="Center"/>
                                         </DockPanel>
@@ -2255,7 +2255,7 @@
                         BorderBrush="{StaticResource B.Border}" BorderThickness="1" Padding="10,8" Margin="0,0,0,8">
                     <StackPanel>
                         <TextBlock Text="MON CODE D'AMI" Style="{StaticResource Label}"/>
-                        <TextBox Text="{Binding MyFriendCode, Mode=OneWay}" IsReadOnly="True"
+                        <TextBox Text="{Binding MyFriendCode, Mode=OneWay}" IsReadOnly="True" MinHeight="0"
                                  FontSize="19" FontWeight="Bold" Foreground="#FF6CA6F2"
                                  Background="Transparent" BorderThickness="0" Padding="0"
                                  FontFamily="Consolas" ToolTip="Partage ce code pour qu'on t'ajoute"/>
