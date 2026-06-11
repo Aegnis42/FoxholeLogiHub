@@ -96,3 +96,12 @@ Voir `DEPLOY.md`. Points clés :
   `foxhole.db`. En prod, les migrations s'appliquent automatiquement.
 - Le companion `fic.exe` (reconnaissance d'images, projet FIR) est lancé/arrêté par l'app et
   écoute sur `127.0.0.1:8099`.
+
+## Licence
+
+Le code de FoxholeLogiHub est sous licence **[MIT](LICENSE)**.
+
+Les composants tiers (companion FIR `fic.exe`, icônes et données du jeu, fonds de carte
+officiels, positions d'hexagones) appartiennent à leurs auteurs — détails et crédits dans
+**[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**. FoxholeLogiHub est un projet
+communautaire **non affilié à Siege Camp** ; Foxhole et ses assets sont © Siege Camp.
