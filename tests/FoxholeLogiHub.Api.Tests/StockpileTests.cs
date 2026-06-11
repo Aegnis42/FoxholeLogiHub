@@ -86,30 +86,39 @@ public sealed class StockpileTests : IClassFixture<ApiFactory>
         string t = Tag();
         var items = new List<ResupplyItemDto> { new("RifleAmmo", "Rifle Ammo", "Munitions", 100) };
 
-        // Rôle sans permission : demander à SON régiment (0) est libre ; publier au-delà
-        // (alliance 1 / publique 2) est refusé sans « Publier des demandes ».
+        // Rôle sans permission : PUBLIQUE (2) libre ; régiment (0) et alliance (1) refusés.
         var dtoNone = await PostAsync<RegimentDto>(chef, "/api/regiments/roles", new CreateRoleRequest($"Rien-{t}", 0));
         int noneId = dtoNone!.Roles.Single(r => r.Name == $"Rien-{t}").Id;
         await PostAsync(chef, "/api/regiments/members/role", new SetMemberRoleRequest(memberId, noneId));
-        var okReg = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"Reg-{t}", "Deadlands", "", items, 1, "", ResupplyVisibility.Regiment));
-        Assert.True(okReg.IsSuccessStatusCode);
+        var okPub = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"Pub-{t}", "Deadlands", "", items, 1, "", ResupplyVisibility.Public));
+        Assert.True(okPub.IsSuccessStatusCode);
+        var koReg = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"KOR-{t}", "Deadlands", "", items, 1, "", ResupplyVisibility.Regiment));
+        Assert.Equal(HttpStatusCode.Forbidden, koReg.StatusCode);
         var koAll = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"KOA-{t}", "Deadlands", "", items, 1, "", ResupplyVisibility.Alliance));
         Assert.Equal(HttpStatusCode.Forbidden, koAll.StatusCode);
-        var koPub = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"KOP-{t}", "Deadlands", "", items, 1, "", ResupplyVisibility.Public));
-        Assert.Equal(HttpStatusCode.Forbidden, koPub.StatusCode);
 
-        // Exposer sa propre demande régiment vers l'alliance : refusé sans la permission aussi.
+        // Basculer sa propre demande publique vers l'alliance : refusé sans la permission aussi.
         var myList = await GetAsync<List<ResupplyRequestDto>>(member, "/api/resupply");
-        string myReqId = myList!.Single(r => r.Title == $"Reg-{t}").Id;
+        string myReqId = myList!.Single(r => r.Title == $"Pub-{t}").Id;
         var koVis = await PostRawAsync(member, "/api/resupply/visibility", new SetResupplyVisibilityRequest(myReqId, ResupplyVisibility.Alliance));
         Assert.Equal(HttpStatusCode.Forbidden, koVis.StatusCode);
 
-        // ResupplyShare : publier à l'alliance oui ; livrer/supprimer la demande d'un AUTRE : non.
+        // « Demandes (régiment) » seule : régiment oui, alliance toujours non.
+        var dtoReg = await PostAsync<RegimentDto>(chef, "/api/regiments/roles",
+            new CreateRoleRequest($"Reg-{t}", (int)RegimentPermission.ResupplyRegiment));
+        int regRoleId = dtoReg!.Roles.Single(r => r.Name == $"Reg-{t}").Id;
+        await PostAsync(chef, "/api/regiments/members/role", new SetMemberRoleRequest(memberId, regRoleId));
+        var okReg = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"Reg2-{t}", "Deadlands", "", items, 1, "", ResupplyVisibility.Regiment));
+        Assert.True(okReg.IsSuccessStatusCode);
+        var koAll2 = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"KOA2-{t}", "Deadlands", "", items, 1, "", ResupplyVisibility.Alliance));
+        Assert.Equal(HttpStatusCode.Forbidden, koAll2.StatusCode);
+
+        // « Demandes (alliance) » : l'alliance s'ouvre.
         var dtoShare = await PostAsync<RegimentDto>(chef, "/api/regiments/roles",
-            new CreateRoleRequest($"Pub-{t}", (int)RegimentPermission.ResupplyShare));
-        int shareId = dtoShare!.Roles.Single(r => r.Name == $"Pub-{t}").Id;
+            new CreateRoleRequest($"All-{t}", (int)(RegimentPermission.ResupplyRegiment | RegimentPermission.ResupplyAlliance)));
+        int shareId = dtoShare!.Roles.Single(r => r.Name == $"All-{t}").Id;
         await PostAsync(chef, "/api/regiments/members/role", new SetMemberRoleRequest(memberId, shareId));
-        var okAll = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"All-{t}", "Deadlands", "", items, 1, "", ResupplyVisibility.Alliance));
+        var okAll = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"All2-{t}", "Deadlands", "", items, 1, "", ResupplyVisibility.Alliance));
         Assert.True(okAll.IsSuccessStatusCode);
 
         var chefList = await PostAsync<List<ResupplyRequestDto>>(chef, "/api/resupply",
@@ -122,7 +131,7 @@ public sealed class StockpileTests : IClassFixture<ApiFactory>
 
         // + ResupplyManage : livrer la demande d'un autre devient possible.
         var dtoMan = await PostAsync<RegimentDto>(chef, "/api/regiments/roles",
-            new CreateRoleRequest($"Gest-{t}", (int)(RegimentPermission.ResupplyShare | RegimentPermission.ResupplyManage)));
+            new CreateRoleRequest($"Gest-{t}", (int)(RegimentPermission.ResupplyRegiment | RegimentPermission.ResupplyManage)));
         int manId = dtoMan!.Roles.Single(r => r.Name == $"Gest-{t}").Id;
         await PostAsync(chef, "/api/regiments/members/role", new SetMemberRoleRequest(memberId, manId));
         var okDone = await PostRawAsync(member, "/api/resupply/done", new ResupplyActionRequest(chefReqId));

@@ -761,9 +761,12 @@
                                                                 <CheckBox Content="Gérer le MPF" IsChecked="{Binding PMpf}"
                                                                           IsEnabled="{Binding GranularEnabled}"
                                                                           ToolTip="Récupérer/supprimer les commandes MPF des autres membres (chacun gère toujours les siennes)"/>
-                                                                <CheckBox Content="Publier des demandes" IsChecked="{Binding PResupShare}"
+                                                                <CheckBox Content="Demandes (régiment)" IsChecked="{Binding PResupRegiment}"
                                                                           IsEnabled="{Binding GranularEnabled}"
-                                                                          ToolTip="Publier des demandes au-delà du régiment (visibilité alliance ou publique) — demander à SON régiment reste ouvert à tous les membres"/>
+                                                                          ToolTip="Créer des demandes de ravitaillement visibles par le régiment — les demandes PUBLIQUES restent ouvertes à tous"/>
+                                                                <CheckBox Content="Demandes (alliance)" IsChecked="{Binding PResupAlliance}"
+                                                                          IsEnabled="{Binding GranularEnabled}"
+                                                                          ToolTip="Créer des demandes de ravitaillement visibles par l'alliance — les demandes PUBLIQUES restent ouvertes à tous"/>
                                                                 <CheckBox Content="Gérer les demandes" IsChecked="{Binding PResupManage}"
                                                                           IsEnabled="{Binding GranularEnabled}"
                                                                           ToolTip="Livrer/rouvrir/supprimer les demandes du régiment, changer leur visibilité, réattribuer une prise en charge (le créateur et le preneur gèrent toujours les leurs)"/>

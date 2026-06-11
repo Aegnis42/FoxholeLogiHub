@@ -28,10 +28,17 @@ public static class ResupplyEndpoints
             var ctx = await MyRegimentAsync(db, me);
             if (ctx is null)
                 return Results.BadRequest(new ApiError("Rejoins un régiment d'abord."));
-            // Demander du ravitaillement à SON régiment (visibilité privée) : ouvert à tous.
-            // Publier au-delà du régiment (alliance ou publique) : permission « Publier des demandes ».
-            if (Math.Clamp(req.Visibility, 0, 2) != ResupplyVisibility.Regiment
-                && !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyShare))
+            // Permission selon la visibilité : régiment et alliance ont chacune la leur ;
+            // les demandes PUBLIQUES sont ouvertes à tous les membres.
+            int vis = Math.Clamp(req.Visibility, 0, 2);
+            RegimentPermission needCreate = vis switch
+            {
+                ResupplyVisibility.Regiment => RegimentPermission.ResupplyRegiment,
+                ResupplyVisibility.Alliance => RegimentPermission.ResupplyAlliance,
+                _ => RegimentPermission.None,
+            };
+            if (needCreate != RegimentPermission.None
+                && !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, needCreate))
                 return Results.Forbid();
             var items = (req.Items ?? new List<ResupplyItemDto>())
                 .Where(i => !string.IsNullOrWhiteSpace(i.Code) && i.Quantity > 0)
@@ -148,16 +155,22 @@ public static class ResupplyEndpoints
             await MutateAsync(db, hub, Me(p), req.Id, Scope.OwnerOrClaimer, r =>
             { r.Status = r.ClaimedBySteamId.Length > 0 ? ResupplyStatus.Claimed : ResupplyStatus.Open; })).RequireAuthorization();
 
-        // Changer la visibilité (créateur ou gestionnaire). Exposer au-delà du régiment
-        // (alliance/publique) exige en plus la permission « Publier des demandes ».
+        // Changer la visibilité (créateur ou gestionnaire) : basculer vers régiment ou
+        // alliance exige la permission correspondante (vers publique : libre).
         app.MapPost("/api/resupply/visibility", async (SetResupplyVisibilityRequest req, System.Security.Claims.ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
         {
             string me = Me(p);
             int newVis = Math.Clamp(req.Visibility, 0, 2);
-            if (newVis != ResupplyVisibility.Regiment)
+            RegimentPermission needVis = newVis switch
+            {
+                ResupplyVisibility.Regiment => RegimentPermission.ResupplyRegiment,
+                ResupplyVisibility.Alliance => RegimentPermission.ResupplyAlliance,
+                _ => RegimentPermission.None,
+            };
+            if (needVis != RegimentPermission.None)
             {
                 var ctx = await MyRegimentAsync(db, me);
-                if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyShare))
+                if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, needVis))
                     return Results.Forbid();
             }
             return await MutateAsync(db, hub, me, req.Id, Scope.Own, r => r.Visibility = newVis);

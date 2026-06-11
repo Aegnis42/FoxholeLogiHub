@@ -46,7 +46,7 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
     private string _name;
     private bool _pMembers, _pRoles, _pInvite, _pRegiment, _pAlliances;
     private bool _pStockAdmin, _pStockCreate, _pStockShare, _pStockEdit, _pStockDelete, _pMpf;
-    private bool _pResupShare, _pResupManage;
+    private bool _pResupRegiment, _pResupAlliance, _pResupManage;
 
     public RegimentRoleItemViewModel(RegimentRoleDto dto, bool canEdit)
     {
@@ -66,7 +66,8 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
         _pStockEdit = perms.HasFlag(RegimentPermission.StockpileEdit);
         _pStockDelete = perms.HasFlag(RegimentPermission.StockpileDelete);
         _pMpf = perms.HasFlag(RegimentPermission.MpfManage);
-        _pResupShare = perms.HasFlag(RegimentPermission.ResupplyShare);
+        _pResupRegiment = perms.HasFlag(RegimentPermission.ResupplyRegiment);
+        _pResupAlliance = perms.HasFlag(RegimentPermission.ResupplyAlliance);
         _pResupManage = perms.HasFlag(RegimentPermission.ResupplyManage);
     }
 
@@ -98,7 +99,8 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
     public bool PStockEdit { get => _pStockEdit; set => Set(ref _pStockEdit, value); }
     public bool PStockDelete { get => _pStockDelete; set => Set(ref _pStockDelete, value); }
     public bool PMpf { get => _pMpf; set => Set(ref _pMpf, value); }
-    public bool PResupShare { get => _pResupShare; set => Set(ref _pResupShare, value); }
+    public bool PResupRegiment { get => _pResupRegiment; set => Set(ref _pResupRegiment, value); }
+    public bool PResupAlliance { get => _pResupAlliance; set => Set(ref _pResupAlliance, value); }
     public bool PResupManage { get => _pResupManage; set => Set(ref _pResupManage, value); }
 
     /// <summary>Les cases granulaires sont grisées quand le parapluie donne déjà tout.</summary>
@@ -118,7 +120,8 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
         if (PStockEdit) p |= RegimentPermission.StockpileEdit;
         if (PStockDelete) p |= RegimentPermission.StockpileDelete;
         if (PMpf) p |= RegimentPermission.MpfManage;
-        if (PResupShare) p |= RegimentPermission.ResupplyShare;
+        if (PResupRegiment) p |= RegimentPermission.ResupplyRegiment;
+        if (PResupAlliance) p |= RegimentPermission.ResupplyAlliance;
         if (PResupManage) p |= RegimentPermission.ResupplyManage;
         return (int)p;
     }
