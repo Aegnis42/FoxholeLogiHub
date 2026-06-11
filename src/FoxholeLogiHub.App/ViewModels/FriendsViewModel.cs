@@ -33,9 +33,17 @@ public sealed class FriendsViewModel : ObservableObject
     {
         _settings = _settingsStore.Load();
         _apiBaseUrl = _settings.ApiBaseUrl;
-        Friends.CollectionChanged += (_, _) => Raise(nameof(HasNoFriends));
+        Friends.CollectionChanged += (_, _) => { Raise(nameof(HasNoFriends)); Raise(nameof(OnlineSummary)); };
         Requests.CollectionChanged += (_, _) => Raise(nameof(HasRequests));
     }
+
+    /// <summary>« — 2/5 en ligne » pour l'en-tête du panneau amis ("" sans amis).</summary>
+    public string OnlineSummary => Friends.Count == 0
+        ? ""
+        : $"— {Friends.Count(f => f.Online)}/{Friends.Count} en ligne";
+
+    /// <summary>À appeler quand une présence change (le compte en ligne de l'en-tête dépend des items).</summary>
+    private void RaiseOnlineSummary() => Raise(nameof(OnlineSummary));
 
     /// <summary>Événements relayés au shell (pour le ViewModel régiment notamment).</summary>
     public event Action? Authenticated;
@@ -314,6 +322,7 @@ public sealed class FriendsViewModel : ObservableObject
         {
             foreach (FriendItemViewModel f in Friends)
                 f.Online = set.Contains(f.SteamId);
+            RaiseOnlineSummary();
         });
     }
 
@@ -324,6 +333,7 @@ public sealed class FriendsViewModel : ObservableObject
             FriendItemViewModel? f = Friends.FirstOrDefault(x => x.SteamId == steamId);
             if (f is not null)
                 f.Online = online;
+            RaiseOnlineSummary();
         });
     }
 

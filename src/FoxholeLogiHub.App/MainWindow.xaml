@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="FoxholeLogiHub" Height="720" Width="980"
+        Title="FoxholeLogiHub" Height="760" Width="1280" MinWidth="1100" MinHeight="640"
         Background="{StaticResource B.Bg}" Foreground="{StaticResource B.Text}"
         FontFamily="{StaticResource F.Ui}"
         WindowStyle="SingleBorderWindow">
@@ -48,8 +48,9 @@
 
         <Grid Grid.Row="1">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="180"/>
+            <ColumnDefinition Width="220"/>
             <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="260"/>
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
@@ -95,45 +96,6 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsCalculatorActive}" Value="True">
-                                        <Setter Property="Tag" Value="Active"/>
-                                        <Setter Property="Background" Value="#FF151D2B"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    <Button Content="⚙  Paramètres" Click="OnNavSettings">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsSettingsActive}" Value="True">
-                                        <Setter Property="Tag" Value="Active"/>
-                                        <Setter Property="Background" Value="#FF151D2B"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    <Button Content="👤  Profil" Click="OnNavProfile">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsProfileActive}" Value="True">
-                                        <Setter Property="Tag" Value="Active"/>
-                                        <Setter Property="Background" Value="#FF151D2B"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    <Button Content="🫂  Amis" Click="OnNavFriends">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsFriendsActive}" Value="True">
                                         <Setter Property="Tag" Value="Active"/>
                                         <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
@@ -210,7 +172,69 @@
                     </Button>
                 </StackPanel>
 
-                <!-- Mise à jour prête + version (Velopack) -->
+                <!-- Pied de sidebar : version + connexion (tout en bas), icônes ⚙/👤, MAJ, overlay -->
+                <DockPanel DockPanel.Dock="Bottom" Margin="4,8,4,0" LastChildFill="False">
+                    <Ellipse DockPanel.Dock="Left" Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,6,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#FF5E6B7E"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Friends.Connected}" Value="True">
+                                        <Setter Property="Fill" Value="#FF41CC6E"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="10.5" Foreground="#FF94A1B2">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="Hors ligne"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Friends.Connected}" Value="True">
+                                        <Setter Property="Text" Value="Serveur connecté"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding AppVersion}" Foreground="#FF5E6B7E"
+                               FontSize="10.5" VerticalAlignment="Center"/>
+                </DockPanel>
+                <UniformGrid DockPanel.Dock="Bottom" Columns="2">
+                    <Button Click="OnNavSettings" Margin="0,0,3,0" Padding="0,8" ToolTip="Paramètres"
+                            HorizontalContentAlignment="Center">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Setter Property="FontSize" Value="16"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSettingsActive}" Value="True">
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <TextBlock Text="⚙" HorizontalAlignment="Center"/>
+                    </Button>
+                    <Button Click="OnNavProfile" Margin="3,0,0,0" Padding="0,8" ToolTip="Profil"
+                            HorizontalContentAlignment="Center">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Setter Property="FontSize" Value="16"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsProfileActive}" Value="True">
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <TextBlock Text="👤" HorizontalAlignment="Center"/>
+                    </Button>
+                </UniformGrid>
                 <Button DockPanel.Dock="Bottom" Content="{Binding UpdateLabel}" Style="{StaticResource FlatButton}"
                         Background="#FF1F8A4C" Padding="8,6" Margin="0,0,0,8" Click="OnApplyUpdate"
                         Visibility="{Binding UpdateReady, Converter={StaticResource BoolToVis}}"
@@ -218,26 +242,7 @@
                 <Button DockPanel.Dock="Bottom" Content="🗖 Overlay en jeu (F9)" Style="{StaticResource FlatButton}"
                         Background="#FF1A222E" Padding="8,5" Margin="0,0,0,8" Click="OnToggleOverlay"
                         ToolTip="Petite fenêtre toujours visible : alertes, MPF, recherche — par-dessus le jeu en mode fenêtré sans bordure. F9 pour basculer."/>
-                <TextBlock DockPanel.Dock="Bottom" Text="{Binding AppVersion}" Foreground="#FF5E6B7E"
-                           FontSize="10.5" Margin="4,0,0,6"/>
-
-                <!-- Présence en bas -->
-                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="4,0,0,2">
-                    <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,6,0">
-                        <Ellipse.Style>
-                            <Style TargetType="Ellipse">
-                                <Setter Property="Fill" Value="#FF5E6B7E"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Friends.Connected}" Value="True">
-                                        <Setter Property="Fill" Value="#FF4CC26A"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Ellipse.Style>
-                    </Ellipse>
-                    <TextBlock Text="{Binding Friends.Status}" FontSize="10" Foreground="#FF94A1B2"
-                               TextWrapping="Wrap" Width="130"/>
-                </StackPanel>
+                <Border DockPanel.Dock="Top"/>
             </DockPanel>
         </Border>
 
@@ -486,164 +491,6 @@
             </Grid>
 
             <!-- ====================== AMIS ====================== -->
-            <Grid Visibility="{Binding IsFriendsActive, Converter={StaticResource BoolToVis}}">
-              <Grid DataContext="{Binding Friends}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <TextBlock Grid.Row="0" Text="Amis" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
-
-                <!-- Mon code d'ami -->
-                <Border Grid.Row="1" Style="{StaticResource Card}">
-                    <Grid>
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right" Content="Se déconnecter" VerticalAlignment="Top"
-                                    HorizontalAlignment="Right" Style="{StaticResource FlatButton}"
-                                    Background="#FF3A3030" Padding="10,5" Click="OnLogoutClick"/>
-                            <StackPanel>
-                                <TextBlock Text="MON CODE D'AMI" Style="{StaticResource Label}"/>
-                                <TextBox Text="{Binding MyFriendCode, Mode=OneWay}" IsReadOnly="True"
-                                         FontSize="26" FontWeight="Bold" Foreground="#FF6CA6F2"
-                                         Background="Transparent" BorderThickness="0" Padding="0"
-                                         FontFamily="Consolas"/>
-                                <TextBlock Text="Partage ce code pour qu'on t'ajoute en ami."
-                                           Foreground="#FF94A1B2" FontSize="11" Margin="0,4,0,0"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Grid>
-                </Border>
-
-                <!-- Ajouter un ami -->
-                <Border Grid.Row="2" Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Text="AJOUTER UN AMI PAR CODE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Text="{Binding AddCodeInput, UpdateSourceTrigger=PropertyChanged}"
-                                     FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
-                                     BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
-                                     VerticalContentAlignment="Center"/>
-                            <Button Grid.Column="1" Content="Envoyer" Style="{StaticResource FlatButton}"
-                                    Margin="10,0,0,0" Click="OnSendRequestClick" IsEnabled="{Binding Connected}"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- Demandes reçues -->
-                <Border Grid.Row="3" Style="{StaticResource Card}"
-                        Visibility="{Binding HasRequests, Converter={StaticResource BoolToVis}}">
-                    <StackPanel>
-                        <TextBlock Text="Demandes reçues" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <ItemsControl ItemsSource="{Binding Requests}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#FF33384A" CornerRadius="6" Padding="10" Margin="0,0,0,8">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <Grid Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0">
-                                                <Ellipse Fill="{Binding FactionBrush}"/>
-                                                <TextBlock Text="{Binding Initial}" Foreground="White"
-                                                           FontWeight="Bold" FontSize="16"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                <Ellipse>
-                                                    <Ellipse.Fill>
-                                                        <ImageBrush ImageSource="{Binding AvatarUrl}" Stretch="UniformToFill"/>
-                                                    </Ellipse.Fill>
-                                                </Ellipse>
-                                            </Grid>
-
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding Faction}" FontSize="11" Foreground="#FF94A1B2"/>
-                                            </StackPanel>
-
-                                            <Button Grid.Column="2" Content="Accepter" Style="{StaticResource FlatButton}"
-                                                    Background="#FF2F6B43" Padding="12,6" Margin="0,0,8,0"
-                                                    Click="OnAcceptRequestClick"/>
-                                            <Button Grid.Column="3" Content="Refuser" Style="{StaticResource FlatButton}"
-                                                    Background="#FF3A3030" Padding="12,6" Click="OnDeclineRequestClick"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
-
-                <!-- Liste d'amis -->
-                <Border Grid.Row="4" Style="{StaticResource Card}">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Text="Mes amis" FontSize="16" FontWeight="SemiBold"
-                                   Margin="0,0,0,12"/>
-                        <Grid DockPanel.Dock="Top">
-                            <TextBlock Text="Aucun ami pour l'instant. Partage ton code ou ajoute un code ci-dessus."
-                                       Foreground="#FF5E6B7E" FontSize="13"
-                                       Visibility="{Binding HasNoFriends, Converter={StaticResource BoolToVis}}"/>
-                        </Grid>
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Friends}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="#FF1F2937" CornerRadius="6" Padding="10" Margin="0,0,0,8">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <Grid Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0">
-                                                    <Ellipse Fill="{Binding FactionBrush}"/>
-                                                    <TextBlock Text="{Binding Initial}" Foreground="White"
-                                                               FontWeight="Bold" FontSize="16"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    <Ellipse>
-                                                        <Ellipse.Fill>
-                                                            <ImageBrush ImageSource="{Binding AvatarUrl}" Stretch="UniformToFill"/>
-                                                        </Ellipse.Fill>
-                                                    </Ellipse>
-                                                    <Ellipse Width="12" Height="12" HorizontalAlignment="Right"
-                                                             VerticalAlignment="Bottom" Stroke="#FF1F2937"
-                                                             StrokeThickness="2" Fill="{Binding StatusBrush}"/>
-                                                </Grid>
-
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="{Binding Faction}" FontSize="11" Foreground="#FF94A1B2"/>
-                                                </StackPanel>
-
-                                                <TextBlock Grid.Column="2" Text="{Binding StatusText}" FontSize="12"
-                                                           Foreground="{Binding StatusBrush}" VerticalAlignment="Center"
-                                                           Margin="0,0,12,0"/>
-
-                                                <Button Grid.Column="3" Content="Retirer" Style="{StaticResource FlatButton}"
-                                                        Background="#FF3A3030" Padding="10,5" Click="OnRemoveFriendClick"/>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </DockPanel>
-                </Border>
-              </Grid>
-            </Grid>
-
             <!-- ====================== RÉGIMENT ====================== -->
             <Grid Visibility="{Binding IsRegimentActive, Converter={StaticResource BoolToVis}}">
               <Grid DataContext="{Binding Regiment}">
@@ -2387,8 +2234,128 @@
             </Grid>
         </Grid>
 
+        <!-- ====================== PANNEAU AMIS (colonne droite permanente) ====================== -->
+        <Border Grid.Column="2" Background="{StaticResource B.BgDeep}" Padding="12,14,12,12"
+                BorderBrush="{StaticResource B.Border}" BorderThickness="1,1,0,0">
+            <DockPanel DataContext="{Binding Friends}">
+
+                <DockPanel DockPanel.Dock="Top" Margin="2,0,2,10">
+                    <Button DockPanel.Dock="Right" Content="⏻" Click="OnLogoutClick" Padding="6,2"
+                            Background="Transparent" Foreground="#FF5E6B7E" BorderThickness="0"
+                            FontSize="13" Cursor="Hand" ToolTip="Se déconnecter de Steam"/>
+                    <TextBlock VerticalAlignment="Center" FontSize="11" FontWeight="Bold" Foreground="#FF5E6B7E">
+                        <Run Text="🫂 AMIS"/>
+                        <Run Text="{Binding OnlineSummary, Mode=OneWay}" FontWeight="Normal"/>
+                    </TextBlock>
+                </DockPanel>
+
+                <!-- Mon code d'ami (cliquer = tout sélectionner pour copier) -->
+                <Border DockPanel.Dock="Top" Background="{StaticResource B.Surface}" CornerRadius="8"
+                        BorderBrush="{StaticResource B.Border}" BorderThickness="1" Padding="10,8" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="MON CODE D'AMI" Style="{StaticResource Label}"/>
+                        <TextBox Text="{Binding MyFriendCode, Mode=OneWay}" IsReadOnly="True"
+                                 FontSize="19" FontWeight="Bold" Foreground="#FF6CA6F2"
+                                 Background="Transparent" BorderThickness="0" Padding="0"
+                                 FontFamily="Consolas" ToolTip="Partage ce code pour qu'on t'ajoute"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Ajouter par code -->
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                    <Button DockPanel.Dock="Right" Content="➕" Style="{StaticResource FlatButton}"
+                            Background="#FF2D63D8" Padding="10,6" Margin="6,0,0,0"
+                            Click="OnSendRequestClick" IsEnabled="{Binding Connected}"
+                            ToolTip="Envoyer une demande d'ami"/>
+                    <TextBox Text="{Binding AddCodeInput, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="12.5" CharacterCasing="Upper"
+                             VerticalContentAlignment="Center" ToolTip="Code d'ami (6 caractères)"/>
+                </DockPanel>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Demandes reçues -->
+                        <TextBlock Text="DEMANDES REÇUES" Style="{StaticResource Label}" Margin="2,0,0,4"
+                                   Visibility="{Binding HasRequests, Converter={StaticResource BoolToVis}}"/>
+                        <ItemsControl ItemsSource="{Binding Requests}" Margin="0,0,0,8"
+                                      Visibility="{Binding HasRequests, Converter={StaticResource BoolToVis}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FF1A2A47" CornerRadius="7" Padding="8,6" Margin="0,0,0,4">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="✕" Background="#FF8E3438" Foreground="White"
+                                                    BorderThickness="0" Padding="7,3" FontSize="10" Cursor="Hand"
+                                                    Click="OnDeclineRequestClick" ToolTip="Refuser"/>
+                                            <Button DockPanel.Dock="Right" Content="✓" Background="#FF1F8A4C" Foreground="White"
+                                                    BorderThickness="0" Padding="7,3" FontSize="10" Cursor="Hand"
+                                                    Margin="0,0,4,0" Click="OnAcceptRequestClick" ToolTip="Accepter"/>
+                                            <Grid Width="24" Height="24" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                <Ellipse Fill="{Binding FactionBrush}"/>
+                                                <TextBlock Text="{Binding Initial}" Foreground="White" FontWeight="Bold"
+                                                           FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Ellipse>
+                                                    <Ellipse.Fill>
+                                                        <ImageBrush ImageSource="{Binding AvatarUrl}" Stretch="UniformToFill"/>
+                                                    </Ellipse.Fill>
+                                                </Ellipse>
+                                            </Grid>
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Liste d'amis -->
+                        <TextBlock Text="Aucun ami pour l'instant — partage ton code ci-dessus."
+                                   Foreground="#FF5E6B7E" FontSize="11.5" TextWrapping="Wrap" Margin="2,4,0,0"
+                                   Visibility="{Binding HasNoFriends, Converter={StaticResource BoolToVis}}"/>
+                        <ItemsControl ItemsSource="{Binding Friends}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="Row" Background="Transparent" CornerRadius="7" Padding="6,5">
+                                        <DockPanel>
+                                            <Button x:Name="RemoveBtn" DockPanel.Dock="Right" Content="✕" Visibility="Hidden"
+                                                    Background="Transparent" Foreground="#FF5E6B7E" BorderThickness="0"
+                                                    Padding="5,2" FontSize="10" Cursor="Hand"
+                                                    Click="OnRemoveFriendClick" ToolTip="Retirer cet ami"/>
+                                            <Grid Width="30" Height="30" Margin="0,0,9,0" VerticalAlignment="Center">
+                                                <Ellipse Fill="{Binding FactionBrush}"/>
+                                                <TextBlock Text="{Binding Initial}" Foreground="White" FontWeight="Bold"
+                                                           FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Ellipse>
+                                                    <Ellipse.Fill>
+                                                        <ImageBrush ImageSource="{Binding AvatarUrl}" Stretch="UniformToFill"/>
+                                                    </Ellipse.Fill>
+                                                </Ellipse>
+                                                <Ellipse Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                         Stroke="#FF0A0E14" StrokeThickness="2" Fill="{Binding StatusBrush}"/>
+                                            </Grid>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayName}" FontSize="12.5" FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding StatusText}" FontSize="10"
+                                                           Foreground="{Binding StatusBrush}"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Row" Property="Background" Value="#FF141B26"/>
+                                            <Setter TargetName="RemoveBtn" Property="Visibility" Value="Visible"/>
+                                        </Trigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
         <!-- ====================== PORTE DE CONNEXION (au lancement) ====================== -->
-        <Border Grid.Column="0" Grid.ColumnSpan="2" Background="#FF0A0E14"
+        <Border Grid.Column="0" Grid.ColumnSpan="3" Background="#FF0A0E14"
                 Visibility="{Binding Friends.NeedsLogin, Converter={StaticResource BoolToVis}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="400">
                 <Image Source="pack://application:,,,/Assets/logo.png" Width="130" Height="130"
