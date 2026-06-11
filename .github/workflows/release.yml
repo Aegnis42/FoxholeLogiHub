@@ -58,6 +58,7 @@ jobs:
           --packDir publish --mainExe FoxholeLogiHub.App.exe
           --packTitle "FoxholeLogiHub" --packAuthors "Aegnis42"
           --icon src/FoxholeLogiHub.App/Assets/icon.ico
+          --splashImage src/FoxholeLogiHub.App/Assets/splash.png
 
       - name: Publier la GitHub Release
         shell: pwsh
