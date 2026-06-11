@@ -95,6 +95,12 @@ public partial class MainWindow : Window
         // Réouvre l'overlay (hub + panneaux) s'il était affiché à la dernière fermeture.
         if (new SettingsStore().Load().OverlayPanel("hub").Open)
             Dispatcher.BeginInvoke(new Action(() => ToggleOverlay()), System.Windows.Threading.DispatcherPriority.Loaded);
+
+        // Premier lancement après installation : écran de bienvenue (raccourci Bureau, démarrage).
+        if (Program.IsFirstRun)
+            Dispatcher.BeginInvoke(new Action(() =>
+                new WelcomeWindow { Owner = this }.ShowDialog()),
+                System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     /// <summary>(Ré)enregistre les raccourcis globaux selon les Paramètres (touches F5-F12).</summary>

@@ -2190,6 +2190,9 @@
                                 <TextBlock Text="🖥 GÉNÉRAL" Style="{StaticResource Label}" Margin="0,0,0,8"/>
                                 <CheckBox Content="Lancer FoxholeLogiHub à l'ouverture de session Windows"
                                           IsChecked="{Binding StartWithWindows}" FontSize="12.5" Margin="0,0,0,6"/>
+                                <CheckBox Content="Raccourci sur le Bureau"
+                                          IsChecked="{Binding DesktopShortcutEnabled}" FontSize="12.5" Margin="0,0,0,6"
+                                          ToolTip="Crée ou retire immédiatement le raccourci FoxholeLogiHub du Bureau"/>
                                 <CheckBox Content="Fermer la fenêtre = continuer en arrière-plan (icône de zone de notification, overlay et alertes actifs)"
                                           IsChecked="{Binding CloseToTray}" FontSize="12.5" Margin="0,0,0,6"/>
                                 <CheckBox Content="Vérifier automatiquement les mises à jour au lancement"

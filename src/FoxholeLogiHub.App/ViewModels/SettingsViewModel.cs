@@ -72,6 +72,28 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>Raccourci Bureau (créé/supprimé immédiatement — l'état reflète le .lnk réel).</summary>
+    public bool DesktopShortcutEnabled
+    {
+        get => Services.DesktopShortcut.Exists();
+        set
+        {
+            try
+            {
+                if (value)
+                    Services.DesktopShortcut.Create();
+                else
+                    Services.DesktopShortcut.Remove();
+                Status = value ? "Raccourci créé sur le Bureau." : "Raccourci retiré du Bureau.";
+            }
+            catch (Exception ex)
+            {
+                Status = $"Raccourci impossible : {ex.Message}";
+            }
+            Raise();
+        }
+    }
+
     public bool AutoCheckUpdates
     {
         get => _store.Load().AutoCheckUpdates;
@@ -236,6 +258,7 @@ public sealed class SettingsViewModel : ObservableObject
     public void RefreshComputed()
     {
         Raise(nameof(TileCacheText));
+        Raise(nameof(DesktopShortcutEnabled));
         Raise(nameof(StartWithWindows));
         Raise(nameof(CloseToTray));
         Raise(nameof(AutoCheckUpdates));
