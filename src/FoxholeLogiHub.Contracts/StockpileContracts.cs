@@ -49,6 +49,21 @@ public sealed record StockpileDto(
 /// <summary>Un item d'un stockpile (quantité + seuils d'alerte). Name/Category dénormalisés.</summary>
 public sealed record StockpileItemDto(string Code, string Name, string Category, int Quantity, int LowThreshold, int CriticalThreshold);
 
+/// <summary>Transfert d'une quantité d'un item entre deux stockpiles du régiment.</summary>
+public sealed record TransferStockRequest(string FromStockpileId, string ToStockpileId, string Code, int Quantity);
+
+/// <summary>Une ligne du journal des transferts.</summary>
+public sealed record StockTransferDto(string FromName, string ToName, string Code, string ItemName, int Quantity, DateTimeOffset At);
+
+/// <summary>Commande MPF du régiment (file de production de masse).</summary>
+public sealed record MpfOrderDto(string Id, string ItemCode, string ItemName, int Crates, string Hex,
+    DateTimeOffset DoneAt, string CreatedByName, bool CanManage);
+
+/// <summary>Crée une commande MPF : temps restant saisi en minutes (lu en jeu).</summary>
+public sealed record CreateMpfOrderRequest(string ItemCode, string ItemName, int Crates, string Hex, int RemainingMinutes);
+
+public sealed record MpfActionRequest(string Id);
+
 /// <summary>Template d'objectifs de seuils, partagé au régiment.</summary>
 public sealed record StockpileTemplateDto(string Id, string Name, int ItemCount);
 /// <summary>Crée (ou remplace, à nom égal) un template à partir des seuils d'un stockpile.</summary>

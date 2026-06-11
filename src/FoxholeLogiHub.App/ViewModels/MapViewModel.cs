@@ -218,20 +218,23 @@ public sealed class MapTownViewModel
     public string PanelName => (TierStars.Length > 0 ? TierStars + " " : "") + Name;
 }
 
-/// <summary>Un pin « stockpile » sur la carte.</summary>
-public sealed class MapPinViewModel
+/// <summary>Un pin « stockpile » sur la carte. X/Y mutables : suivent le curseur pendant un drag.</summary>
+public sealed class MapPinViewModel : ObservableObject
 {
+    private double _x, _y;
+
     public MapPinViewModel(StockpileItemViewModel s, MapHexViewModel hex, double x, double y)
     {
         Stockpile = s;
         Hex = hex;
-        X = x; Y = y;
+        _x = x; _y = y;
     }
 
     public StockpileItemViewModel Stockpile { get; }
     public MapHexViewModel Hex { get; }
-    public double X { get; }
-    public double Y { get; }
+    public double X { get => _x; set => Set(ref _x, value); }
+    public double Y { get => _y; set => Set(ref _y, value); }
+    public bool CanDrag => Stockpile.CanManage;
     public bool IsThreatened => Stockpile.IsThreatened;
 
     public string Glyph => Stockpile.Type switch
@@ -383,6 +386,84 @@ public sealed class MapViewModel : ObservableObject
                 continue;
             MapStructures.Add(new MapStructViewModel(hex, s) { IsHighlighted = highlighted });
         }
+    }
+
+    // ---------- Mesure de distance ----------
+
+    // Un hexagone Foxhole fait ≈ 2,2 km pointe-à-pointe ; notre hexagone canvas fait 2·S de large.
+    private const double MetersPerCanvasUnit = 2196.0 / (2 * S);
+    private const double TruckKmh = 25.0; // camion sur route, estimation prudente
+
+    private bool _measureActive;
+    private Point? _measureA;
+    private bool _measureLocked;
+
+    public bool MeasureActive
+    {
+        get => _measureActive;
+        set
+        {
+            if (_measureActive == value)
+                return;
+            Set(ref _measureActive, value);
+            _measureA = null;
+            _measureLocked = false;
+            MeasureVisible = false;
+            Raise(nameof(MeasureVisible));
+        }
+    }
+
+    public bool MeasureVisible { get; private set; }
+    public double MeasureX1 { get; private set; }
+    public double MeasureY1 { get; private set; }
+    public double MeasureX2 { get; private set; }
+    public double MeasureY2 { get; private set; }
+    public double MeasureLabelX { get; private set; }
+    public double MeasureLabelY { get; private set; }
+    public string MeasureLabel { get; private set; } = "";
+
+    /// <summary>Clic en mode mesure : 1er = point A, 2e = verrouille, 3e = nouvelle mesure.</summary>
+    public void MeasureClick(Point canvas)
+    {
+        if (_measureA is null || _measureLocked)
+        {
+            _measureA = canvas;
+            _measureLocked = false;
+            UpdateMeasure(canvas, canvas);
+        }
+        else
+        {
+            _measureLocked = true;
+            UpdateMeasure(_measureA.Value, canvas);
+        }
+    }
+
+    /// <summary>Survol en mode mesure : le point B suit le curseur tant que la mesure n'est pas verrouillée.</summary>
+    public void MeasureHover(Point canvas)
+    {
+        if (_measureA is not null && !_measureLocked)
+            UpdateMeasure(_measureA.Value, canvas);
+    }
+
+    private void UpdateMeasure(Point a, Point b)
+    {
+        MeasureX1 = a.X; MeasureY1 = a.Y;
+        MeasureX2 = b.X; MeasureY2 = b.Y;
+        MeasureLabelX = (a.X + b.X) / 2;
+        MeasureLabelY = (a.Y + b.Y) / 2;
+
+        double meters = (b - a).Length * MetersPerCanvasUnit;
+        double minutes = meters / 1000.0 / TruckKmh * 60.0;
+        MeasureLabel = meters < 1000
+            ? $"≈ {meters:0} m"
+            : $"≈ {meters / 1000.0:0.0} km · ~{minutes:0} min 🚚";
+
+        MeasureVisible = true;
+        Raise(nameof(MeasureVisible));
+        Raise(nameof(MeasureX1)); Raise(nameof(MeasureY1));
+        Raise(nameof(MeasureX2)); Raise(nameof(MeasureY2));
+        Raise(nameof(MeasureLabelX)); Raise(nameof(MeasureLabelY));
+        Raise(nameof(MeasureLabel));
     }
 
     // ---------- « Où produire ? » (surbrillance des lieux du plan de production) ----------
@@ -754,6 +835,52 @@ public sealed class MapViewModel : ObservableObject
         }
     }
 
+    /// <summary>L'hexagone contenant ce point canvas (test point-dans-polygone), ou null.</summary>
+    public MapHexViewModel? HexAt(Point canvas)
+    {
+        foreach (var hex in Hexes)
+        {
+            if (canvas.X < hex.X || canvas.X > hex.X + hex.W || canvas.Y < hex.Y || canvas.Y > hex.Y + hex.H)
+                continue;
+            // Even-odd sur les 6 sommets (coordonnées locales) — les bboxes voisines se chevauchent.
+            double px = canvas.X - hex.X, py = canvas.Y - hex.Y;
+            bool inside = false;
+            var pts = hex.Points;
+            for (int i = 0, j = pts.Count - 1; i < pts.Count; j = i++)
+            {
+                if ((pts[i].Y > py) != (pts[j].Y > py)
+                    && px < (pts[j].X - pts[i].X) * (py - pts[i].Y) / (pts[j].Y - pts[i].Y) + pts[i].X)
+                    inside = !inside;
+            }
+            if (inside)
+                return hex;
+        }
+        return null;
+    }
+
+    /// <summary>Déplace un stockpile à une position précise (drag de pin ou mode « déplacer »).</summary>
+    public async Task MoveStockpileToAsync(StockpileItemViewModel target, MapHexViewModel hex, double relX, double relY)
+    {
+        if (_client is null)
+            return;
+        relX = Math.Clamp(relX, 0, 1);
+        relY = Math.Clamp(relY, 0, 1);
+        try
+        {
+            await _client.SetPositionAsync(new SetStockpilePositionRequest(
+                target.Id, hex.Display, NearestTownName(hex, relX, relY), relX, relY));
+            Status = $"« {target.Name} » déplacé 📍";
+            if (_stockpiles is not null)
+                await _stockpiles.RefreshAsync();
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            Status = $"Déplacement impossible : {ex.Message}";
+            await RefreshAsync(); // remet le pin à sa vraie position
+        }
+    }
+
     /// <summary>Clic sur la carte en mode choix : crée (ou déplace) le stockpile à cet endroit précis.</summary>
     public async Task CompletePickAsync(MapHexViewModel hex, double relX, double relY)
     {
@@ -765,21 +892,9 @@ public sealed class MapViewModel : ObservableObject
         if (_moveTarget is not null)
         {
             var target = _moveTarget;
-            try
-            {
-                await _client.SetPositionAsync(new SetStockpilePositionRequest(
-                    target.Id, hex.Display, NearestTownName(hex, relX, relY), relX, relY));
-                CancelPick();
-                Status = $"« {target.Name} » déplacé 📍";
-                if (_stockpiles is not null)
-                    await _stockpiles.RefreshAsync();
-                await RefreshAsync();
-                Select(hex);
-            }
-            catch (Exception ex)
-            {
-                Status = $"Déplacement impossible : {ex.Message}";
-            }
+            CancelPick();
+            await MoveStockpileToAsync(target, hex, relX, relY);
+            Select(hex);
             return;
         }
 

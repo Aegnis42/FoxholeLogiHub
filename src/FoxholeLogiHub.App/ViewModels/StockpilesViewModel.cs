@@ -245,15 +245,17 @@ public sealed class StockpilesViewModel : ObservableObject
             }
             Authed = true;
             RaiseViewFlags();
-            // Les trois requêtes sont indépendantes → en parallèle (3 allers-retours → 1).
+            // Les requêtes sont indépendantes → en parallèle (4 allers-retours → 1).
             var listTask = _client.GetListAsync();
             var alertsTask = LoadAlertsAsync();
             var warTask = LoadWarStatusAsync();
+            var mpfTask = LoadMpfAsync();
             ApplyList(await listTask);
             if (IsStockpileSelected)
                 await LoadItemsAsync();
             await alertsTask;
             await warTask;
+            await mpfTask;
             Status = HasRegiment ? $"{Stockpiles.Count} stockpile(s)." : "Rejoins un régiment pour gérer des stockpiles.";
         }
         catch (AuthRequiredException) { ClearAuth(); }
@@ -538,6 +540,167 @@ public sealed class StockpilesViewModel : ObservableObject
         Raise(nameof(IsStockpileSelected));
         await LoadItemsAsync();
         await LoadTemplatesAsync();
+        await LoadTransfersAsync();
+    }
+
+    // ---------- File MPF du régiment ----------
+
+    private string _mpfItemName = "";
+    private string _mpfCrates = "";
+    private string _mpfHex = "";
+    private string _mpfHours = "";
+    private string _mpfMinutes = "";
+    private System.Windows.Threading.DispatcherTimer? _mpfTimer;
+
+    public ObservableCollection<MpfOrderViewModel> MpfOrders { get; } = new();
+    public bool HasMpf => MpfOrders.Count > 0;
+    public string MpfItemName { get => _mpfItemName; set => Set(ref _mpfItemName, value); }
+    public string MpfCrates { get => _mpfCrates; set => Set(ref _mpfCrates, value); }
+    public string MpfHex { get => _mpfHex; set => Set(ref _mpfHex, value); }
+    public string MpfHours { get => _mpfHours; set => Set(ref _mpfHours, value); }
+    public string MpfMinutes { get => _mpfMinutes; set => Set(ref _mpfMinutes, value); }
+
+    private void EnsureMpfTimer()
+    {
+        if (_mpfTimer is not null)
+            return;
+        _mpfTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _mpfTimer.Tick += (_, _) =>
+        {
+            foreach (var o in MpfOrders)
+                if (o.Tick())
+                    ToastRequested?.Invoke("MPF terminé", $"{o.Name} {o.CratesText} — à récupérer !");
+        };
+        _mpfTimer.Start();
+    }
+
+    private async Task LoadMpfAsync()
+    {
+        if (_client is null)
+            return;
+        try
+        {
+            var rows = await _client.GetMpfOrdersAsync();
+            MpfOrders.Clear();
+            foreach (var o in rows)
+                MpfOrders.Add(new MpfOrderViewModel(o));
+            Raise(nameof(HasMpf));
+            EnsureMpfTimer();
+        }
+        catch { /* meilleur effort */ }
+    }
+
+    public async Task CreateMpfAsync()
+    {
+        if (_client is null || Busy)
+            return;
+        if (string.IsNullOrWhiteSpace(MpfItemName)) { Status = "Choisis l'item produit au MPF."; return; }
+        if (!int.TryParse(MpfCrates.Trim(), out int crates) || crates <= 0) { Status = "Nombre de caisses invalide."; return; }
+        int.TryParse(MpfHours.Trim(), out int hours);
+        int.TryParse(MpfMinutes.Trim(), out int minutes);
+        int remaining = Math.Max(0, hours * 60 + minutes);
+
+        var cat = FoxholeItemCatalog.Resolve(MpfItemName);
+        Busy = true;
+        try
+        {
+            await _client.CreateMpfOrderAsync(new CreateMpfOrderRequest(cat.Code, cat.Name, crates, MpfHex.Trim(), remaining));
+            Status = $"Commande MPF notée : {cat.Name} ×{crates} (prête dans {hours} h {minutes:00}).";
+            MpfItemName = ""; MpfCrates = ""; MpfHours = ""; MpfMinutes = "";
+            await LoadMpfAsync();
+        }
+        catch (FriendException fex) { Status = fex.Message; }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
+    }
+
+    public async Task CollectMpfAsync(MpfOrderViewModel order)
+    {
+        if (_client is null || Busy)
+            return;
+        Busy = true;
+        try
+        {
+            await _client.CollectMpfOrderAsync(order.Id);
+            Status = $"{order.Name} récupéré ✅";
+            await LoadMpfAsync();
+        }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
+    }
+
+    // ---------- Transferts entre stockpiles ----------
+
+    private StockpileLineViewModel? _transferLine;
+    private string _transferQty = "";
+    private StockpileItemViewModel? _transferTarget;
+
+    public bool TransferActive => _transferLine is not null;
+    public string TransferTitle => _transferLine is null ? "" : $"⇄ Transférer {_transferLine.Name}";
+    public string TransferQty { get => _transferQty; set => Set(ref _transferQty, value); }
+    public StockpileItemViewModel? TransferTarget { get => _transferTarget; set => Set(ref _transferTarget, value); }
+    public ObservableCollection<StockpileItemViewModel> TransferTargets { get; } = new();
+
+    /// <summary>Ouvre le mini-formulaire de transfert pour un item du stockpile ouvert.</summary>
+    public void BeginTransfer(StockpileLineViewModel line)
+    {
+        _transferLine = line;
+        TransferQty = line.Quantity.ToString();
+        TransferTargets.Clear();
+        foreach (var s in Stockpiles.Where(s => s.IsOwn && s.CanManage && s.Id != _selectedId))
+            TransferTargets.Add(s);
+        TransferTarget = TransferTargets.FirstOrDefault();
+        Raise(nameof(TransferActive));
+        Raise(nameof(TransferTitle));
+        if (TransferTargets.Count == 0)
+            Status = "Aucun autre stockpile du régiment pour recevoir le transfert.";
+    }
+
+    public void CancelTransfer()
+    {
+        _transferLine = null;
+        Raise(nameof(TransferActive));
+        Raise(nameof(TransferTitle));
+    }
+
+    public async Task ConfirmTransferAsync()
+    {
+        if (_client is null || _selectedId is null || _transferLine is null || Busy)
+            return;
+        if (TransferTarget is null) { Status = "Choisis un stockpile de destination."; return; }
+        if (!int.TryParse(TransferQty.Trim(), out int qty) || qty <= 0) { Status = "Quantité invalide."; return; }
+
+        Busy = true;
+        try
+        {
+            ApplyItems(await _client.TransferAsync(new TransferStockRequest(
+                _selectedId, TransferTarget.Id, _transferLine.Code, qty)));
+            Status = $"{_transferLine.Name} ×{Math.Min(qty, _transferLine.Quantity):N0} → « {TransferTarget.Name} » ⇄";
+            CancelTransfer();
+            await LoadTransfersAsync();
+        }
+        catch (FriendException fex) { Status = fex.Message; }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
+    }
+
+    /// <summary>Journal des transferts récents du régiment (affiché sous la liste des stockpiles).</summary>
+    public ObservableCollection<string> Transfers { get; } = new();
+    public bool HasTransfers => Transfers.Count > 0;
+
+    private async Task LoadTransfersAsync()
+    {
+        if (_client is null)
+            return;
+        try
+        {
+            var rows = await _client.GetTransfersAsync();
+            Transfers.Clear();
+            foreach (var t in rows)
+                Transfers.Add($"{t.At.ToLocalTime():dd/MM HH:mm} — {t.ItemName} ×{t.Quantity:N0} : {t.FromName} → {t.ToName}");
+            Raise(nameof(HasTransfers));
+        }
+        catch { /* meilleur effort */ }
     }
 
     // ---------- Templates d'objectifs de seuils ----------
@@ -618,6 +781,7 @@ public sealed class StockpilesViewModel : ObservableObject
 
     public void CloseDetail()
     {
+        CancelTransfer();
         _selectedId = null;
         Items.Clear();
         NewItemName = ""; NewItemQuantity = ""; NewItemLow = ""; NewItemCritical = "";

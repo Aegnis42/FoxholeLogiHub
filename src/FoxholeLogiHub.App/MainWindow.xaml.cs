@@ -114,6 +114,19 @@ public partial class MainWindow : Window
     private double _mapStartTx, _mapStartTy;
 
     private void OnNavMap(object sender, RoutedEventArgs e) => _vm.ShowMap();
+    private void OnNavCalculator(object sender, RoutedEventArgs e) => _vm.ShowCalculator();
+
+    // --- Calculatrice logistique ---
+
+    private void OnCalcAddItem(object sender, RoutedEventArgs e) => _vm.Calculator.AddItem();
+    private void OnCalcClear(object sender, RoutedEventArgs e) => _vm.Calculator.Clear();
+    private void OnCalcSendResupply(object sender, RoutedEventArgs e) => _vm.Calculator.SendToResupply();
+
+    private void OnCalcRemoveItem(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is ResupplyItemLineViewModel item)
+            _vm.Calculator.RemoveItem(item);
+    }
 
     private void OnMapReset(object sender, RoutedEventArgs e)
     {
@@ -130,6 +143,27 @@ public partial class MainWindow : Window
 
     private async void OnSaveWebhook(object sender, RoutedEventArgs e) => await _vm.Regiment.SaveWebhookAsync();
     private void OnApplyUpdate(object sender, RoutedEventArgs e) => _vm.ApplyUpdate();
+
+    // --- File MPF ---
+
+    private async void OnCreateMpf(object sender, RoutedEventArgs e) => await _vm.Stockpiles.CreateMpfAsync();
+
+    private async void OnCollectMpf(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is MpfOrderViewModel order)
+            await _vm.Stockpiles.CollectMpfAsync(order);
+    }
+
+    // --- Transferts entre stockpiles ---
+
+    private void OnTransferItem(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is StockpileLineViewModel line)
+            _vm.Stockpiles.BeginTransfer(line);
+    }
+
+    private async void OnConfirmTransfer(object sender, RoutedEventArgs e) => await _vm.Stockpiles.ConfirmTransferAsync();
+    private void OnCancelTransfer(object sender, RoutedEventArgs e) => _vm.Stockpiles.CancelTransfer();
 
     // --- Templates d'objectifs ---
 
@@ -269,8 +303,23 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private MapPinViewModel? _dragPin;
+    private bool _dragPinMoved;
+
     private void OnMapMouseDown(object sender, MouseButtonEventArgs e)
     {
+        // Presser un pin gérable = début de drag potentiel (le pan ne démarre pas).
+        var hit = VisualTreeHelper.HitTest(MapRoot, e.GetPosition(MapRoot));
+        if (!_vm.Map.PickActive && !_vm.Map.MeasureActive
+            && (hit?.VisualHit as FrameworkElement)?.DataContext is MapPinViewModel pin && pin.CanDrag)
+        {
+            _dragPin = pin;
+            _dragPinMoved = false;
+            _mapStart = e.GetPosition(MapViewport);
+            MapViewport.CaptureMouse();
+            return;
+        }
+
         _mapPanning = true;
         _mapMoved = false;
         _mapStart = e.GetPosition(MapViewport);
@@ -281,6 +330,26 @@ public partial class MainWindow : Window
 
     private void OnMapMouseMove(object sender, MouseEventArgs e)
     {
+        // Drag d'un pin : il suit le curseur (coordonnées canvas).
+        if (_dragPin is not null)
+        {
+            Point pv = e.GetPosition(MapViewport);
+            Vector dv = pv - _mapStart;
+            if (Math.Abs(dv.X) > 4 || Math.Abs(dv.Y) > 4)
+                _dragPinMoved = true;
+            if (_dragPinMoved)
+            {
+                Point cp = e.GetPosition(MapRoot);
+                _dragPin.X = cp.X;
+                _dragPin.Y = cp.Y;
+            }
+            return;
+        }
+
+        // Aperçu live de la mesure de distance.
+        if (_vm.Map.MeasureActive && !_mapPanning)
+            _vm.Map.MeasureHover(e.GetPosition(MapRoot));
+
         if (!_mapPanning)
             return;
         Point p = e.GetPosition(MapViewport);
@@ -295,14 +364,45 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnMapMouseUp(object sender, MouseButtonEventArgs e)
+    private async void OnMapMouseUp(object sender, MouseButtonEventArgs e)
     {
+        // Fin d'un drag de pin : on dépose sur l'hexagone sous le curseur (sinon clic simple).
+        if (_dragPin is not null)
+        {
+            var pin = _dragPin;
+            _dragPin = null;
+            MapViewport.ReleaseMouseCapture();
+            if (_dragPinMoved)
+            {
+                Point drop = e.GetPosition(MapRoot);
+                var target = _vm.Map.HexAt(drop);
+                if (target is not null)
+                    await _vm.Map.MoveStockpileToAsync(pin.Stockpile, target,
+                        (drop.X - target.X) / target.W, (drop.Y - target.Y) / target.H);
+                else
+                    await _vm.Map.RefreshAsync(); // lâché hors carte → le pin revient à sa place
+            }
+            else
+            {
+                _vm.Map.Select(pin.Hex); // simple clic sur le pin = comportement habituel
+                ZoomToHex(pin.Hex);
+            }
+            return;
+        }
+
         if (!_mapPanning)
             return;
         _mapPanning = false;
         MapViewport.ReleaseMouseCapture();
         if (_mapMoved)
             return;
+
+        // Mode mesure : le clic pose les points A puis B (prioritaire sur la sélection).
+        if (_vm.Map.MeasureActive)
+        {
+            _vm.Map.MeasureClick(e.GetPosition(MapRoot));
+            return;
+        }
 
         // Clic simple : la souris est capturée, donc on hit-teste manuellement sous le curseur.
         var pos = e.GetPosition(MapRoot);

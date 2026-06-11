@@ -125,6 +125,55 @@ public sealed class StockpileItemViewModel : ObservableObject
     public bool ShowForeignRegiment => !IsOwn;
 }
 
+/// <summary>Une commande MPF en cours (compte à rebours rafraîchi par un timer côté VM parent).</summary>
+public sealed class MpfOrderViewModel : ObservableObject
+{
+    private readonly MpfOrderDto _d;
+    private bool _wasReady;
+
+    public MpfOrderViewModel(MpfOrderDto d)
+    {
+        _d = d;
+        Icon = ItemIcons.Load(d.ItemCode);
+        _wasReady = IsReady;
+    }
+
+    public string Id => _d.Id;
+    public string Name => _d.ItemName;
+    public ImageSource? Icon { get; }
+    public bool CanManage => _d.CanManage;
+    public string CratesText => $"×{_d.Crates} caisse(s)";
+    public string ByText => $"par {_d.CreatedByName}" + (_d.Hex.Length > 0 ? $" · {_d.Hex}" : "");
+    public bool IsReady => DateTimeOffset.UtcNow >= _d.DoneAt;
+
+    public string RemainingText
+    {
+        get
+        {
+            var left = _d.DoneAt - DateTimeOffset.UtcNow;
+            if (left <= TimeSpan.Zero)
+                return "✅ Prêt — à récupérer";
+            return left.TotalHours >= 1
+                ? $"⏳ prêt dans {(int)left.TotalHours} h {left.Minutes:00}"
+                : $"⏳ prêt dans {Math.Max(1, left.Minutes)} min";
+        }
+    }
+
+    public Brush RemainingBrush => IsReady ? Palette.Good : Palette.Neutral;
+
+    /// <summary>Rafraîchit le compte à rebours ; renvoie true si la commande VIENT de passer « prête ».</summary>
+    public bool Tick()
+    {
+        bool ready = IsReady;
+        bool became = ready && !_wasReady;
+        _wasReady = ready;
+        Raise(nameof(RemainingText));
+        Raise(nameof(RemainingBrush));
+        Raise(nameof(IsReady));
+        return became;
+    }
+}
+
 /// <summary>Un résultat de la recherche globale d'items (où se trouve l'item, en quelle quantité).</summary>
 public sealed class ItemSearchResultViewModel
 {

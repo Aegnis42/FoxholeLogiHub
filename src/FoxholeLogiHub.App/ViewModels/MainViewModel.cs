@@ -37,6 +37,7 @@ public sealed class MainViewModel : ObservableObject
     public StockpilesViewModel Stockpiles { get; } = new();
     public ResupplyViewModel Resupply { get; } = new();
     public MapViewModel Map { get; } = new();
+    public CalculatorViewModel Calculator { get; } = new();
     public CompanionManager Companion { get; } = new();
     public ObservableCollection<Loadout> Loadouts { get; } = new();
 
@@ -134,6 +135,7 @@ public sealed class MainViewModel : ObservableObject
     public bool IsResupplyActive => _activeTab == "Ravitaillement";
     public bool IsTakenActive => _activeTab == "Prises";
     public bool IsMapActive => _activeTab == "Carte";
+    public bool IsCalculatorActive => _activeTab == "Calculatrice";
 
     public void ShowDashboard() => SetTab("Dashboard");
     public void ShowProfile() => SetTab("Profil");
@@ -143,6 +145,7 @@ public sealed class MainViewModel : ObservableObject
     public void ShowResupply() => SetTab("Ravitaillement");
     public void ShowTaken() => SetTab("Prises");
     public void ShowMap() => SetTab("Carte");
+    public void ShowCalculator() => SetTab("Calculatrice");
 
     private void SetTab(string tab)
     {
@@ -157,6 +160,7 @@ public sealed class MainViewModel : ObservableObject
         Raise(nameof(IsResupplyActive));
         Raise(nameof(IsTakenActive));
         Raise(nameof(IsMapActive));
+        Raise(nameof(IsCalculatorActive));
     }
 
     // --- Profil ---
@@ -242,6 +246,12 @@ public sealed class MainViewModel : ObservableObject
                 Friends.ToastRequested += _notifier.Show;
                 Resupply.ToastRequested += _notifier.Show;
                 Stockpiles.ToastRequested += _notifier.Show;
+                // Calculatrice → brouillon de demande de ravitaillement.
+                Calculator.SendToResupplyRequested += items =>
+                {
+                    Resupply.ImportDraft(items);
+                    ShowResupply();
+                };
             }
 
             Companion.EnsureStarted();

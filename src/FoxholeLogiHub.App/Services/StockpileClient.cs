@@ -31,6 +31,44 @@ public sealed class StockpileClient : IDisposable
     public Task<List<StockpileDto>> ShareAsync(string id, string regimentId) => PostListAsync("/api/stockpiles/share", new ShareStockpileRequest(id, regimentId), HttpMethod.Post);
     public Task<List<StockpileDto>> UnshareAsync(string id, string regimentId) => PostListAsync("/api/stockpiles/unshare", new UnshareStockpileRequest(id, regimentId), HttpMethod.Post);
 
+    // --- Transferts entre stockpiles ---
+
+    /// <summary>Transfère une quantité d'item et renvoie les items à jour du stockpile SOURCE.</summary>
+    public async Task<List<StockpileItemDto>> TransferAsync(TransferStockRequest req)
+    {
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/stockpiles/transfer", req);
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<StockpileItemDto>>()) ?? new();
+    }
+
+    public async Task<List<StockTransferDto>> GetTransfersAsync()
+    {
+        HttpResponseMessage resp = await _http.GetAsync("/api/stockpiles/transfers");
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<StockTransferDto>>()) ?? new();
+    }
+
+    // --- File MPF du régiment ---
+
+    public async Task<List<MpfOrderDto>> GetMpfOrdersAsync()
+    {
+        HttpResponseMessage resp = await _http.GetAsync("/api/mpf");
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<MpfOrderDto>>()) ?? new();
+    }
+
+    public async Task CreateMpfOrderAsync(CreateMpfOrderRequest req)
+    {
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/mpf", req);
+        await EnsureAsync(resp);
+    }
+
+    public async Task CollectMpfOrderAsync(string id)
+    {
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/mpf/collect", new MpfActionRequest(id));
+        await EnsureAsync(resp);
+    }
+
     // --- Templates d'objectifs de seuils ---
 
     public async Task<List<StockpileTemplateDto>> GetTemplatesAsync()

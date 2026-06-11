@@ -189,6 +189,39 @@ public sealed class StockpileTemplateItem
     public int CriticalThreshold { get; set; }
 }
 
+/// <summary>Mouvement de stock entre deux stockpiles du régiment (journal — noms dénormalisés
+/// pour survivre à la suppression des stockpiles).</summary>
+public sealed class StockTransfer
+{
+    public long Id { get; set; }
+    public string RegimentId { get; set; } = "";
+    public string FromStockpileId { get; set; } = "";
+    public string FromName { get; set; } = "";
+    public string ToStockpileId { get; set; } = "";
+    public string ToName { get; set; } = "";
+    public string Code { get; set; } = "";
+    public string ItemName { get; set; } = "";
+    public int Quantity { get; set; }
+    public string BySteamId { get; set; } = "";
+    public long AtUnixMs { get; set; }
+}
+
+/// <summary>Commande MPF en cours (file de production de masse, partagée au régiment).</summary>
+public sealed class MpfOrder
+{
+    public string Id { get; set; } = "";
+    public string RegimentId { get; set; } = "";
+    public string ItemCode { get; set; } = "";
+    public string ItemName { get; set; } = "";
+    public int Crates { get; set; }
+    public string Hex { get; set; } = "";
+    public long DoneAtUnixMs { get; set; }
+    public bool Notified { get; set; }                 // webhook « MPF terminé » déjà envoyé
+    public string CreatedBySteamId { get; set; } = "";
+    public string CreatedByName { get; set; } = "";    // dénormalisé pour l'affichage
+    public long CreatedAtUnixMs { get; set; }
+}
+
 public sealed class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -209,6 +242,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<StockpileItemSnapshot> StockpileItemSnapshots => Set<StockpileItemSnapshot>();
     public DbSet<StockpileTemplate> StockpileTemplates => Set<StockpileTemplate>();
     public DbSet<StockpileTemplateItem> StockpileTemplateItems => Set<StockpileTemplateItem>();
+    public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
+    public DbSet<MpfOrder> MpfOrders => Set<MpfOrder>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -298,6 +333,19 @@ public sealed class AppDbContext : DbContext
         {
             e.HasKey(i => i.Id);
             e.HasIndex(i => i.TemplateId);
+        });
+
+        b.Entity<StockTransfer>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.HasIndex(t => new { t.RegimentId, t.AtUnixMs });
+        });
+
+        b.Entity<MpfOrder>(e =>
+        {
+            e.HasKey(o => o.Id);
+            e.HasIndex(o => o.RegimentId);
+            e.HasIndex(o => new { o.Notified, o.DoneAtUnixMs }); // balayage du watcher
         });
     }
 }

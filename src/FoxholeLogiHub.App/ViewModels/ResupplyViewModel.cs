@@ -204,6 +204,16 @@ public sealed class ResupplyViewModel : ObservableObject
         Raise(nameof(HasDraft));
     }
 
+    /// <summary>Remplit le brouillon depuis la calculatrice (remplace le brouillon courant).</summary>
+    public void ImportDraft(List<(string Code, string Name, string Category, int Qty)> items)
+    {
+        DraftItems.Clear();
+        foreach (var (code, name, category, qty) in items)
+            DraftItems.Add(new ResupplyItemLineViewModel(code, name, category, qty));
+        Raise(nameof(HasDraft));
+        Status = $"Brouillon prérempli ({items.Count} item(s)) — donne un nom et un lieu, puis crée la demande.";
+    }
+
     public void AddDraftFromNeed(ResupplyNeedViewModel need)
     {
         DraftItems.Add(new ResupplyItemLineViewModel(need.Code, need.Name, need.Category, need.Deficit));

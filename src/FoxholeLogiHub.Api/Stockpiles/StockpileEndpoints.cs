@@ -378,6 +378,80 @@ public static class StockpileEndpoints
                 .ToList());
         }).RequireAuthorization();
 
+        // --- Transferts entre stockpiles (du même régiment) ---
+
+        app.MapPost("/api/stockpiles/transfer", async (TransferStockRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+                return Results.Forbid();
+            if (req.Quantity <= 0)
+                return Results.BadRequest(new ApiError("Quantité invalide."));
+            if (req.FromStockpileId == req.ToStockpileId)
+                return Results.BadRequest(new ApiError("Choisis deux stockpiles différents."));
+
+            string regId = ctx.Value.reg.Id;
+            var from = await db.Stockpiles.FirstOrDefaultAsync(s => s.Id == req.FromStockpileId && s.RegimentId == regId);
+            var to = await db.Stockpiles.FirstOrDefaultAsync(s => s.Id == req.ToStockpileId && s.RegimentId == regId);
+            if (from is null || to is null)
+                return Results.NotFound(new ApiError("Stockpile introuvable (les deux doivent être à ton régiment)."));
+
+            string code = Validate.Str(req.Code ?? "", 64);
+            var srcItem = await db.StockpileItems.FirstOrDefaultAsync(i => i.StockpileId == from.Id && i.Code == code);
+            if (srcItem is null || srcItem.Quantity <= 0)
+                return Results.BadRequest(new ApiError("Item absent du stockpile source."));
+            int qty = Math.Min(req.Quantity, srcItem.Quantity);
+
+            // Décrémente la source (l'item suivi par des seuils reste à 0, sinon il disparaît).
+            srcItem.Quantity -= qty;
+            if (srcItem.Quantity == 0 && srcItem.LowThreshold == 0 && srcItem.CriticalThreshold == 0)
+                db.StockpileItems.Remove(srcItem);
+
+            // Incrémente la destination (seuils de la destination préservés).
+            var dstItem = await db.StockpileItems.FirstOrDefaultAsync(i => i.StockpileId == to.Id && i.Code == code);
+            if (dstItem is null)
+                db.StockpileItems.Add(new StockpileItem
+                {
+                    StockpileId = to.Id, Code = code, Name = srcItem.Name, Category = srcItem.Category,
+                    Quantity = qty, LowThreshold = 0, CriticalThreshold = 0,
+                });
+            else
+                dstItem.Quantity = (int)Math.Min((long)dstItem.Quantity + qty, Validate.MaxQuantity);
+
+            db.StockTransfers.Add(new StockTransfer
+            {
+                RegimentId = regId,
+                FromStockpileId = from.Id, FromName = from.Name,
+                ToStockpileId = to.Id, ToName = to.Name,
+                Code = code, ItemName = srcItem.Name, Quantity = qty,
+                BySteamId = me, AtUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            });
+
+            from.UpdatedAt = to.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync();
+            await NotifyRegimentAsync(hub, db, regId, PresenceEvents.StockpilesChanged);
+            return Results.Ok(await ItemsAsync(db, from.Id));
+        }).RequireAuthorization();
+
+        // Journal des transferts récents du régiment.
+        app.MapGet("/api/stockpiles/transfers", async (ClaimsPrincipal p, AppDbContext db) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null)
+                return Results.Ok(new List<StockTransferDto>());
+            string regId = ctx.Value.reg.Id;
+            var rows = await db.StockTransfers.AsNoTracking()
+                .Where(t => t.RegimentId == regId)
+                .OrderByDescending(t => t.AtUnixMs)
+                .Take(30)
+                .ToListAsync();
+            return Results.Ok(rows.Select(t => new StockTransferDto(
+                t.FromName, t.ToName, t.Code, t.ItemName, t.Quantity,
+                DateTimeOffset.FromUnixTimeMilliseconds(t.AtUnixMs))).ToList());
+        }).RequireAuthorization();
+
         // --- Templates d'objectifs de seuils (partagés au régiment) ---
 
         app.MapGet("/api/stockpiles/templates", async (ClaimsPrincipal p, AppDbContext db) =>

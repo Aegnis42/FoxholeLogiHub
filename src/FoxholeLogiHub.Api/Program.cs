@@ -52,6 +52,7 @@ if (builder.Configuration["AllowAnyWebhookUrl"] == "1")
 builder.Services.AddSingleton<FoxholeLogiHub.Api.War.WarApiClient>();
 builder.Services.AddSingleton<FoxholeLogiHub.Api.War.WarStateService>();
 builder.Services.AddHostedService<FoxholeLogiHub.Api.War.WarRefreshService>();
+builder.Services.AddHostedService<FoxholeLogiHub.Api.Mpf.MpfWatcherService>();
 
 // Authentification : JWT signé par le serveur, lié au Steam ID vérifié via Steam OpenID.
 // En prod (Postgres fourni), un secret fort est OBLIGATOIRE : on refuse de démarrer plutôt
@@ -360,6 +361,7 @@ FoxholeLogiHub.Api.Regiments.RegimentEndpoints.MapRegimentEndpoints(app);
 FoxholeLogiHub.Api.Stockpiles.StockpileEndpoints.MapStockpileEndpoints(app);
 FoxholeLogiHub.Api.Resupply.ResupplyEndpoints.MapResupplyEndpoints(app);
 FoxholeLogiHub.Api.War.WarEndpoints.MapWarEndpoints(app);
+FoxholeLogiHub.Api.Mpf.MpfEndpoints.MapMpfEndpoints(app);
 
 app.MapHub<PresenceHub>("/hub/presence");
 
