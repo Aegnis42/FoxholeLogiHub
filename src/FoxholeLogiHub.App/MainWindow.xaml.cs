@@ -312,8 +312,6 @@ public partial class MainWindow : Window
     private async void OnCheckUpdatesNow(object sender, RoutedEventArgs e) => await _vm.CheckUpdatesNowAsync();
     private void OnClearTileCache(object sender, RoutedEventArgs e) => _vm.Settings.ClearTileCache();
     private void OnOpenDataFolder(object sender, RoutedEventArgs e) => _vm.Settings.OpenDataFolder();
-    private void OnSaveServerUrl(object sender, RoutedEventArgs e) => _vm.Settings.SaveServerUrl();
-    private void OnResetServerUrl(object sender, RoutedEventArgs e) => _vm.Settings.ResetServerUrl();
 
     /// <summary>Réinitialise les positions des fenêtres d'overlay (fermées puis rouvertes aux défauts).</summary>
     private void OnResetOverlayPositions(object sender, RoutedEventArgs e)

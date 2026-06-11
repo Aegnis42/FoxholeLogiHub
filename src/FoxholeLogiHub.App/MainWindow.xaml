@@ -2395,25 +2395,6 @@
                                         Background="#FF333A45" Padding="10,5" HorizontalAlignment="Left" Click="OnOpenDataFolder"/>
                             </StackPanel>
                         </Border>
-
-                        <!-- Serveur -->
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel DataContext="{Binding Settings}">
-                                <TextBlock Text="🌐 SERVEUR" Style="{StaticResource Label}" Margin="0,0,0,8"/>
-                                <TextBlock Text="URL de l'API (laisser le serveur officiel sauf si tu héberges le tien)."
-                                           Foreground="#FF9AA4B2" FontSize="11.5" Margin="0,0,0,4"/>
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="Officiel" Style="{StaticResource FlatButton}"
-                                            Background="#FF333A45" Padding="10,5" Margin="6,0,0,0" Click="OnResetServerUrl"
-                                            ToolTip="Rétablir le serveur officiel"/>
-                                    <Button DockPanel.Dock="Right" Content="Enregistrer" Style="{StaticResource FlatButton}"
-                                            Background="#FF2A475E" Padding="10,5" Margin="6,0,0,0" Click="OnSaveServerUrl"/>
-                                    <TextBox Text="{Binding ServerUrl, UpdateSourceTrigger=PropertyChanged}" FontSize="12.5" Padding="6"
-                                             Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C"
-                                             BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
-                                </DockPanel>
-                            </StackPanel>
-                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>

@@ -232,37 +232,6 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
-    // ---------- Serveur ----------
-
-    private string? _serverUrlEdit;
-
-    /// <summary>Valeur éditée (appliquée seulement au clic « Enregistrer »).</summary>
-    public string ServerUrl
-    {
-        get => _serverUrlEdit ?? _store.Load().ApiBaseUrl;
-        set => Set(ref _serverUrlEdit, value);
-    }
-
-    public void SaveServerUrl()
-    {
-        string url = ServerUrl.Trim().TrimEnd('/');
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
-        {
-            Status = "URL invalide (http(s)://…).";
-            return;
-        }
-        Mutate(s => s.ApiBaseUrl = url, "Serveur enregistré — reconnecte-toi (onglet Amis) ou relance l'app.");
-        _serverUrlEdit = null;
-        Raise(nameof(ServerUrl));
-    }
-
-    public void ResetServerUrl()
-    {
-        _serverUrlEdit = new AppSettings().ApiBaseUrl; // défaut = serveur officiel
-        Raise(nameof(ServerUrl));
-        SaveServerUrl();
-    }
-
     /// <summary>À l'ouverture de l'onglet : recalcule les valeurs dérivées (taille du cache…).</summary>
     public void RefreshComputed()
     {
