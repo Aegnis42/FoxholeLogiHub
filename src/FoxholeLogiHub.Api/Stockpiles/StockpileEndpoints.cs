@@ -300,19 +300,27 @@ public static class StockpileEndpoints
             db.StockpileItems.AddRange(newItems);
             sp.UpdatedAt = DateTimeOffset.UtcNow;
 
-            // Instantané pour l'historique et les prévisions d'épuisement (+ rétention 30 jours).
+            // Instantané pour l'historique/prévisions, AU PLUS un toutes les 15 min par stockpile :
+            // borne la croissance de la table et empêche le spam F8 (ou un script) de la gonfler ;
+            // une tendance n'a pas besoin de plus de précision.
             long snapAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            db.StockpileItemSnapshots.AddRange(newItems.Select(i => new StockpileItemSnapshot
+            long snapFloorMs = snapAtMs - 15 * 60 * 1000;
+            bool snapshotRecent = await db.StockpileItemSnapshots
+                .AnyAsync(s => s.StockpileId == sp.Id && s.TakenAtUnixMs >= snapFloorMs);
+            if (!snapshotRecent)
             {
-                StockpileId = sp.Id,
-                Code = i.Code,
-                Quantity = i.Quantity,
-                TakenAtUnixMs = snapAtMs,
-            }));
-            long snapCutoffMs = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeMilliseconds();
-            await db.StockpileItemSnapshots
-                .Where(s => s.StockpileId == sp.Id && s.TakenAtUnixMs < snapCutoffMs)
-                .ExecuteDeleteAsync();
+                db.StockpileItemSnapshots.AddRange(newItems.Select(i => new StockpileItemSnapshot
+                {
+                    StockpileId = sp.Id,
+                    Code = i.Code,
+                    Quantity = i.Quantity,
+                    TakenAtUnixMs = snapAtMs,
+                }));
+                long snapCutoffMs = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeMilliseconds();
+                await db.StockpileItemSnapshots
+                    .Where(s => s.StockpileId == sp.Id && s.TakenAtUnixMs < snapCutoffMs)
+                    .ExecuteDeleteAsync();
+            }
 
             await db.SaveChangesAsync();
             await NotifyRegimentAsync(hub, db, sp.RegimentId, PresenceEvents.StockpilesChanged);
@@ -330,10 +338,11 @@ public static class StockpileEndpoints
                 if (newlyCritical.Count > 0)
                 {
                     var lines = newlyCritical.Take(8)
-                        .Select(i => $"• {i.Name} : **{i.Quantity}** (seuil {i.CriticalThreshold})");
+                        .Select(i => $"• {DiscordNotifier.Safe(i.Name)} : {i.Quantity} (seuil {i.CriticalThreshold})");
                     string more = newlyCritical.Count > 8 ? $"\n… et {newlyCritical.Count - 8} autre(s)" : "";
+                    string loc = DiscordNotifier.Safe(sp.Hex) + (sp.Town.Length > 0 ? " · " + DiscordNotifier.Safe(sp.Town) : "");
                     discord.Send(ctx.Value.reg.DiscordWebhookUrl,
-                        $"🚨 **{sp.Name}** ({sp.Hex}{(sp.Town.Length > 0 ? $" · {sp.Town}" : "")}) — stock critique :\n"
+                        $"🚨 **{DiscordNotifier.Safe(sp.Name)}** ({loc}) — stock critique :\n"
                         + string.Join("\n", lines) + more);
                 }
             }
@@ -357,6 +366,8 @@ public static class StockpileEndpoints
             long cutoffMs = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeMilliseconds();
             var rows = await db.StockpileItemSnapshots
                 .Where(s => s.StockpileId == id && s.TakenAtUnixMs >= cutoffMs)
+                .OrderByDescending(s => s.TakenAtUnixMs)
+                .Take(5000) // borne la réponse (≈ 30 j × 96 points × 50 items max suivis)
                 .OrderBy(s => s.TakenAtUnixMs)
                 .ToListAsync();
             return Results.Ok(rows

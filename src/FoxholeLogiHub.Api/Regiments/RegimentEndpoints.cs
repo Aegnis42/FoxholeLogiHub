@@ -155,7 +155,7 @@ public static class RegimentEndpoints
             ctx.Value.reg.DiscordWebhookUrl = url;
             await db.SaveChangesAsync();
             if (url.Length > 0)
-                discord.Send(url, $"✅ Webhook FoxholeLogiHub connecté pour **{ctx.Value.reg.Name}** [{ctx.Value.reg.Tag}] — les alertes de stock, de ravitaillement et de menace arriveront ici.");
+                discord.Send(url, $"✅ Webhook FoxholeLogiHub connecté pour **{DiscordNotifier.Safe(ctx.Value.reg.Name)}** [{DiscordNotifier.Safe(ctx.Value.reg.Tag)}] — les alertes de stock, de ravitaillement et de menace arriveront ici.");
             return Results.Ok(BuildWebhookDto(url));
         }).RequireAuthorization();
 

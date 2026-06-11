@@ -436,7 +436,8 @@ public sealed class WarRefreshService : BackgroundService
                 {
                     if (!newThreats.TryGetValue(reg.DiscordWebhookUrl, out var lines))
                         newThreats[reg.DiscordWebhookUrl] = lines = new List<string>();
-                    lines.Add($"• **{sp.Name}** — {sp.Hex}{(sp.Town.Length > 0 ? $" · {sp.Town}" : "")} : {reason}");
+                    string loc = Common.DiscordNotifier.Safe(sp.Hex) + (sp.Town.Length > 0 ? " · " + Common.DiscordNotifier.Safe(sp.Town) : "");
+                    lines.Add($"• **{Common.DiscordNotifier.Safe(sp.Name)}** — {loc} : {reason}");
                 }
             }
         }

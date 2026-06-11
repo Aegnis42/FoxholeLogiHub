@@ -83,11 +83,12 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        if (_hwnd != IntPtr.Zero)
-            UnregisterHotKey(_hwnd, HotkeyId);
-        _source?.RemoveHook(HwndHook);
-        _vm.Companion.Dispose();
-        _vm.Shutdown(); // retire l'icône de zone de notification
+        // Chaque étape de nettoyage est isolée : un échec ne doit pas empêcher les suivantes
+        // (surtout libérer la hotkey F8 globale et l'icône de notification).
+        try { if (_hwnd != IntPtr.Zero) UnregisterHotKey(_hwnd, HotkeyId); } catch { }
+        try { _source?.RemoveHook(HwndHook); } catch { }
+        try { _vm.Companion.Dispose(); } catch { }
+        try { _vm.Shutdown(); } catch { } // retire l'icône de zone de notification
         base.OnClosed(e);
     }
 

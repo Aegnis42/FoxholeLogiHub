@@ -146,4 +146,46 @@ public sealed class StockpileTests : IClassFixture<ApiFactory>
             new CreateStockpileRequest(huge, "Deadlands", "", StockpileTypes.StorageDepot, "", false));
         Assert.All(list.Where(s => s.Name.StartsWith("xxx")), s => Assert.True(s.Name.Length <= 64));
     }
+
+    [Fact]
+    public async Task Historique_borne_la_frequence_des_instantanes()
+    {
+        var (a, _) = await UserWithRegimentAsync(_factory, "Alpha", "ALP");
+        string t = Tag();
+        var list = await PostAsync<List<StockpileDto>>(a, "/api/stockpiles", Sp($"Dep-{t}", false));
+        string id = list.Single(s => s.Name == $"Dep-{t}").Id;
+
+        // Trois imports rapprochés (< 15 min) → un seul instantané conservé par item.
+        for (int q = 100; q <= 300; q += 100)
+            await PostAsync<List<StockpileItemDto>>(a, "/api/stockpiles/items/import",
+                new ImportStockpileItemsRequest(id, new List<StockpileItemDto>
+                {
+                    new("Cloth", "Bmats", "Ressources", q, 0, 0),
+                }));
+
+        var history = await GetAsync<List<StockpileItemHistoryDto>>(a, $"/api/stockpiles/{id}/history");
+        var cloth = history.Single(h => h.Code == "Cloth");
+        Assert.Single(cloth.Points); // le rate-limit 15 min n'a gardé que le premier
+    }
+}
+
+/// <summary>Le neutraliseur Discord casse les mentions de masse et le markdown (anti-injection webhook).</summary>
+public sealed class DiscordSafeTests
+{
+    [Theory]
+    [InlineData("@everyone alerte", "everyone alerte")]
+    [InlineData("Dépôt\nligne 2", "Dépôt ligne 2")]
+    [InlineData("**gras** `code`", "gras code")]
+    [InlineData("<@1234>", "1234")]
+    public void Safe_neutralise_mentions_et_markdown(string input, string expected)
+    {
+        Assert.Equal(expected, FoxholeLogiHub.Api.Common.DiscordNotifier.Safe(input).Trim());
+    }
+
+    [Fact]
+    public void Safe_tronque_les_textes_trop_longs()
+    {
+        string huge = new string('x', 200);
+        Assert.True(FoxholeLogiHub.Api.Common.DiscordNotifier.Safe(huge).Length <= 81);
+    }
 }

@@ -131,7 +131,10 @@ public sealed class MapTileService
         int bpp = tga[16] / 8;
         bool topDown = (tga[17] & 0x20) != 0;
         int offset = 18 + idLen;
-        if (bpp is not (3 or 4) || width <= 0 || height <= 0 || tga.Length < offset + width * height * bpp)
+        // Plafond AVANT tout calcul de taille : les tuiles Foxhole font 1024×888 ; 4096 est large.
+        // Sans ce garde, width*height*bpp déborde l'int (dim. max 65535) et l'allocation est aberrante.
+        if (bpp is not (3 or 4) || width is <= 0 or > 4096 || height is <= 0 or > 4096
+            || tga.Length < offset + (long)width * height * bpp)
             return null;
 
         // BGRA top-down attendu par WPF — on retourne l'image si l'origine TGA est en bas.

@@ -65,10 +65,10 @@ public static class ResupplyEndpoints
             await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.ResupplyChanged);
 
             string prio = req.Priority switch { 2 => "🔴 haute", 1 => "🟠 normale", _ => "🟢 basse" };
-            string title = string.IsNullOrWhiteSpace(req.Title) ? "Demande" : req.Title.Trim();
+            string title = string.IsNullOrWhiteSpace(req.Title) ? "Demande" : DiscordNotifier.Safe(req.Title);
             discord.Send(ctx.Value.reg.DiscordWebhookUrl,
-                $"🚚 **Nouvelle demande de ravitaillement** : « {title} » — {req.Hex}"
-                + (string.IsNullOrWhiteSpace(req.Coords) ? "" : $" ({req.Coords.Trim()})")
+                $"🚚 **Nouvelle demande de ravitaillement** : « {title} » — {DiscordNotifier.Safe(req.Hex)}"
+                + (string.IsNullOrWhiteSpace(req.Coords) ? "" : $" ({DiscordNotifier.Safe(req.Coords)})")
                 + $" · {items.Count} item(s) · priorité {prio}");
 
             return Results.Ok(await BuildListAsync(db, me));
@@ -124,8 +124,8 @@ public static class ResupplyEndpoints
                     .Select(x => x.DiscordWebhookUrl).FirstOrDefaultAsync();
                 string by = r.RegimentId == myRegId
                     ? "par un membre du régiment"
-                    : $"par **{ctx.Value.reg.Name}** [{ctx.Value.reg.Tag}]";
-                discord.Send(url ?? "", $"🛠 Demande **« {r.Title} »** ({r.Hex}) prise en charge {by}.");
+                    : $"par **{DiscordNotifier.Safe(ctx.Value.reg.Name)}** [{DiscordNotifier.Safe(ctx.Value.reg.Tag)}]";
+                discord.Send(url ?? "", $"🛠 Demande **« {DiscordNotifier.Safe(r.Title)} »** ({DiscordNotifier.Safe(r.Hex)}) prise en charge {by}.");
             }
 
             return Results.Ok(await BuildListAsync(db, me));
@@ -134,7 +134,7 @@ public static class ResupplyEndpoints
         // Marquer livrée (régiment propriétaire ou preneur en charge).
         app.MapPost("/api/resupply/done", async (ResupplyActionRequest req, System.Security.Claims.ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub, DiscordNotifier discord) =>
             await MutateAsync(db, hub, Me(p), req.Id, Scope.OwnerOrClaimer, r => r.Status = ResupplyStatus.Done,
-                discord, r => $"✅ Demande **« {r.Title} »** ({r.Hex}) livrée.")).RequireAuthorization();
+                discord, r => $"✅ Demande **« {DiscordNotifier.Safe(r.Title)} »** ({DiscordNotifier.Safe(r.Hex)}) livrée.")).RequireAuthorization();
 
         // Rouvrir (régiment propriétaire ou preneur en charge).
         app.MapPost("/api/resupply/reopen", async (ResupplyActionRequest req, System.Security.Claims.ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
