@@ -1,0 +1,64 @@
+<Window x:Class="FoxholeLogiHub.App.OverlayStockWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LogiHub Overlay — Stockpile"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False"
+        Width="300" SizeToContent="Height" MaxHeight="560" ResizeMode="NoResize">
+    <Border Background="#EE13171E" CornerRadius="10" BorderBrush="#FF2A3340" BorderThickness="1">
+        <DockPanel Margin="10">
+
+            <DockPanel DockPanel.Dock="Top" Background="Transparent" MouseLeftButtonDown="OnDragWindow" Margin="0,0,0,6">
+                <Button DockPanel.Dock="Right" Content="✕" Click="OnCloseClick"
+                        Background="Transparent" Foreground="#FF9AA4B2" BorderThickness="0"
+                        Padding="6,0" FontSize="13" Cursor="Hand"/>
+                <TextBlock Text="📦 Stockpile" Foreground="White" FontWeight="Bold" FontSize="12.5"
+                           VerticalAlignment="Center"/>
+            </DockPanel>
+
+            <!-- Choix du stockpile -->
+            <ComboBox DockPanel.Dock="Top" ItemsSource="{Binding Stockpiles.Stockpiles}"
+                      SelectedItem="{Binding Stockpiles.OverlaySelected}"
+                      FontSize="12" Padding="5" Margin="0,0,0,6">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock>
+                            <Run Text="{Binding Name, Mode=OneWay}"/>
+                            <Run Text="{Binding Hex, Mode=OneWay, StringFormat=' — {0}'}" Foreground="#FF8A93A0"/>
+                        </TextBlock>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="Choisis un stockpile ci-dessus." Foreground="#FF6B7280" FontSize="11">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Stockpiles.OverlaySelected}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ItemsControl ItemsSource="{Binding Stockpiles.OverlayItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,1">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding QuantityText}" FontSize="12"
+                                               FontWeight="Bold" Foreground="{Binding StatusBrush}" VerticalAlignment="Center"/>
+                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="11.5"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</Window>

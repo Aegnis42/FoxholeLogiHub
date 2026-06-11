@@ -16,6 +16,9 @@ public partial class OverlayWindow : Window
     /// <summary>Demande de fermeture (croix) — le propriétaire gère l'état et la persistance.</summary>
     public event Action? CloseRequested;
 
+    /// <summary>Bascule d'un panneau ("stock" | "resupply" | "taken") — géré par MainWindow.</summary>
+    public event Action<string>? PanelToggleRequested;
+
     public OverlayWindow(MainViewModel vm, double? left, double? top)
     {
         InitializeComponent();
@@ -44,6 +47,10 @@ public partial class OverlayWindow : Window
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => CloseRequested?.Invoke();
+
+    private void OnTogglePanelStock(object sender, RoutedEventArgs e) => PanelToggleRequested?.Invoke("stock");
+    private void OnTogglePanelResupply(object sender, RoutedEventArgs e) => PanelToggleRequested?.Invoke("resupply");
+    private void OnTogglePanelTaken(object sender, RoutedEventArgs e) => PanelToggleRequested?.Invoke("taken");
 
     private async void OnSearchClick(object sender, RoutedEventArgs e) =>
         await _vm.Stockpiles.SearchItemsAsync();

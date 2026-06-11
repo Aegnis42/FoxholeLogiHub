@@ -15,10 +15,26 @@ public sealed class AppSettings
     /// <summary>Notifications Windows (toasts) : demandes d'amis, invitations, ravitaillement, stock critique.</summary>
     public bool NotificationsEnabled { get; set; } = true;
 
-    /// <summary>Overlay compact (fenêtre toujours visible) : état et position mémorisés.</summary>
-    public bool OverlayOpen { get; set; }
-    public double? OverlayLeft { get; set; }
-    public double? OverlayTop { get; set; }
+    /// <summary>
+    /// Panneaux de l'overlay (fenêtres toujours visibles) : état ouvert + position, par panneau
+    /// ("hub", "stock", "resupply", "taken"). Le panneau « hub » sert aussi d'interrupteur global.
+    /// </summary>
+    public Dictionary<string, OverlayPanelState> OverlayPanels { get; set; } = new();
+
+    public OverlayPanelState OverlayPanel(string key)
+    {
+        if (!OverlayPanels.TryGetValue(key, out var state))
+            OverlayPanels[key] = state = new OverlayPanelState();
+        return state;
+    }
+}
+
+/// <summary>État persisté d'un panneau d'overlay.</summary>
+public sealed class OverlayPanelState
+{
+    public bool Open { get; set; }
+    public double? Left { get; set; }
+    public double? Top { get; set; }
 }
 
 /// <summary>Persistance des réglages dans settings.json.</summary>

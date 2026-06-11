@@ -383,6 +383,64 @@ public sealed class StockpilesViewModel : ObservableObject
                 SelectedCanManage = sel.CanManage;
             }
         }
+
+        ResnapOverlaySelection();
+    }
+
+    // ---------- Panneau overlay « stockpile » (sélection indépendante du détail principal) ----------
+
+    private string? _overlaySelectedId;
+    private StockpileItemViewModel? _overlaySelected;
+
+    public StockpileItemViewModel? OverlaySelected
+    {
+        get => _overlaySelected;
+        set
+        {
+            _overlaySelected = value;
+            _overlaySelectedId = value?.Id;
+            Raise(nameof(OverlaySelected));
+            _ = LoadOverlayItemsAsync();
+        }
+    }
+
+    public ObservableCollection<StockpileLineViewModel> OverlayItems { get; } = new();
+    public bool OverlayHasItems => OverlayItems.Count > 0;
+
+    private async Task LoadOverlayItemsAsync()
+    {
+        if (_client is null || _overlaySelected is null)
+        {
+            OverlayItems.Clear();
+            Raise(nameof(OverlayHasItems));
+            return;
+        }
+        try
+        {
+            var items = await _client.GetItemsAsync(_overlaySelected.Id);
+            OverlayItems.Clear();
+            foreach (var d in items.OrderBy(i => i.Name))
+                OverlayItems.Add(new StockpileLineViewModel(d, false));
+            Raise(nameof(OverlayHasItems));
+        }
+        catch { /* meilleur effort */ }
+    }
+
+    /// <summary>Après un rechargement de la liste : re-pointe la sélection overlay sur la nouvelle instance.</summary>
+    private void ResnapOverlaySelection()
+    {
+        if (_overlaySelectedId is null)
+            return;
+        _overlaySelected = Stockpiles.FirstOrDefault(s => s.Id == _overlaySelectedId);
+        Raise(nameof(OverlaySelected));
+        if (_overlaySelected is null)
+        {
+            _overlaySelectedId = null;
+            OverlayItems.Clear();
+            Raise(nameof(OverlayHasItems));
+        }
+        else
+            _ = LoadOverlayItemsAsync();
     }
 
     /// <summary>Création hors port/dépôt : on bascule sur la carte pour choisir l'emplacement à la main.</summary>

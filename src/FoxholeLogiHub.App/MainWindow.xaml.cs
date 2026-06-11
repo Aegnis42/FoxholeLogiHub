@@ -74,8 +74,8 @@ public partial class MainWindow : Window
         RegisterHotKey(_hwnd, HotkeyId, 0, VkF8); // F8 global → import par capture
         RegisterHotKey(_hwnd, HotkeyIdOverlay, 0, VkF9); // F9 global → overlay compact
 
-        // Réouvre l'overlay s'il était affiché à la dernière fermeture.
-        if (new SettingsStore().Load().OverlayOpen)
+        // Réouvre l'overlay (hub + panneaux) s'il était affiché à la dernière fermeture.
+        if (new SettingsStore().Load().OverlayPanel("hub").Open)
             Dispatcher.BeginInvoke(new Action(() => ToggleOverlay()), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
@@ -94,46 +94,114 @@ public partial class MainWindow : Window
         return IntPtr.Zero;
     }
 
-    // ---------- Overlay compact (toujours-au-dessus) ----------
+    // ---------- Overlay multi-fenêtres (toujours-au-dessus) ----------
+    // « hub » (alertes/MPF/recherche) + panneaux indépendants déplaçables :
+    // « stock » (contenu d'un stockpile), « resupply » (demandes + création), « taken » (prises).
+    // F9 / bouton sidebar = bascule du hub + des panneaux marqués ouverts.
 
-    private OverlayWindow? _overlay;
+    private readonly Dictionary<string, Window> _overlays = new();
 
     private void OnToggleOverlay(object sender, RoutedEventArgs e) => ToggleOverlay();
 
+    private Window CreateOverlayPanel(string key, OverlayPanelState state)
+    {
+        Window w = key switch
+        {
+            "stock" => new OverlayStockWindow(_vm, state.Left, state.Top),
+            "resupply" => new OverlayResupplyWindow(_vm, state.Left, state.Top),
+            "taken" => new OverlayTakenWindow(_vm, state.Left, state.Top),
+            _ => new OverlayWindow(_vm, state.Left, state.Top),
+        };
+        w.Owner = this;
+        switch (w)
+        {
+            case OverlayWindow hub:
+                hub.CloseRequested += ToggleOverlay; // la croix du hub masque tout l'overlay
+                hub.PanelToggleRequested += TogglePanel;
+                break;
+            case OverlayStockWindow s: s.CloseRequested += () => TogglePanel("stock"); break;
+            case OverlayResupplyWindow r: r.CloseRequested += () => TogglePanel("resupply"); break;
+            case OverlayTakenWindow t: t.CloseRequested += () => TogglePanel("taken"); break;
+        }
+        _overlays[key] = w;
+        return w;
+    }
+
+    /// <summary>F9 : affiche (hub + panneaux mémorisés ouverts) ou masque toutes les fenêtres.</summary>
     private void ToggleOverlay()
     {
         var store = new SettingsStore();
         var settings = store.Load();
+        bool anyVisible = _overlays.Values.Any(w => w.IsVisible);
 
-        if (_overlay is { IsVisible: true })
+        if (anyVisible)
         {
-            settings.OverlayLeft = _overlay.Left;
-            settings.OverlayTop = _overlay.Top;
-            settings.OverlayOpen = false;
+            foreach (var pair in _overlays)
+            {
+                if (!pair.Value.IsVisible)
+                    continue;
+                var st = settings.OverlayPanel(pair.Key);
+                st.Left = pair.Value.Left;
+                st.Top = pair.Value.Top;
+                pair.Value.Hide();
+            }
+            settings.OverlayPanel("hub").Open = false; // interrupteur global
             store.Save(settings);
-            _overlay.Hide();
             return;
         }
 
-        if (_overlay is null)
-        {
-            _overlay = new OverlayWindow(_vm, settings.OverlayLeft, settings.OverlayTop) { Owner = this };
-            _overlay.CloseRequested += ToggleOverlay;
-        }
-        _overlay.Show();
-        settings.OverlayOpen = true;
+        ShowPanel("hub", settings);
+        foreach (string key in new[] { "stock", "resupply", "taken" })
+            if (settings.OverlayPanel(key).Open)
+                ShowPanel(key, settings);
+        settings.OverlayPanel("hub").Open = true;
         store.Save(settings);
+    }
+
+    /// <summary>Bascule d'un panneau individuel (boutons du hub ou croix du panneau).</summary>
+    private void TogglePanel(string key)
+    {
+        var store = new SettingsStore();
+        var settings = store.Load();
+        var st = settings.OverlayPanel(key);
+
+        if (_overlays.TryGetValue(key, out var w) && w.IsVisible)
+        {
+            st.Left = w.Left;
+            st.Top = w.Top;
+            st.Open = false;
+            store.Save(settings);
+            w.Hide();
+            return;
+        }
+
+        ShowPanel(key, settings);
+        st.Open = true;
+        store.Save(settings);
+    }
+
+    private void ShowPanel(string key, AppSettings settings)
+    {
+        if (!_overlays.TryGetValue(key, out var w))
+            w = CreateOverlayPanel(key, settings.OverlayPanel(key));
+        w.Show();
     }
 
     private void PersistOverlayState()
     {
-        if (_overlay is null)
+        if (_overlays.Count == 0)
             return;
         var store = new SettingsStore();
         var settings = store.Load();
-        settings.OverlayLeft = _overlay.Left;
-        settings.OverlayTop = _overlay.Top;
-        settings.OverlayOpen = _overlay.IsVisible;
+        foreach (var pair in _overlays)
+        {
+            var st = settings.OverlayPanel(pair.Key);
+            st.Left = pair.Value.Left;
+            st.Top = pair.Value.Top;
+            if (pair.Key != "hub")
+                st.Open = pair.Value.IsVisible || st.Open; // masqué par F9 ≠ fermé : il revient au prochain F9
+        }
+        settings.OverlayPanel("hub").Open = _overlays.TryGetValue("hub", out var hub) && hub.IsVisible;
         store.Save(settings);
     }
 

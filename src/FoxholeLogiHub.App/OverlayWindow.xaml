@@ -29,6 +29,19 @@
             <TextBlock DockPanel.Dock="Top" Text="{Binding Stockpiles.WarBanner}" Foreground="#FF7FA8D9"
                        FontSize="10.5" TextWrapping="Wrap" Margin="0,0,0,6"/>
 
+            <!-- Ouvrir les panneaux (fenêtres indépendantes, déplaçables) -->
+            <UniformGrid DockPanel.Dock="Top" Columns="3" Margin="0,0,0,6">
+                <Button Content="📦 Stockpile" Click="OnTogglePanelStock" Margin="0,0,3,0"
+                        Background="#FF222A36" Foreground="#FFB8C4D0" BorderThickness="0" Padding="4,4"
+                        FontSize="10.5" Cursor="Hand" ToolTip="Fenêtre : contenu d'un stockpile au choix"/>
+                <Button Content="🚚 Demandes" Click="OnTogglePanelResupply" Margin="0,0,3,0"
+                        Background="#FF222A36" Foreground="#FFB8C4D0" BorderThickness="0" Padding="4,4"
+                        FontSize="10.5" Cursor="Hand" ToolTip="Fenêtre : demandes ouvertes + en créer une"/>
+                <Button Content="🔧 Prises" Click="OnTogglePanelTaken"
+                        Background="#FF222A36" Foreground="#FFB8C4D0" BorderThickness="0" Padding="4,4"
+                        FontSize="10.5" Cursor="Hand" ToolTip="Fenêtre : demandes prises en charge par le régiment"/>
+            </UniformGrid>
+
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
 
