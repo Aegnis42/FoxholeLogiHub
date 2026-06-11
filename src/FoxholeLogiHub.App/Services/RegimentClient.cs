@@ -81,9 +81,9 @@ public sealed class RegimentClient : IDisposable
     }
 
     /// <summary>Webhook Discord (chef) : configure ("" = désactive) et renvoie l'état masqué.</summary>
-    public async Task<RegimentWebhookDto?> SetWebhookAsync(string url)
+    public async Task<RegimentWebhookDto?> SetWebhookAsync(string url, string? roleTag = null)
     {
-        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/regiments/webhook", new SetRegimentWebhookRequest(url));
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/regiments/webhook", new SetRegimentWebhookRequest(url, roleTag));
         await EnsureAsync(resp);
         return await resp.Content.ReadFromJsonAsync<RegimentWebhookDto>();
     }

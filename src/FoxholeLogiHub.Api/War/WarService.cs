@@ -408,7 +408,7 @@ public sealed class WarRefreshService : BackgroundService
             .Where(r => r.DiscordWebhookUrl != "")
             .ToListAsync();
         var current = new HashSet<string>(StringComparer.Ordinal);
-        var newThreats = new Dictionary<string, List<string>>(); // webhook → lignes
+        var newThreats = new Dictionary<string, (string RoleTag, List<string> Lines)>(); // webhook → (mention, lignes)
 
         if (regs.Count > 0)
         {
@@ -434,10 +434,10 @@ public sealed class WarRefreshService : BackgroundService
                 current.Add(key);
                 if (_lastThreats is not null && !_lastThreats.Contains(key))
                 {
-                    if (!newThreats.TryGetValue(reg.DiscordWebhookUrl, out var lines))
-                        newThreats[reg.DiscordWebhookUrl] = lines = new List<string>();
+                    if (!newThreats.TryGetValue(reg.DiscordWebhookUrl, out var entry))
+                        newThreats[reg.DiscordWebhookUrl] = entry = (reg.DiscordRoleTag, new List<string>());
                     string loc = Common.DiscordNotifier.Safe(sp.Hex) + (sp.Town.Length > 0 ? " · " + Common.DiscordNotifier.Safe(sp.Town) : "");
-                    lines.Add($"• **{Common.DiscordNotifier.Safe(sp.Name)}** — {loc} : {reason}");
+                    entry.Lines.Add($"• **{Common.DiscordNotifier.Safe(sp.Name)}** — {loc} : {reason}");
                 }
             }
         }
@@ -448,8 +448,9 @@ public sealed class WarRefreshService : BackgroundService
         if (baseline)
             return;
 
-        foreach (var (url, lines) in newThreats)
-            _discord.Send(url, "🚨 **Stockpiles menacés !**\n" + string.Join("\n", lines.Take(10))
-                + (lines.Count > 10 ? $"\n… et {lines.Count - 10} autre(s)" : ""));
+        foreach (var (url, entry) in newThreats)
+            _discord.Send(url, Common.DiscordNotifier.Tagged(entry.RoleTag,
+                "🚨 **Stockpiles menacés !**\n" + string.Join("\n", entry.Lines.Take(10))
+                + (entry.Lines.Count > 10 ? $"\n… et {entry.Lines.Count - 10} autre(s)" : "")));
     }
 }

@@ -193,8 +193,20 @@ public sealed class RegimentViewModel : ObservableObject
 
     private string _webhookInput = "";
     public string WebhookInput { get => _webhookInput; set => Set(ref _webhookInput, value); }
+    private string _webhookTagInput = "";
+    public string WebhookTagInput { get => _webhookTagInput; set => Set(ref _webhookTagInput, value); }
     private string _webhookState = "";
     public string WebhookState { get => _webhookState; private set => Set(ref _webhookState, value); }
+
+    private void ApplyWebhookDto(RegimentWebhookDto? dto, string suffix = "")
+    {
+        WebhookTagInput = dto?.RoleTag ?? "";
+        WebhookState = dto is { Configured: true }
+            ? $"Connecté : {dto.Masked}"
+              + (string.IsNullOrEmpty(dto.RoleTag) ? "" : $" · mention {dto.RoleTag}")
+              + suffix
+            : "Aucun webhook configuré.";
+    }
 
     private async Task LoadWebhookAsync()
     {
@@ -202,15 +214,15 @@ public sealed class RegimentViewModel : ObservableObject
             return;
         try
         {
-            var dto = await _client.GetWebhookAsync();
-            WebhookState = dto is { Configured: true }
-                ? $"Connecté : {dto.Masked}"
-                : "Aucun webhook configuré.";
+            ApplyWebhookDto(await _client.GetWebhookAsync());
         }
         catch { /* meilleur effort */ }
     }
 
-    /// <summary>Enregistre (ou désactive si vide) le webhook Discord du régiment.</summary>
+    /// <summary>
+    /// Enregistre le webhook et/ou la mention. URL vide + mention fournie = ne change que la
+    /// mention (l'URL enregistrée est masquée, pas besoin de la recoller).
+    /// </summary>
     public async Task SaveWebhookAsync()
     {
         if (_client is null || Busy)
@@ -218,12 +230,27 @@ public sealed class RegimentViewModel : ObservableObject
         Busy = true;
         try
         {
-            var dto = await _client.SetWebhookAsync(WebhookInput.Trim());
+            var dto = await _client.SetWebhookAsync(WebhookInput.Trim(), WebhookTagInput.Trim());
             WebhookInput = "";
-            WebhookState = dto is { Configured: true }
-                ? $"Connecté : {dto.Masked} — message de test envoyé ✅"
-                : "Webhook désactivé.";
+            ApplyWebhookDto(dto, " — message de test envoyé ✅");
             Status = "Webhook Discord mis à jour.";
+        }
+        catch (FriendException fex) { Status = fex.Message; }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
+    }
+
+    /// <summary>Coupe le webhook (et sa mention).</summary>
+    public async Task DisableWebhookAsync()
+    {
+        if (_client is null || Busy)
+            return;
+        Busy = true;
+        try
+        {
+            ApplyWebhookDto(await _client.SetWebhookAsync("", null));
+            WebhookInput = "";
+            Status = "Webhook Discord désactivé.";
         }
         catch (FriendException fex) { Status = fex.Message; }
         catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }

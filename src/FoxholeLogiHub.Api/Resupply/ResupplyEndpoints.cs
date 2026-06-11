@@ -66,10 +66,10 @@ public static class ResupplyEndpoints
 
             string prio = req.Priority switch { 2 => "🔴 haute", 1 => "🟠 normale", _ => "🟢 basse" };
             string title = string.IsNullOrWhiteSpace(req.Title) ? "Demande" : DiscordNotifier.Safe(req.Title);
-            discord.Send(ctx.Value.reg.DiscordWebhookUrl,
+            discord.Send(ctx.Value.reg.DiscordWebhookUrl, DiscordNotifier.Tagged(ctx.Value.reg.DiscordRoleTag,
                 $"🚚 **Nouvelle demande de ravitaillement** : « {title} » — {DiscordNotifier.Safe(req.Hex)}"
                 + (string.IsNullOrWhiteSpace(req.Coords) ? "" : $" ({DiscordNotifier.Safe(req.Coords)})")
-                + $" · {items.Count} item(s) · priorité {prio}");
+                + $" · {items.Count} item(s) · priorité {prio}"));
 
             return Results.Ok(await BuildListAsync(db, me));
         }).RequireAuthorization();
@@ -120,12 +120,13 @@ public static class ResupplyEndpoints
             // Webhook du régiment propriétaire : prise en charge effective par quelqu'un d'autre qu'avant.
             if (r.ClaimedBySteamId == me && claimedBefore != me)
             {
-                string? url = await db.Regiments.Where(x => x.Id == r.RegimentId)
-                    .Select(x => x.DiscordWebhookUrl).FirstOrDefaultAsync();
+                var hook = await db.Regiments.Where(x => x.Id == r.RegimentId)
+                    .Select(x => new { x.DiscordWebhookUrl, x.DiscordRoleTag }).FirstOrDefaultAsync();
                 string by = r.RegimentId == myRegId
                     ? "par un membre du régiment"
                     : $"par **{DiscordNotifier.Safe(ctx.Value.reg.Name)}** [{DiscordNotifier.Safe(ctx.Value.reg.Tag)}]";
-                discord.Send(url ?? "", $"🛠 Demande **« {DiscordNotifier.Safe(r.Title)} »** ({DiscordNotifier.Safe(r.Hex)}) prise en charge {by}.");
+                discord.Send(hook?.DiscordWebhookUrl ?? "", DiscordNotifier.Tagged(hook?.DiscordRoleTag ?? "",
+                    $"🛠 Demande **« {DiscordNotifier.Safe(r.Title)} »** ({DiscordNotifier.Safe(r.Hex)}) prise en charge {by}."));
             }
 
             return Results.Ok(await BuildListAsync(db, me));
@@ -186,9 +187,9 @@ public static class ResupplyEndpoints
 
         if (discord is not null && message is not null)
         {
-            string? url = await db.Regiments.Where(x => x.Id == ownerReg)
-                .Select(x => x.DiscordWebhookUrl).FirstOrDefaultAsync();
-            discord.Send(url ?? "", message);
+            var hook = await db.Regiments.Where(x => x.Id == ownerReg)
+                .Select(x => new { x.DiscordWebhookUrl, x.DiscordRoleTag }).FirstOrDefaultAsync();
+            discord.Send(hook?.DiscordWebhookUrl ?? "", DiscordNotifier.Tagged(hook?.DiscordRoleTag ?? "", message));
         }
 
         return Results.Ok(await BuildListAsync(db, me));

@@ -173,6 +173,32 @@ public sealed class StockpileTests : IClassFixture<ApiFactory>
 public sealed class DiscordSafeTests
 {
     [Theory]
+    [InlineData("", "")]
+    [InlineData("  ", "")]
+    [InlineData("@everyone", "@everyone")]
+    [InlineData("@here", "@here")]
+    [InlineData("123456789012345678", "<@&123456789012345678>")]
+    [InlineData("<@&123456789012345678>", "<@&123456789012345678>")]
+    public void NormalizeRoleTag_accepte_les_formats_valides(string input, string expected) =>
+        Assert.Equal(expected, FoxholeLogiHub.Api.Common.DiscordNotifier.NormalizeRoleTag(input));
+
+    [Theory]
+    [InlineData("@Logi")]
+    [InlineData("<@123456789012345678>")]
+    [InlineData("abc")]
+    [InlineData("123")]
+    [InlineData("<@&123456789012345678> sup")]
+    public void NormalizeRoleTag_rejette_les_formats_invalides(string input) =>
+        Assert.Null(FoxholeLogiHub.Api.Common.DiscordNotifier.NormalizeRoleTag(input));
+
+    [Fact]
+    public void Tagged_prefixe_seulement_si_mention()
+    {
+        Assert.Equal("msg", FoxholeLogiHub.Api.Common.DiscordNotifier.Tagged("", "msg"));
+        Assert.Equal("<@&42424242> msg", FoxholeLogiHub.Api.Common.DiscordNotifier.Tagged("<@&42424242>", "msg"));
+    }
+
+    [Theory]
     [InlineData("@everyone alerte", "everyone alerte")]
     [InlineData("Dépôt\nligne 2", "Dépôt ligne 2")]
     [InlineData("**gras** `code`", "gras code")]

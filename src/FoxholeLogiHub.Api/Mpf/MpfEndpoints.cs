@@ -154,17 +154,18 @@ public sealed class MpfWatcherService : BackgroundService
         var regIds = due.Select(o => o.RegimentId).Distinct().ToList();
         var webhooks = await db.Regiments.AsNoTracking()
             .Where(r => regIds.Contains(r.Id) && r.DiscordWebhookUrl != "")
-            .ToDictionaryAsync(r => r.Id, r => r.DiscordWebhookUrl);
+            .ToDictionaryAsync(r => r.Id, r => new { r.DiscordWebhookUrl, r.DiscordRoleTag });
 
         foreach (var group in due.GroupBy(o => o.RegimentId))
         {
-            if (webhooks.TryGetValue(group.Key, out var url))
+            if (webhooks.TryGetValue(group.Key, out var hook))
             {
                 var lines = group.Take(8).Select(o =>
                     $"• {DiscordNotifier.Safe(o.ItemName)} ×{o.Crates} caisse(s)"
                     + (o.Hex.Length > 0 ? $" — {DiscordNotifier.Safe(o.Hex)}" : "")
                     + $" (par {DiscordNotifier.Safe(o.CreatedByName)})");
-                _discord.Send(url, "🏭 **MPF terminé — à récupérer :**\n" + string.Join("\n", lines));
+                _discord.Send(hook.DiscordWebhookUrl, DiscordNotifier.Tagged(hook.DiscordRoleTag,
+                    "🏭 **MPF terminé — à récupérer :**\n" + string.Join("\n", lines)));
             }
             foreach (var o in group)
                 o.Notified = true;

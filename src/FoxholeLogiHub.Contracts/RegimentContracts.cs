@@ -47,8 +47,9 @@ public sealed record ProposeAllianceRequest(string TargetInviteCode);
 public sealed record RespondAllianceRequest(string OtherRegimentId, bool Accept);
 public sealed record RemoveAllianceRequest(string OtherRegimentId);
 
-/// <summary>Configure le webhook Discord du régiment ("" = désactiver). Chef uniquement.</summary>
-public sealed record SetRegimentWebhookRequest(string Url);
+/// <summary>Configure le webhook Discord du régiment ("" = désactiver) + mention à préfixer
+/// aux notifications (ID de rôle, &lt;@&amp;id&gt;, @everyone/@here ; "" = aucune). Chef uniquement.</summary>
+public sealed record SetRegimentWebhookRequest(string Url, string? RoleTag = null);
 
-/// <summary>État du webhook Discord (URL masquée, jamais le secret complet).</summary>
-public sealed record RegimentWebhookDto(bool Configured, string Masked);
+/// <summary>État du webhook Discord (URL masquée, jamais le secret complet) + mention configurée.</summary>
+public sealed record RegimentWebhookDto(bool Configured, string Masked, string RoleTag = "");

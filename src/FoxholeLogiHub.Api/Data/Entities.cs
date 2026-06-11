@@ -42,6 +42,8 @@ public sealed class Regiment
     public string OwnerSteamId { get; set; } = "";
     // Webhook Discord du régiment ("" = désactivé) — alertes stock/ravitaillement/menaces.
     public string DiscordWebhookUrl { get; set; } = "";
+    // Mention préfixée aux notifications Discord (ex. <@&123…>, @here) — "" = aucune.
+    public string DiscordRoleTag { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 }
 

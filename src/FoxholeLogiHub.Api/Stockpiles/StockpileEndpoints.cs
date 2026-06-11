@@ -341,9 +341,9 @@ public static class StockpileEndpoints
                         .Select(i => $"• {DiscordNotifier.Safe(i.Name)} : {i.Quantity} (seuil {i.CriticalThreshold})");
                     string more = newlyCritical.Count > 8 ? $"\n… et {newlyCritical.Count - 8} autre(s)" : "";
                     string loc = DiscordNotifier.Safe(sp.Hex) + (sp.Town.Length > 0 ? " · " + DiscordNotifier.Safe(sp.Town) : "");
-                    discord.Send(ctx.Value.reg.DiscordWebhookUrl,
+                    discord.Send(ctx.Value.reg.DiscordWebhookUrl, DiscordNotifier.Tagged(ctx.Value.reg.DiscordRoleTag,
                         $"🚨 **{DiscordNotifier.Safe(sp.Name)}** ({loc}) — stock critique :\n"
-                        + string.Join("\n", lines) + more);
+                        + string.Join("\n", lines) + more));
                 }
             }
 

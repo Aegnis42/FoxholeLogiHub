@@ -359,6 +359,7 @@ public partial class MainWindow : Window
     }
 
     private async void OnSaveWebhook(object sender, RoutedEventArgs e) => await _vm.Regiment.SaveWebhookAsync();
+    private async void OnDisableWebhook(object sender, RoutedEventArgs e) => await _vm.Regiment.DisableWebhookAsync();
     private void OnApplyUpdate(object sender, RoutedEventArgs e) => _vm.ApplyUpdate();
 
     // --- File MPF ---

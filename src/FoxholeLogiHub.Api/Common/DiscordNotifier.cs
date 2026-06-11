@@ -17,6 +17,29 @@ public sealed class DiscordNotifier
     public static bool AllowAnyUrl;
 
     /// <summary>
+    /// Valide/normalise le tag de rôle voulu par le CHEF (seule mention autorisée à passer) :
+    /// "" = aucun ; un ID numérique devient &lt;@&amp;id&gt; ; @everyone/@here et &lt;@&amp;id&gt; passent tels quels.
+    /// Renvoie null si le format n'est pas reconnu.
+    /// </summary>
+    public static string? NormalizeRoleTag(string? input)
+    {
+        string tag = (input ?? "").Trim();
+        if (tag.Length == 0)
+            return "";
+        if (tag is "@everyone" or "@here")
+            return tag;
+        if (tag.Length is >= 5 and <= 25 && tag.All(char.IsAsciiDigit))
+            return $"<@&{tag}>";
+        if (System.Text.RegularExpressions.Regex.IsMatch(tag, @"^<@&\d{5,25}>$"))
+            return tag;
+        return null;
+    }
+
+    /// <summary>Préfixe un message par la mention du régiment (volontairement NON neutralisée — posée par le chef).</summary>
+    public static string Tagged(string roleTag, string message) =>
+        string.IsNullOrEmpty(roleTag) ? message : $"{roleTag} {message}";
+
+    /// <summary>
     /// Neutralise un texte fourni par l'utilisateur (nom de stockpile, titre de demande…) avant
     /// insertion dans un message Discord : pas de mention de masse (@everyone/@here/&lt;@id&gt;), pas de
     /// saut de ligne ni de markdown qui casserait la mise en forme. Tronqué à 80 caractères.

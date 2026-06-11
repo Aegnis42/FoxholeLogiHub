@@ -149,14 +149,35 @@ public static class RegimentEndpoints
             if (ctx is null || ctx.Value.reg.OwnerSteamId != me)
                 return Results.BadRequest(new ApiError("Seul le chef peut configurer le webhook Discord."));
             string url = Validate.Str(req.Url ?? "", 256).Trim();
+
+            // L'URL est masquée côté client : champ URL vide + mention fournie + webhook déjà
+            // configuré = on ne modifie QUE la mention. (Désactiver = URL vide ET mention null.)
+            bool tagOnly = url.Length == 0 && req.RoleTag is not null && ctx.Value.reg.DiscordWebhookUrl.Length > 0;
+            if (tagOnly)
+                url = ctx.Value.reg.DiscordWebhookUrl;
             if (url.Length > 0 && !DiscordNotifier.LooksValid(url))
                 return Results.BadRequest(new ApiError("URL invalide — colle l'URL du webhook Discord (https://discord.com/api/webhooks/…)."));
 
+            // Mention optionnelle (ID de rôle, <@&id>, @everyone/@here) — null = inchangée.
+            string roleTag = ctx.Value.reg.DiscordRoleTag;
+            if (req.RoleTag is not null)
+            {
+                string? normalized = DiscordNotifier.NormalizeRoleTag(req.RoleTag);
+                if (normalized is null)
+                    return Results.BadRequest(new ApiError("Mention invalide — colle l'ID du rôle Discord (clic droit sur le rôle → Copier l'identifiant), ou @everyone / @here."));
+                roleTag = normalized;
+            }
+            if (url.Length == 0)
+                roleTag = ""; // webhook désactivé → mention effacée aussi
+
             ctx.Value.reg.DiscordWebhookUrl = url;
+            ctx.Value.reg.DiscordRoleTag = roleTag;
             await db.SaveChangesAsync();
             if (url.Length > 0)
-                discord.Send(url, $"✅ Webhook FoxholeLogiHub connecté pour **{DiscordNotifier.Safe(ctx.Value.reg.Name)}** [{DiscordNotifier.Safe(ctx.Value.reg.Tag)}] — les alertes de stock, de ravitaillement et de menace arriveront ici.");
-            return Results.Ok(BuildWebhookDto(url));
+                discord.Send(url, DiscordNotifier.Tagged(roleTag, tagOnly
+                    ? $"🔔 Mention configurée pour **{DiscordNotifier.Safe(ctx.Value.reg.Name)}** — les prochaines alertes pingueront ce rôle."
+                    : $"✅ Webhook FoxholeLogiHub connecté pour **{DiscordNotifier.Safe(ctx.Value.reg.Name)}** [{DiscordNotifier.Safe(ctx.Value.reg.Tag)}] — les alertes de stock, de ravitaillement et de menace arriveront ici."));
+            return Results.Ok(BuildWebhookDto(url, roleTag));
         }).RequireAuthorization();
 
         app.MapGet("/api/regiments/webhook", async (ClaimsPrincipal p, AppDbContext db) =>
@@ -165,7 +186,7 @@ public static class RegimentEndpoints
             var ctx = await MyRegimentAsync(db, me);
             if (ctx is null || ctx.Value.reg.OwnerSteamId != me)
                 return Results.BadRequest(new ApiError("Seul le chef peut voir le webhook Discord."));
-            return Results.Ok(BuildWebhookDto(ctx.Value.reg.DiscordWebhookUrl));
+            return Results.Ok(BuildWebhookDto(ctx.Value.reg.DiscordWebhookUrl, ctx.Value.reg.DiscordRoleTag));
         }).RequireAuthorization();
 
         // Fin de guerre : purge les données logistiques du régiment (stockpiles + contenus + partages
@@ -429,8 +450,8 @@ public static class RegimentEndpoints
     // ---------- Helpers (spécifiques aux régiments — le reste vient de RegimentGuards) ----------
 
     /// <summary>URL masquée pour l'affichage (jamais le secret complet).</summary>
-    private static RegimentWebhookDto BuildWebhookDto(string url) =>
-        new(url.Length > 0, url.Length > 45 ? url[..42] + "•••" : url);
+    private static RegimentWebhookDto BuildWebhookDto(string url, string roleTag) =>
+        new(url.Length > 0, url.Length > 45 ? url[..42] + "•••" : url, roleTag);
 
     private static async Task<string> UniqueCodeAsync(AppDbContext db)
     {

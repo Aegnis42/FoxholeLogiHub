@@ -802,11 +802,21 @@
                                                    Text="Les alertes du régiment (stock critique, stockpile menacé, demandes de ravitaillement créées/prises/livrées) seront postées dans ton salon Discord. Crée un webhook dans Discord : Paramètres du salon → Intégrations → Webhooks, puis colle son URL ici."/>
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Enregistrer" Style="{StaticResource FlatButton}"
-                                                    Background="#FF2A475E" Padding="14,6" Margin="8,0,0,0" Click="OnSaveWebhook"
-                                                    ToolTip="Vide = désactiver"/>
+                                                    Background="#FF2A475E" Padding="14,6" Margin="8,0,0,0" Click="OnSaveWebhook"/>
                                             <TextBox Text="{Binding WebhookInput, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="7"
                                                      Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
                                                      CaretBrush="White" ToolTip="https://discord.com/api/webhooks/…"/>
+                                        </DockPanel>
+                                        <DockPanel Margin="0,6,0,0">
+                                            <Button DockPanel.Dock="Right" Content="Désactiver" Style="{StaticResource FlatButton}"
+                                                    Background="#FF5A3535" Padding="10,6" Margin="8,0,0,0" Click="OnDisableWebhook"
+                                                    ToolTip="Coupe le webhook et sa mention"/>
+                                            <TextBlock DockPanel.Dock="Left" Text="Rôle à mentionner :" Foreground="#FF9AA4B2" FontSize="12"
+                                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <TextBox Text="{Binding WebhookTagInput, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="7"
+                                                     Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                                     CaretBrush="White"
+                                                     ToolTip="ID du rôle Discord (clic droit sur le rôle → Copier l'identifiant), ou @everyone / @here — pingué en tête de chaque alerte. Vide = aucune mention. Le rôle doit être mentionnable."/>
                                         </DockPanel>
                                         <TextBlock Text="{Binding WebhookState}" Foreground="#FF7FA8D9" FontSize="12" Margin="0,6,0,0"/>
                                     </StackPanel>
