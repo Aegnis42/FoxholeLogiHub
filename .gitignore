@@ -31,6 +31,7 @@ app-err.txt
 
 # Exception : icônes d'items (bundle FIR, nécessaires au build/affichage)
 !src/FoxholeLogiHub.App/Data/icons/*.png
+!src/FoxholeLogiHub.App/Assets/*.png
 
 # Base de données locale de l'API (SQLite)
 *.db
