@@ -37,6 +37,9 @@ builder.Services.AddSingleton<ConnectionTracker>();
 builder.Services.AddSingleton<IUserIdProvider, SteamIdUserIdProvider>();
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<FoxholeLogiHub.Api.Common.DiscordNotifier>();
+if (builder.Configuration["AllowAnyWebhookUrl"] == "1")
+    FoxholeLogiHub.Api.Common.DiscordNotifier.AllowAnyUrl = true; // dev/tests uniquement
 
 // État de la guerre (API publique Foxhole) : cache partagé + rafraîchissement périodique.
 builder.Services.AddSingleton<FoxholeLogiHub.Api.War.WarApiClient>();

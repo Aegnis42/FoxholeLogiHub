@@ -141,6 +141,33 @@ public static class RegimentEndpoints
             return Results.Ok(new { inviteCode = ctx.Value.reg.InviteCode });
         }).RequireAuthorization();
 
+        // Webhook Discord du régiment (chef uniquement) : "" = désactivé.
+        app.MapPost("/api/regiments/webhook", async (SetRegimentWebhookRequest req, ClaimsPrincipal p, AppDbContext db, DiscordNotifier discord) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || ctx.Value.reg.OwnerSteamId != me)
+                return Results.BadRequest(new ApiError("Seul le chef peut configurer le webhook Discord."));
+            string url = Validate.Str(req.Url ?? "", 256).Trim();
+            if (url.Length > 0 && !DiscordNotifier.LooksValid(url))
+                return Results.BadRequest(new ApiError("URL invalide — colle l'URL du webhook Discord (https://discord.com/api/webhooks/…)."));
+
+            ctx.Value.reg.DiscordWebhookUrl = url;
+            await db.SaveChangesAsync();
+            if (url.Length > 0)
+                discord.Send(url, $"✅ Webhook FoxholeLogiHub connecté pour **{ctx.Value.reg.Name}** [{ctx.Value.reg.Tag}] — les alertes de stock, de ravitaillement et de menace arriveront ici.");
+            return Results.Ok(BuildWebhookDto(url));
+        }).RequireAuthorization();
+
+        app.MapGet("/api/regiments/webhook", async (ClaimsPrincipal p, AppDbContext db) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || ctx.Value.reg.OwnerSteamId != me)
+                return Results.BadRequest(new ApiError("Seul le chef peut voir le webhook Discord."));
+            return Results.Ok(BuildWebhookDto(ctx.Value.reg.DiscordWebhookUrl));
+        }).RequireAuthorization();
+
         // Fin de guerre : purge les données logistiques du régiment (stockpiles + contenus + partages
         // + demandes de ravitaillement) pour repartir propre. Réservé au CHEF — le client propose
         // une archive locale avant d'appeler.
@@ -400,6 +427,10 @@ public static class RegimentEndpoints
     }
 
     // ---------- Helpers (spécifiques aux régiments — le reste vient de RegimentGuards) ----------
+
+    /// <summary>URL masquée pour l'affichage (jamais le secret complet).</summary>
+    private static RegimentWebhookDto BuildWebhookDto(string url) =>
+        new(url.Length > 0, url.Length > 45 ? url[..42] + "•••" : url);
 
     private static async Task<string> UniqueCodeAsync(AppDbContext db)
     {

@@ -164,7 +164,11 @@ public sealed class FriendsViewModel : ObservableObject
             await _client.ConnectPresenceAsync(new PresenceHandlers(
                 OnPresenceChanged, OnOnlineFriends, OnFriendRequestReceived, OnFriendsChanged,
                 () => OnUi(() => RegimentChanged?.Invoke()),
-                () => OnUi(() => RegimentInviteReceived?.Invoke()),
+                () => OnUi(() =>
+                {
+                    RegimentInviteReceived?.Invoke();
+                    ToastRequested?.Invoke("Invitation de régiment", "Tu as été invité dans un régiment.");
+                }),
                 () => OnUi(() => StockpilesChanged?.Invoke()),
                 () => OnUi(() => ResupplyChanged?.Invoke())));
 
@@ -321,10 +325,14 @@ public sealed class FriendsViewModel : ObservableObject
         });
     }
 
+    /// <summary>Toast Windows demandé (titre, message) — câblé par MainViewModel vers le Notifier.</summary>
+    public event Action<string, string>? ToastRequested;
+
     private void OnFriendRequestReceived() => OnUi(() =>
     {
         _ = ReloadRequestsAsync();
         Status = "Nouvelle demande d'ami reçue.";
+        ToastRequested?.Invoke("Demande d'ami", "Tu as reçu une nouvelle demande d'ami.");
     });
 
     private void OnFriendsChanged() => OnUi(() =>

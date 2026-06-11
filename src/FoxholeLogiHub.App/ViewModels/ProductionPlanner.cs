@@ -22,6 +22,40 @@ public sealed class ProductionPlan
 }
 
 /// <summary>
+/// Traduit un plan de production en iconTypes de structures de la carte (où produire, où récolter).
+/// Les bâtiments de facility (Bétonnière, Métallurgie…) n'ont pas d'icône publique → ignorés.
+/// </summary>
+public static class ProductionMapIcons
+{
+    public static HashSet<int> For(ProductionPlan plan)
+    {
+        var icons = new HashSet<int>();
+        foreach (var c in plan.Crafts)
+        {
+            switch (c.Building)
+            {
+                case "Usine": icons.Add(34); break;
+                case "MPF": icons.Add(51); break;
+                case "Raffinerie": icons.Add(17); break;
+            }
+        }
+        foreach (var h in plan.Harvests)
+        {
+            switch (h.Code)
+            {
+                case "Metal": icons.Add(20); icons.Add(38); break;        // Salvage
+                case "Components": icons.Add(21); icons.Add(40); break;
+                case "Sulfur": icons.Add(23); icons.Add(32); break;
+                case "Coal": icons.Add(61); break;
+                case "Oil": icons.Add(62); icons.Add(75); break;
+                case "Petrol": icons.Add(22); break;
+            }
+        }
+        return icons;
+    }
+}
+
+/// <summary>
 /// Décompose une liste d'items demandés en chaîne de production complète (jusqu'aux ressources
 /// à récolter), à partir des recettes de <see cref="FoxholeItemCatalog"/>. Estime aussi le nombre
 /// de véhicules pour livrer les items finis.

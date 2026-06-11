@@ -110,6 +110,12 @@ public sealed class ResupplyViewModel : ObservableObject
         Status = "Connecte-toi avec Steam (onglet Amis).";
     }
 
+    /// <summary>« Où produire ? » : la carte doit zoomer sur l'hexagone de la demande et surligner les lieux du plan.</summary>
+    public event Action<string, IReadOnlyCollection<int>>? ProduceOnMapRequested;
+
+    public void RequestProduceOnMap(ResupplyRequestViewModel r) =>
+        ProduceOnMapRequested?.Invoke(r.Hex, r.ProductionIcons);
+
     public async Task RefreshAsync()
     {
         string? token = _tokenStore.Load();
@@ -150,6 +156,12 @@ public sealed class ResupplyViewModel : ObservableObject
         RaiseCounts();
     }
 
+    /// <summary>Toast Windows demandé (titre, message) — câblé par MainViewModel vers le Notifier.</summary>
+    public event Action<string, string>? ToastRequested;
+
+    // Demandes ouvertes déjà vues (toast uniquement pour les NOUVELLES ; null = pas encore de base).
+    private HashSet<string>? _knownRequestIds;
+
     private void ApplyRequests(List<ResupplyRequestDto> list)
     {
         OpenRequests.Clear(); TakenRequests.Clear();
@@ -163,6 +175,16 @@ public sealed class ResupplyViewModel : ObservableObject
             // sinon : prise par un autre régiment → pas dans ma vue
         }
         RaiseCounts();
+
+        // Toast pour les nouvelles demandes ouvertes créées par d'autres (jamais au premier chargement).
+        var openNow = list.Where(d => d.Status == ResupplyStatus.Open).ToList();
+        if (_knownRequestIds is not null)
+        {
+            foreach (var d in openNow.Where(d => !d.IsMine && !_knownRequestIds.Contains(d.Id)).Take(3))
+                ToastRequested?.Invoke("Nouvelle demande de ravitaillement",
+                    $"« {d.Title} » — {d.Hex} ({d.Items.Count} item(s))");
+        }
+        _knownRequestIds = openNow.Select(d => d.Id).ToHashSet();
     }
 
     // --- Brouillon d'items ---

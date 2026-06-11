@@ -220,4 +220,7 @@ public sealed class ResupplyRequestViewModel : ObservableObject
     public bool HasCrafts => _plan.Value.HasCrafts;
     public bool HasHarvests => _plan.Value.HasHarvests;
     public string VehiclesText => $"≈ {_plan.Value.Vehicles} véhicule(s)  ·  {_plan.Value.FinalCrates:N0} caisses à livrer (~15/camion)";
+
+    /// <summary>IconTypes des structures de la carte utiles à ce plan (usines, raffineries, champs…).</summary>
+    public HashSet<int> ProductionIcons => ProductionMapIcons.For(_plan.Value);
 }

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace FoxholeLogiHub.Api.War;
 
@@ -227,6 +228,17 @@ public sealed class WarRefreshService : BackgroundService
         88, // Dépôt d'aéronefs
         89, // Usine d'aéronefs
         91, 92, // Pistes d'aviation T1/T2
+        // Champs et mines de ressources (planification des récoltes)
+        20, // Champ de ferraille
+        21, // Champ de composants
+        22, // Champ de carburant
+        23, // Champ de soufre
+        32, // Mine de soufre
+        38, // Mine de ferraille
+        40, // Mine de composants
+        61, // Champ de charbon
+        62, // Champ de pétrole
+        75, // Plateforme pétrolière
     };
 
     /// <summary>Bases qui définissent le contrôle d'une zone : Town Base 1-3, base relique 1-3, fortin.</summary>
@@ -235,17 +247,26 @@ public sealed class WarRefreshService : BackgroundService
     private readonly WarApiClient _api;
     private readonly WarStateService _state;
     private readonly ILogger<WarRefreshService> _logger;
+    private readonly IServiceScopeFactory _scopes;
+    private readonly Common.DiscordNotifier _discord;
     private readonly bool _disabled;
+
+    // Stockpiles menacés au cycle précédent (clé stockpileId|raison) — pour ne notifier Discord
+    // que les NOUVELLES menaces. Null tant qu'aucune base de comparaison (pas de spam au boot).
+    private HashSet<string>? _lastThreats;
 
     // Labels statiques par carte — quasi immuables, on ne les recharge que si la guerre change.
     private readonly Dictionary<string, List<(string Text, double X, double Y)>> _labels = new();
     private int _labelsWar = -1;
 
-    public WarRefreshService(WarApiClient api, WarStateService state, IConfiguration config, ILogger<WarRefreshService> logger)
+    public WarRefreshService(WarApiClient api, WarStateService state, IConfiguration config,
+        ILogger<WarRefreshService> logger, IServiceScopeFactory scopes, Common.DiscordNotifier discord)
     {
         _api = api;
         _state = state;
         _logger = logger;
+        _scopes = scopes;
+        _discord = discord;
         _disabled = config["DisableWarApi"] == "1";
     }
 
@@ -363,5 +384,71 @@ public sealed class WarRefreshService : BackgroundService
         });
         _logger.LogInformation("War API : guerre {War}, {Hexes} hexagones, {Towns} villes, VP W{W}/C{C}.",
             war.WarNumber, townsByHex.Count, townsByHex.Values.Sum(t => t.Count), wardens, colonials);
+
+        try
+        {
+            await NotifyNewThreatsAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Détection des menaces Discord échouée.");
+        }
+    }
+
+    /// <summary>
+    /// Compare l'état de menace des stockpiles (ville ennemie/rasée) avec le cycle précédent et
+    /// prévient les régiments dont le webhook Discord est configuré — uniquement les NOUVELLES menaces.
+    /// </summary>
+    private async Task NotifyNewThreatsAsync()
+    {
+        using var scope = _scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Data.AppDbContext>();
+
+        var regs = await db.Regiments
+            .Where(r => r.DiscordWebhookUrl != "")
+            .ToListAsync();
+        var current = new HashSet<string>(StringComparer.Ordinal);
+        var newThreats = new Dictionary<string, List<string>>(); // webhook → lignes
+
+        if (regs.Count > 0)
+        {
+            var regIds = regs.Select(r => r.Id).ToList();
+            var stockpiles = await db.Stockpiles
+                .Where(s => regIds.Contains(s.RegimentId) && !s.IsPublic)
+                .ToListAsync();
+            var regById = regs.ToDictionary(r => r.Id);
+
+            foreach (var sp in stockpiles)
+            {
+                var reg = regById[sp.RegimentId];
+                var town = _state.FindTown(sp.Hex, sp.Town);
+                if (town is null)
+                    continue;
+                string control = WarStateService.ControlFor(town, reg.Faction);
+                string? reason = town.Scorched ? "🔥 ville rasée"
+                    : control == Contracts.WarTownControl.Enemy ? "⚠️ ville passée à l'ennemi"
+                    : null;
+                if (reason is null)
+                    continue;
+                string key = $"{sp.Id}|{reason}";
+                current.Add(key);
+                if (_lastThreats is not null && !_lastThreats.Contains(key))
+                {
+                    if (!newThreats.TryGetValue(reg.DiscordWebhookUrl, out var lines))
+                        newThreats[reg.DiscordWebhookUrl] = lines = new List<string>();
+                    lines.Add($"• **{sp.Name}** — {sp.Hex}{(sp.Town.Length > 0 ? $" · {sp.Town}" : "")} : {reason}");
+                }
+            }
+        }
+
+        // Première passe après démarrage = base de comparaison, sans notifier le passif existant.
+        bool baseline = _lastThreats is null;
+        _lastThreats = current;
+        if (baseline)
+            return;
+
+        foreach (var (url, lines) in newThreats)
+            _discord.Send(url, "🚨 **Stockpiles menacés !**\n" + string.Join("\n", lines.Take(10))
+                + (lines.Count > 10 ? $"\n… et {lines.Count - 10} autre(s)" : ""));
     }
 }

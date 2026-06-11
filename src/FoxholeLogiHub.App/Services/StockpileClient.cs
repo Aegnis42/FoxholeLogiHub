@@ -27,8 +27,55 @@ public sealed class StockpileClient : IDisposable
     public Task<List<StockpileDto>> CreateAsync(CreateStockpileRequest req) => PostListAsync("/api/stockpiles", req, HttpMethod.Post);
     public Task<List<StockpileDto>> UpdateAsync(UpdateStockpileRequest req) => PostListAsync("/api/stockpiles", req, HttpMethod.Put);
     public Task<List<StockpileDto>> DeleteAsync(string id) => PostListAsync("/api/stockpiles/delete", new DeleteStockpileRequest(id), HttpMethod.Post);
+    public Task<List<StockpileDto>> SetPositionAsync(SetStockpilePositionRequest req) => PostListAsync("/api/stockpiles/position", req, HttpMethod.Post);
     public Task<List<StockpileDto>> ShareAsync(string id, string regimentId) => PostListAsync("/api/stockpiles/share", new ShareStockpileRequest(id, regimentId), HttpMethod.Post);
     public Task<List<StockpileDto>> UnshareAsync(string id, string regimentId) => PostListAsync("/api/stockpiles/unshare", new UnshareStockpileRequest(id, regimentId), HttpMethod.Post);
+
+    // --- Templates d'objectifs de seuils ---
+
+    public async Task<List<StockpileTemplateDto>> GetTemplatesAsync()
+    {
+        HttpResponseMessage resp = await _http.GetAsync("/api/stockpiles/templates");
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<StockpileTemplateDto>>()) ?? new();
+    }
+
+    public async Task<StockpileTemplateDto?> CreateTemplateAsync(CreateTemplateFromStockpileRequest req)
+    {
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/stockpiles/templates", req);
+        await EnsureAsync(resp);
+        return await resp.Content.ReadFromJsonAsync<StockpileTemplateDto>();
+    }
+
+    /// <summary>Applique le template et renvoie les items à jour du stockpile.</summary>
+    public async Task<List<StockpileItemDto>> ApplyTemplateAsync(ApplyTemplateRequest req)
+    {
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/stockpiles/templates/apply", req);
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<StockpileItemDto>>()) ?? new();
+    }
+
+    public async Task DeleteTemplateAsync(string templateId)
+    {
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/stockpiles/templates/delete", new DeleteTemplateRequest(templateId));
+        await EnsureAsync(resp);
+    }
+
+    /// <summary>Historique 30 jours des quantités (un point par import) pour les tendances.</summary>
+    public async Task<List<StockpileItemHistoryDto>> GetHistoryAsync(string stockpileId)
+    {
+        HttpResponseMessage resp = await _http.GetAsync($"/api/stockpiles/{stockpileId}/history");
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<StockpileItemHistoryDto>>()) ?? new();
+    }
+
+    /// <summary>Recherche un item dans tous les stockpiles visibles (nom ou code, min. 2 caractères).</summary>
+    public async Task<List<StockpileItemSearchResultDto>> SearchItemsAsync(string query)
+    {
+        HttpResponseMessage resp = await _http.GetAsync($"/api/stockpiles/items/search?q={Uri.EscapeDataString(query)}");
+        await EnsureAsync(resp);
+        return (await resp.Content.ReadFromJsonAsync<List<StockpileItemSearchResultDto>>()) ?? new();
+    }
 
     public async Task<List<StockpileAlertDto>> GetAlertsAsync()
     {

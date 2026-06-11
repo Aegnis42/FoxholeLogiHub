@@ -87,6 +87,7 @@ public partial class MainWindow : Window
             UnregisterHotKey(_hwnd, HotkeyId);
         _source?.RemoveHook(HwndHook);
         _vm.Companion.Dispose();
+        _vm.Shutdown(); // retire l'icône de zone de notification
         base.OnClosed(e);
     }
 
@@ -116,7 +117,43 @@ public partial class MainWindow : Window
     private void OnMapReset(object sender, RoutedEventArgs e)
     {
         _mapUserInteracted = false; // retour au cadrage auto (suivra les redimensionnements)
+        _vm.Map.ClearHighlight();
         ResetMapView(animate: true);
+    }
+
+    private void OnResupplyProduceMap(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is ResupplyRequestViewModel r)
+            _vm.Resupply.RequestProduceOnMap(r);
+    }
+
+    private async void OnSaveWebhook(object sender, RoutedEventArgs e) => await _vm.Regiment.SaveWebhookAsync();
+
+    // --- Templates d'objectifs ---
+
+    private async void OnSaveTemplate(object sender, RoutedEventArgs e) => await _vm.Stockpiles.SaveTemplateAsync();
+    private async void OnApplyTemplate(object sender, RoutedEventArgs e) => await _vm.Stockpiles.ApplyTemplateAsync();
+
+    private async void OnDeleteTemplate(object sender, RoutedEventArgs e)
+    {
+        var t = _vm.Stockpiles.SelectedTemplate;
+        if (t is null)
+            return;
+        if (MessageBox.Show($"Supprimer le template « {t.Name} » ?", "FoxholeLogiHub",
+                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+        await _vm.Stockpiles.DeleteTemplateAsync();
+    }
+
+    // --- Recherche globale d'items ---
+
+    private async void OnStockpileSearch(object sender, RoutedEventArgs e) => await _vm.Stockpiles.SearchItemsAsync();
+    private void OnStockpileSearchClear(object sender, RoutedEventArgs e) => _vm.Stockpiles.ClearSearch();
+
+    private async void OnStockpileSearchKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+            await _vm.Stockpiles.SearchItemsAsync();
     }
 
     private void ResetMapView(bool animate = false)
@@ -344,6 +381,22 @@ public partial class MainWindow : Window
     private async void OnMapPlacementCreate(object sender, RoutedEventArgs e) => await _vm.Map.ConfirmPlacementAsync();
     private void OnMapPlacementCancel(object sender, RoutedEventArgs e) => _vm.Map.CancelPlacement();
     private void OnMapPickCancel(object sender, RoutedEventArgs e) => _vm.Map.CancelPick();
+
+    private void OnMapMovePin(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is StockpileItemViewModel s)
+            _vm.Map.BeginMovePin(s);
+    }
+
+    private async void OnMapDeletePin(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not StockpileItemViewModel s)
+            return;
+        if (MessageBox.Show($"Supprimer le stockpile « {s.Name} » et son contenu ?", "FoxholeLogiHub",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+        await _vm.Map.DeleteStockpileAsync(s);
+    }
 
     private void OnNavDashboard(object sender, RoutedEventArgs e) => _vm.ShowDashboard();
     private void OnNavProfile(object sender, RoutedEventArgs e) => _vm.ShowProfile();

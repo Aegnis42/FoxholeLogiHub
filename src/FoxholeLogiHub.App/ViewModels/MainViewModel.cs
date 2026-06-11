@@ -13,6 +13,8 @@ namespace FoxholeLogiHub.App.ViewModels;
 public sealed class MainViewModel : ObservableObject
 {
     private readonly AccountService _accountService = new();
+    private readonly SettingsStore _settingsStore = new();
+    private readonly Notifier _notifier = new();
     private Account? _account;
     private bool _mapPickWired;
 
@@ -37,8 +39,29 @@ public sealed class MainViewModel : ObservableObject
     public CompanionManager Companion { get; } = new();
     public ObservableCollection<Loadout> Loadouts { get; } = new();
 
+    /// <summary>Notifications Windows activées (persisté dans settings.json).</summary>
+    public bool NotificationsEnabled
+    {
+        get => _notifier.Enabled;
+        set
+        {
+            if (_notifier.Enabled == value)
+                return;
+            _notifier.Enabled = value;
+            var s = _settingsStore.Load();
+            s.NotificationsEnabled = value;
+            _settingsStore.Save(s);
+            Raise();
+        }
+    }
+
+    /// <summary>À appeler à la fermeture de la fenêtre (retire l'icône de zone de notification).</summary>
+    public void Shutdown() => _notifier.Dispose();
+
     public MainViewModel()
     {
+        _notifier.Enabled = _settingsStore.Load().NotificationsEnabled;
+
         // Le module amis porte la connexion temps réel ; on relaie aux modules régiment/stockpiles/ravito.
         Friends.Authenticated += () => _ = RefreshSocialAsync();
         Friends.LoggedOut += () => { Regiment.ClearAuth(); Stockpiles.ClearAuth(); Resupply.ClearAuth(); Map.ClearAuth(); };
@@ -184,6 +207,16 @@ public sealed class MainViewModel : ObservableObject
                     Map.BeginPickPosition(pick);
                 };
                 Map.PickCompleted += () => Stockpiles.OnPlacedExternally();
+                // « Où produire ? » : la demande prise en charge ouvre la carte avec les lieux du plan.
+                Resupply.ProduceOnMapRequested += (hex, icons) =>
+                {
+                    ShowMap();
+                    Map.HighlightProduction(hex, icons);
+                };
+                // Notifications Windows (toasts) — activables dans Profil.
+                Friends.ToastRequested += _notifier.Show;
+                Resupply.ToastRequested += _notifier.Show;
+                Stockpiles.ToastRequested += _notifier.Show;
             }
 
             Companion.EnsureStarted();

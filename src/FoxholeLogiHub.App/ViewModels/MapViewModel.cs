@@ -125,7 +125,24 @@ public sealed class MapStructViewModel
         [89] = ("🛩", "Usine d'aéronefs"),
         [91] = ("🛫", "Piste d'aviation"),
         [92] = ("🛫", "Piste d'aviation T2"),
+        [20] = ("♻", "Champ de ferraille"),
+        [21] = ("🔩", "Champ de composants"),
+        [22] = ("⛽", "Champ de carburant"),
+        [23] = ("🟡", "Champ de soufre"),
+        [32] = ("🟡", "Mine de soufre"),
+        [38] = ("♻", "Mine de ferraille"),
+        [40] = ("🔩", "Mine de composants"),
+        [61] = ("⚫", "Champ de charbon"),
+        [62] = ("🛢", "Champ de pétrole"),
+        [75] = ("🛢", "Plateforme pétrolière"),
     };
+
+    /// <summary>Champ ou mine de ressource (récolte) — filtrable via le toggle « ⛏ Ressources ».</summary>
+    public static bool IsResourceIcon(int icon) => icon is 20 or 21 or 22 or 23 or 32 or 38 or 40 or 61 or 62 or 75;
+    public bool IsResource => IsResourceIcon(Icon);
+
+    /// <summary>Mis en évidence par « Où produire ? » (anneau doré).</summary>
+    public bool IsHighlighted { get; init; }
 
     public MapStructViewModel(MapHexViewModel hex, WarMapStructDto s)
     {
@@ -312,6 +329,21 @@ public sealed class MapViewModel : ObservableObject
         }
     }
 
+    private bool _showResources = true;
+
+    /// <summary>Affiche/masque les champs et mines de ressources sur la carte.</summary>
+    public bool ShowResources
+    {
+        get => _showResources;
+        set
+        {
+            if (_showResources == value)
+                return;
+            Set(ref _showResources, value);
+            RebuildOverlays();
+        }
+    }
+
     /// <summary>Labels de villes + structures : tout le monde en zoom profond, sinon l'hexagone sélectionné.</summary>
     private void RebuildOverlays()
     {
@@ -322,16 +354,56 @@ public sealed class MapViewModel : ObservableObject
             foreach (var t in Towns)
                 TownLabels.Add(t);
             foreach (var hex in Hexes)
-                foreach (var s in hex.Structures)
-                    MapStructures.Add(new MapStructViewModel(hex, s));
+                AddStructures(hex);
         }
         else if (_selected is not null)
         {
             foreach (var t in Towns.Where(t => t.Hex == _selected))
                 TownLabels.Add(t);
-            foreach (var s in _selected.Structures)
-                MapStructures.Add(new MapStructViewModel(_selected, s));
+            AddStructures(_selected);
         }
+    }
+
+    private void AddStructures(MapHexViewModel hex)
+    {
+        foreach (var s in hex.Structures)
+        {
+            bool highlighted = _highlightIcons?.Contains(s.Icon) == true;
+            if (!highlighted && !_showResources && MapStructViewModel.IsResourceIcon(s.Icon))
+                continue;
+            MapStructures.Add(new MapStructViewModel(hex, s) { IsHighlighted = highlighted });
+        }
+    }
+
+    // ---------- « Où produire ? » (surbrillance des lieux du plan de production) ----------
+
+    private HashSet<int>? _highlightIcons;
+
+    /// <summary>Met en évidence les structures utiles au plan (usines, raffineries, champs…) et zoome sur l'hexagone de la demande.</summary>
+    public void HighlightProduction(string hexFreeText, IReadOnlyCollection<int> icons)
+    {
+        _highlightIcons = icons.Count > 0 ? new HashSet<int>(icons) : null;
+        var hex = FindHex(hexFreeText);
+        if (hex is not null)
+        {
+            Select(hex); // RefreshSelection → RebuildOverlays (applique la surbrillance)
+            FocusHexRequested?.Invoke(hex);
+        }
+        else
+        {
+            RebuildOverlays();
+        }
+        Status = _highlightIcons is not null
+            ? "Lieux de production et de récolte du plan en surbrillance ✨ (« Vue monde » pour effacer)"
+            : Status;
+    }
+
+    public void ClearHighlight()
+    {
+        if (_highlightIcons is null)
+            return;
+        _highlightIcons = null;
+        RebuildOverlays();
     }
 
     public void Initialize(StockpilesViewModel stockpiles, ResupplyViewModel resupply)
@@ -607,9 +679,12 @@ public sealed class MapViewModel : ObservableObject
     // ---------- Choix d'emplacement demandé par l'onglet Stockpiles ----------
 
     private PendingMapPick? _pick;
+    private StockpileItemViewModel? _moveTarget;
 
-    public bool PickActive => _pick is not null;
-    public string PickBanner => _pick is null ? "" : $"📍 Clique sur la carte pour placer « {_pick.Name} »";
+    public bool PickActive => _pick is not null || _moveTarget is not null;
+    public string PickBanner => _moveTarget is not null
+        ? $"📍 Clique le nouvel emplacement de « {_moveTarget.Name} »"
+        : _pick is not null ? $"📍 Clique sur la carte pour placer « {_pick.Name} »" : "";
 
     /// <summary>La vue doit zoomer sur cet hexagone (le ViewModel ne possède pas les transforms).</summary>
     public event Action<MapHexViewModel>? FocusHexRequested;
@@ -635,18 +710,72 @@ public sealed class MapViewModel : ObservableObject
     public void CancelPick()
     {
         _pick = null;
+        _moveTarget = null;
         Raise(nameof(PickActive));
         Raise(nameof(PickBanner));
     }
 
-    /// <summary>Clic sur la carte en mode choix : crée le stockpile à cet endroit précis.</summary>
+    /// <summary>Déplacement d'un pin existant : le prochain clic sur la carte le repositionne.</summary>
+    public void BeginMovePin(StockpileItemViewModel s)
+    {
+        CancelPlacement();
+        _pick = null;
+        _moveTarget = s;
+        Raise(nameof(PickActive));
+        Raise(nameof(PickBanner));
+    }
+
+    /// <summary>Supprime un stockpile depuis la carte (après confirmation côté vue).</summary>
+    public async Task DeleteStockpileAsync(StockpileItemViewModel s)
+    {
+        if (_client is null)
+            return;
+        try
+        {
+            await _client.DeleteAsync(s.Id);
+            Status = $"« {s.Name} » supprimé.";
+            if (_stockpiles is not null)
+                await _stockpiles.RefreshAsync();
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            Status = $"Suppression impossible : {ex.Message}";
+        }
+    }
+
+    /// <summary>Clic sur la carte en mode choix : crée (ou déplace) le stockpile à cet endroit précis.</summary>
     public async Task CompletePickAsync(MapHexViewModel hex, double relX, double relY)
     {
-        if (_pick is null || _client is null)
+        if (_client is null)
             return;
-        var pick = _pick;
         relX = Math.Clamp(relX, 0, 1);
         relY = Math.Clamp(relY, 0, 1);
+
+        if (_moveTarget is not null)
+        {
+            var target = _moveTarget;
+            try
+            {
+                await _client.SetPositionAsync(new SetStockpilePositionRequest(
+                    target.Id, hex.Display, NearestTownName(hex, relX, relY), relX, relY));
+                CancelPick();
+                Status = $"« {target.Name} » déplacé 📍";
+                if (_stockpiles is not null)
+                    await _stockpiles.RefreshAsync();
+                await RefreshAsync();
+                Select(hex);
+            }
+            catch (Exception ex)
+            {
+                Status = $"Déplacement impossible : {ex.Message}";
+            }
+            return;
+        }
+
+        if (_pick is null)
+            return;
+        var pick = _pick;
         string town = pick.Town.Length > 0 ? pick.Town : NearestTownName(hex, relX, relY);
         try
         {

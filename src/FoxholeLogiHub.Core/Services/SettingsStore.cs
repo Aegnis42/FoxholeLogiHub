@@ -7,6 +7,9 @@ public sealed class AppSettings
 {
     /// <summary>URL de base de l'API d'amis. Localhost en dev ; URL Railway en prod.</summary>
     public string ApiBaseUrl { get; set; } = "http://localhost:5080";
+
+    /// <summary>Notifications Windows (toasts) : demandes d'amis, invitations, ravitaillement, stock critique.</summary>
+    public bool NotificationsEnabled { get; set; } = true;
 }
 
 /// <summary>Persistance des réglages dans settings.json.</summary>

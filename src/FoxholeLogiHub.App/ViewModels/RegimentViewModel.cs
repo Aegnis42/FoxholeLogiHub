@@ -184,6 +184,50 @@ public sealed class RegimentViewModel : ObservableObject
             Alliances.Add(new RegimentAllianceItemViewModel(a));
 
         HasRegiment = true;
+
+        if (reg.IAmOwner)
+            _ = LoadWebhookAsync(); // meilleur effort, ne bloque pas le refresh
+    }
+
+    // ---------- Webhook Discord (chef) ----------
+
+    private string _webhookInput = "";
+    public string WebhookInput { get => _webhookInput; set => Set(ref _webhookInput, value); }
+    private string _webhookState = "";
+    public string WebhookState { get => _webhookState; private set => Set(ref _webhookState, value); }
+
+    private async Task LoadWebhookAsync()
+    {
+        if (_client is null)
+            return;
+        try
+        {
+            var dto = await _client.GetWebhookAsync();
+            WebhookState = dto is { Configured: true }
+                ? $"Connecté : {dto.Masked}"
+                : "Aucun webhook configuré.";
+        }
+        catch { /* meilleur effort */ }
+    }
+
+    /// <summary>Enregistre (ou désactive si vide) le webhook Discord du régiment.</summary>
+    public async Task SaveWebhookAsync()
+    {
+        if (_client is null || Busy)
+            return;
+        Busy = true;
+        try
+        {
+            var dto = await _client.SetWebhookAsync(WebhookInput.Trim());
+            WebhookInput = "";
+            WebhookState = dto is { Configured: true }
+                ? $"Connecté : {dto.Masked} — message de test envoyé ✅"
+                : "Webhook désactivé.";
+            Status = "Webhook Discord mis à jour.";
+        }
+        catch (FriendException fex) { Status = fex.Message; }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
     }
 
     private async Task RunAsync(Func<Task<RegimentDto?>> action, string okMessage)

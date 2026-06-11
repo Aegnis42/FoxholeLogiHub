@@ -26,6 +26,9 @@ public sealed record CreateStockpileRequest(string Name, string Hex, string Town
     double? MapX = null, double? MapY = null);
 public sealed record UpdateStockpileRequest(string Id, string Name, string Hex, string Town, string Type, string Code, bool IsPublic);
 public sealed record DeleteStockpileRequest(string Id);
+
+/// <summary>Repositionne un stockpile sur la carte (hexagone + position 0..1 + ville recalculée).</summary>
+public sealed record SetStockpilePositionRequest(string Id, string Hex, string Town, double MapX, double MapY);
 public sealed record ShareStockpileRequest(string StockpileId, string RegimentId);
 public sealed record UnshareStockpileRequest(string StockpileId, string RegimentId);
 
@@ -45,6 +48,26 @@ public sealed record StockpileDto(
 
 /// <summary>Un item d'un stockpile (quantité + seuils d'alerte). Name/Category dénormalisés.</summary>
 public sealed record StockpileItemDto(string Code, string Name, string Category, int Quantity, int LowThreshold, int CriticalThreshold);
+
+/// <summary>Template d'objectifs de seuils, partagé au régiment.</summary>
+public sealed record StockpileTemplateDto(string Id, string Name, int ItemCount);
+/// <summary>Crée (ou remplace, à nom égal) un template à partir des seuils d'un stockpile.</summary>
+public sealed record CreateTemplateFromStockpileRequest(string StockpileId, string Name);
+/// <summary>Applique les seuils d'un template à un stockpile (les items absents sont créés à 0).</summary>
+public sealed record ApplyTemplateRequest(string TemplateId, string StockpileId);
+public sealed record DeleteTemplateRequest(string TemplateId);
+
+/// <summary>Un point d'historique (quantité d'un item à l'instant d'un import).</summary>
+public sealed record HistoryPointDto(DateTimeOffset At, int Quantity);
+
+/// <summary>Historique 30 jours d'un item d'un stockpile (un point par import).</summary>
+public sealed record StockpileItemHistoryDto(string Code, List<HistoryPointDto> Points);
+
+/// <summary>Résultat de la recherche globale d'items (tous les stockpiles visibles).</summary>
+public sealed record StockpileItemSearchResultDto(
+    string StockpileId, string StockpileName, string Hex, string Town, string Type,
+    string RegimentName, bool IsOwn,
+    string Code, string Name, string Category, int Quantity);
 
 /// <summary>Définit un item dans un stockpile (upsert ; quantité ≤ 0 = retrait).</summary>
 public sealed record SetStockpileItemRequest(string StockpileId, string Code, string Name, string Category, int Quantity, int LowThreshold, int CriticalThreshold);

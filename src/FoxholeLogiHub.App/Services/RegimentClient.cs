@@ -80,6 +80,21 @@ public sealed class RegimentClient : IDisposable
         return (await resp.Content.ReadFromJsonAsync<WarResetResultDto>()) ?? new WarResetResultDto(0, 0, 0);
     }
 
+    /// <summary>Webhook Discord (chef) : configure ("" = désactive) et renvoie l'état masqué.</summary>
+    public async Task<RegimentWebhookDto?> SetWebhookAsync(string url)
+    {
+        HttpResponseMessage resp = await _http.PostAsJsonAsync("/api/regiments/webhook", new SetRegimentWebhookRequest(url));
+        await EnsureAsync(resp);
+        return await resp.Content.ReadFromJsonAsync<RegimentWebhookDto>();
+    }
+
+    public async Task<RegimentWebhookDto?> GetWebhookAsync()
+    {
+        HttpResponseMessage resp = await _http.GetAsync("/api/regiments/webhook");
+        await EnsureAsync(resp);
+        return await resp.Content.ReadFromJsonAsync<RegimentWebhookDto>();
+    }
+
     public Task ProposeAllianceAsync(string code) =>
         SendAsync(HttpMethod.Post, "/api/regiments/alliances/propose", new ProposeAllianceRequest(code));
     public Task RespondAllianceAsync(string otherId, bool accept) =>

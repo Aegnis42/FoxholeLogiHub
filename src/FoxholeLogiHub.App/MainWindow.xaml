@@ -399,20 +399,24 @@
                 </Border>
 
                 <Border Grid.Row="2" Style="{StaticResource Card}">
-                    <UniformGrid Columns="3" Rows="1">
-                        <StackPanel>
-                            <TextBlock Text="DERNIER SERVEUR" Style="{StaticResource Label}"/>
-                            <TextBlock Text="{Binding Server}" FontSize="15"/>
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="LANGUE" Style="{StaticResource Label}"/>
-                            <TextBlock Text="{Binding Language}" FontSize="15"/>
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="GUERRES REJOINTES" Style="{StaticResource Label}"/>
-                            <TextBlock Text="{Binding WarCount}" FontSize="15"/>
-                        </StackPanel>
-                    </UniformGrid>
+                    <StackPanel>
+                        <UniformGrid Columns="3" Rows="1">
+                            <StackPanel>
+                                <TextBlock Text="DERNIER SERVEUR" Style="{StaticResource Label}"/>
+                                <TextBlock Text="{Binding Server}" FontSize="15"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="LANGUE" Style="{StaticResource Label}"/>
+                                <TextBlock Text="{Binding Language}" FontSize="15"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="GUERRES REJOINTES" Style="{StaticResource Label}"/>
+                                <TextBlock Text="{Binding WarCount}" FontSize="15"/>
+                            </StackPanel>
+                        </UniformGrid>
+                        <CheckBox Content="🔔 Notifications Windows (demandes d'amis, ravitaillement, stock critique)"
+                                  IsChecked="{Binding NotificationsEnabled}" Margin="0,12,0,0" FontSize="12.5"/>
+                    </StackPanel>
                 </Border>
 
                 <Border Grid.Row="3" Style="{StaticResource Card}">
@@ -752,6 +756,25 @@
                                     </DockPanel>
                                 </Border>
 
+                                <!-- Webhook Discord (chef uniquement) -->
+                                <Border Style="{StaticResource Card}"
+                                        Visibility="{Binding IAmOwner, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <TextBlock Text="🔔 Webhook Discord" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBlock Foreground="#FF9AA4B2" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"
+                                                   Text="Les alertes du régiment (stock critique, stockpile menacé, demandes de ravitaillement créées/prises/livrées) seront postées dans ton salon Discord. Crée un webhook dans Discord : Paramètres du salon → Intégrations → Webhooks, puis colle son URL ici."/>
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Enregistrer" Style="{StaticResource FlatButton}"
+                                                    Background="#FF2A475E" Padding="14,6" Margin="8,0,0,0" Click="OnSaveWebhook"
+                                                    ToolTip="Vide = désactiver"/>
+                                            <TextBox Text="{Binding WebhookInput, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="7"
+                                                     Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                                     CaretBrush="White" ToolTip="https://discord.com/api/webhooks/…"/>
+                                        </DockPanel>
+                                        <TextBlock Text="{Binding WebhookState}" Foreground="#FF7FA8D9" FontSize="12" Margin="0,6,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
                                 <!-- Membres -->
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
@@ -985,6 +1008,42 @@
                                     </StackPanel>
                                 </Border>
 
+                                <!-- Recherche globale d'items -->
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="🔍 Trouver un item" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                                    Padding="10,6" Margin="6,0,0,0" Click="OnStockpileSearchClear"
+                                                    Visibility="{Binding HasSearchResults, Converter={StaticResource BoolToVis}}"/>
+                                            <Button DockPanel.Dock="Right" Content="Chercher" Style="{StaticResource FlatButton}" Background="#FF2A475E"
+                                                    Padding="14,6" Margin="8,0,0,0" Click="OnStockpileSearch"/>
+                                            <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Padding="7"
+                                                     Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                                     CaretBrush="White" KeyDown="OnStockpileSearchKey"
+                                                     ToolTip="Nom ou code d'item (ex. 7.92, Bmats, bandage…) — cherche dans tous les stockpiles visibles"/>
+                                        </DockPanel>
+                                        <TextBlock Text="{Binding SearchStatus}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,6,0,0"/>
+                                        <ItemsControl ItemsSource="{Binding SearchResults}" Margin="0,6,0,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <DockPanel Margin="0,2">
+                                                        <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,8,0"
+                                                               VerticalAlignment="Center"
+                                                               Visibility="{Binding HasIcon, Converter={StaticResource BoolToVis}}"/>
+                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FF7FC97F"
+                                                                   FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        <StackPanel VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13"/>
+                                                            <TextBlock Text="{Binding WhereText}" Foreground="#FF9AA4B2" FontSize="11" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+
                                 <!-- Liste -->
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
@@ -1107,6 +1166,36 @@
                                                 <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
                                                           Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"/>
                                             </DockPanel>
+
+                                            <!-- Templates d'objectifs : applique/sauve un jeu de seuils du régiment -->
+                                            <DockPanel Margin="0,8,0,0">
+                                                <TextBlock DockPanel.Dock="Left" Text="🎯 TEMPLATE :" Style="{StaticResource Label}"
+                                                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                <Button DockPanel.Dock="Right" Content="💾 Sauver les seuils" Style="{StaticResource FlatButton}"
+                                                        Background="#FF2F6B3A" Padding="10,5" Margin="6,0,0,0" Click="OnSaveTemplate"
+                                                        ToolTip="Enregistre les seuils définis sur ce stockpile comme template du régiment"/>
+                                                <TextBox DockPanel.Dock="Right" Width="150" Margin="10,0,0,0"
+                                                         Text="{Binding TemplateName, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="12.5" Padding="5" Background="#FF1B1E24" Foreground="White"
+                                                         BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                         VerticalContentAlignment="Center" ToolTip="Nom du template à créer (ex. « Dépôt de front »)"/>
+                                                <Button DockPanel.Dock="Right" Content="🗑" Style="{StaticResource FlatButton}"
+                                                        Background="#FF3A3030" Padding="8,5" Margin="6,0,0,0" Click="OnDeleteTemplate"
+                                                        ToolTip="Supprimer le template sélectionné"/>
+                                                <Button DockPanel.Dock="Right" Content="Appliquer" Style="{StaticResource FlatButton}"
+                                                        Background="#FF2A475E" Padding="10,5" Margin="6,0,0,0" Click="OnApplyTemplate"
+                                                        ToolTip="Applique les seuils du template à ce stockpile (items absents créés à 0)"/>
+                                                <ComboBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}"
+                                                          FontSize="12.5" Padding="5" VerticalAlignment="Center">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock>
+                                                                <Run Text="{Binding Name, Mode=OneWay}"/><Run Text="{Binding ItemCount, Mode=OneWay, StringFormat=' ({0} seuils)'}" Foreground="#FF9AA4B2"/>
+                                                            </TextBlock>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </DockPanel>
                                         </StackPanel>
 
                                         <TextBlock Text="Aucun item. Ajoute-en ci-dessus ou via 📷 Importer." Foreground="#FF6B7280" FontSize="13"
@@ -1162,6 +1251,9 @@
                                                                     <TextBlock Text="{Binding QuantityText}" FontWeight="Bold" FontSize="18"
                                                                                Foreground="#FFE6E6E6"/>
                                                                 </DockPanel>
+                                                                <TextBlock Text="{Binding TrendText}" Foreground="{Binding TrendBrush}" FontSize="10.5"
+                                                                           ToolTip="{Binding TrendTooltip}" Margin="0,3,0,0"
+                                                                           Visibility="{Binding HasTrend, Converter={StaticResource BoolToVis}}"/>
                                                             </StackPanel>
                                                         </Grid>
                                                     </Border>
@@ -1569,7 +1661,13 @@
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
                                                         <Border Background="#FF20242C" CornerRadius="6" Margin="0,8,0,0" Padding="8,5">
-                                                            <TextBlock Text="{Binding VehiclesText, StringFormat='🚚 {0}'}" Foreground="#FFB8C4D0" FontSize="12"/>
+                                                            <DockPanel>
+                                                                <Button DockPanel.Dock="Right" Content="🗺 Où produire ?" Style="{StaticResource FlatButton}"
+                                                                        Background="#FF2A475E" FontSize="11" Padding="9,4" Click="OnResupplyProduceMap"
+                                                                        ToolTip="Voir sur la carte les usines, raffineries et champs de ressources utiles à ce plan"/>
+                                                                <TextBlock Text="{Binding VehiclesText, StringFormat='🚚 {0}'}" Foreground="#FFB8C4D0"
+                                                                           FontSize="12" VerticalAlignment="Center"/>
+                                                            </DockPanel>
                                                         </Border>
                                                     </StackPanel>
                                                 </Border>
@@ -1610,6 +1708,9 @@
                     <Button DockPanel.Dock="Right" Content="🌍 Vue monde" Style="{StaticResource FlatButton}"
                             Background="#FF333A45" Padding="12,6" VerticalAlignment="Top" Click="OnMapReset"
                             ToolTip="Dézoomer pour voir le monde entier"/>
+                    <CheckBox DockPanel.Dock="Right" Content="⛏ Ressources" IsChecked="{Binding Map.ShowResources}"
+                              VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#FFB8C4D0"
+                              ToolTip="Afficher les champs et mines de ressources (ferraille, composants, soufre, charbon, pétrole…)"/>
                     <StackPanel>
                         <TextBlock Text="Carte du monde" FontSize="22" FontWeight="Bold"/>
                         <TextBlock Text="{Binding Map.Status}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,2,0,0"/>
@@ -1729,6 +1830,11 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}">
+                                            <!-- Anneau doré : structure utile au plan de production (« Où produire ? ») -->
+                                            <Ellipse Canvas.Left="-13" Canvas.Top="-13" Width="26" Height="26"
+                                                     Stroke="#FFE7B73C" StrokeThickness="2" Fill="#2EE7B73C"
+                                                     IsHitTestVisible="False"
+                                                     Visibility="{Binding IsHighlighted, Converter={StaticResource BoolToVis}}"/>
                                             <Grid Canvas.Left="-9" Canvas.Top="-9" ToolTip="{Binding Tooltip}">
                                                 <Ellipse Width="18" Height="18" Fill="#D912151B"
                                                          Stroke="{Binding TeamBrush}" StrokeThickness="1.5"/>
@@ -1896,6 +2002,15 @@
                                                     </TextBlock>
                                                     <TextBlock Text="{Binding ThreatLabel}" Foreground="#FFC03A3A" FontSize="11" Margin="18,0,0,0"
                                                                Visibility="{Binding IsThreatened, Converter={StaticResource BoolToVis}}"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="18,3,0,2"
+                                                                Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}">
+                                                        <Button Content="📍 Déplacer" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                                                FontSize="10.5" Padding="7,3" Click="OnMapMovePin"
+                                                                ToolTip="Cliquer ensuite le nouvel emplacement sur la carte"/>
+                                                        <Button Content="🗑" Style="{StaticResource FlatButton}" Background="#FF3A3030"
+                                                                FontSize="10.5" Padding="7,3" Margin="6,0,0,0" Click="OnMapDeletePin"
+                                                                ToolTip="Supprimer ce stockpile"/>
+                                                    </StackPanel>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

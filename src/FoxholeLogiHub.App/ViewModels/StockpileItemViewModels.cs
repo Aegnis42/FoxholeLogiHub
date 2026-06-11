@@ -125,6 +125,25 @@ public sealed class StockpileItemViewModel : ObservableObject
     public bool ShowForeignRegiment => !IsOwn;
 }
 
+/// <summary>Un résultat de la recherche globale d'items (où se trouve l'item, en quelle quantité).</summary>
+public sealed class ItemSearchResultViewModel
+{
+    public ItemSearchResultViewModel(StockpileItemSearchResultDto dto)
+    {
+        Dto = dto;
+        Icon = ItemIcons.Load(dto.Code);
+    }
+
+    public StockpileItemSearchResultDto Dto { get; }
+    public ImageSource? Icon { get; }
+    public bool HasIcon => Icon is not null;
+    public string Name => Dto.Name;
+    public string QtyText => $"{Dto.Quantity:N0}×";
+    public string WhereText => $"{Dto.StockpileName} ({StockpileCatalog.Label(Dto.Type)}) — {Dto.Hex}"
+        + (string.IsNullOrEmpty(Dto.Town) ? "" : $" · {Dto.Town}")
+        + (Dto.IsOwn ? "" : $"  [{Dto.RegimentName}]");
+}
+
 /// <summary>Chargement des icônes d'items (bundle FIR, <c>Data/icons/&lt;code&gt;.png</c>, variante <c>-crated</c>).</summary>
 public static class ItemIcons
 {
@@ -202,7 +221,7 @@ public static class ItemCategories
 /// <summary>Une ligne/carte d'item dans le détail d'un stockpile (icône, quantité, statut de stock).</summary>
 public sealed class StockpileLineViewModel : ObservableObject
 {
-    public StockpileLineViewModel(StockpileItemDto dto, bool canManage)
+    public StockpileLineViewModel(StockpileItemDto dto, bool canManage, List<HistoryPointDto>? history = null)
     {
         Code = dto.Code;
         Name = dto.Name;
@@ -212,7 +231,40 @@ public sealed class StockpileLineViewModel : ObservableObject
         Critical = dto.CriticalThreshold;
         CanManage = canManage;
         Icon = ItemIcons.Load(Code);
+        (TrendText, TrendTooltip, TrendBrush) = ComputeTrend(history, Quantity);
     }
+
+    /// <summary>Tendance et prévision : taux/h sur les dernières 48 h d'imports (≥ 2 relevés).</summary>
+    private static (string, string, Brush) ComputeTrend(List<HistoryPointDto>? history, int currentQty)
+    {
+        if (history is null || history.Count < 2)
+            return ("", "", Palette.Neutral);
+        var recent = history
+            .Where(p => p.At >= DateTimeOffset.UtcNow.AddHours(-48))
+            .OrderBy(p => p.At)
+            .ToList();
+        if (recent.Count < 2)
+            return ("", "", Palette.Neutral);
+        double hours = (recent[^1].At - recent[0].At).TotalHours;
+        if (hours < 0.25)
+            return ("", "", Palette.Neutral);
+
+        double rate = (recent[^1].Quantity - recent[0].Quantity) / hours;
+        string detail = $"{recent.Count} relevés sur {hours:0.#} h";
+        if (Math.Abs(rate) < 0.5)
+            return ("→ stable", detail, Palette.Neutral);
+        if (rate > 0)
+            return ($"▲ +{rate:0}/h", $"En hausse — {detail}", Palette.Good);
+
+        double etaHours = currentQty / -rate;
+        string eta = etaHours >= 48 ? $"{etaHours / 24:0.#} j" : $"{etaHours:0} h";
+        return ($"▼ {-rate:0}/h · vide ≈ {eta}", $"En baisse — épuisé dans ≈ {eta} au rythme actuel ({detail})", Palette.Warning);
+    }
+
+    public string TrendText { get; }
+    public string TrendTooltip { get; }
+    public Brush TrendBrush { get; }
+    public bool HasTrend => TrendText.Length > 0;
 
     public string Code { get; }
     public string Name { get; }

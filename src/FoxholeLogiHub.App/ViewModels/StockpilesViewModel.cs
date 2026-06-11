@@ -261,6 +261,12 @@ public sealed class StockpilesViewModel : ObservableObject
     public IReadOnlyList<StockpileAlertDto> LastAlerts => _lastAlerts;
     private List<StockpileAlertDto> _lastAlerts = new();
 
+    /// <summary>Toast Windows demandé (titre, message) — câblé par MainViewModel vers le Notifier.</summary>
+    public event Action<string, string>? ToastRequested;
+
+    // Items critiques déjà vus (toast uniquement pour les NOUVEAUX ; null = pas encore de base).
+    private HashSet<string>? _knownCritical;
+
     private async Task LoadAlertsAsync()
     {
         if (_client is null)
@@ -272,6 +278,21 @@ public sealed class StockpilesViewModel : ObservableObject
             foreach (var a in _lastAlerts)
                 Alerts.Add(new StockpileAlertViewModel(a));
             RaiseAlertFlags();
+
+            // Toast pour les items NOUVELLEMENT critiques (jamais au premier chargement).
+            var criticalNow = _lastAlerts.Where(a => a.Severity == "critical")
+                .Select(a => $"{a.StockpileId}|{a.Code}")
+                .ToHashSet();
+            if (_knownCritical is not null)
+            {
+                var fresh = _lastAlerts
+                    .Where(a => a.Severity == "critical" && !_knownCritical.Contains($"{a.StockpileId}|{a.Code}"))
+                    .Take(3);
+                foreach (var a in fresh)
+                    ToastRequested?.Invoke("Stock critique",
+                        $"{a.Name} : {a.Quantity} (seuil {a.CriticalThreshold}) — {a.StockpileName}");
+            }
+            _knownCritical = criticalNow;
         }
         catch (AuthRequiredException) { ClearAuth(); }
         catch { /* les alertes ne doivent pas bloquer le reste */ }
@@ -405,6 +426,50 @@ public sealed class StockpilesViewModel : ObservableObject
         Status = "Stockpile placé sur la carte 📍";
     }
 
+    // ---------- Recherche globale d'items ----------
+
+    private string _searchQuery = "";
+    public string SearchQuery { get => _searchQuery; set => Set(ref _searchQuery, value); }
+    public ObservableCollection<ItemSearchResultViewModel> SearchResults { get; } = new();
+    public bool HasSearchResults => SearchResults.Count > 0;
+    private string _searchStatus = "";
+    public string SearchStatus { get => _searchStatus; private set => Set(ref _searchStatus, value); }
+
+    /// <summary>Cherche l'item (nom ou code) dans tous les stockpiles visibles, trié par quantité.</summary>
+    public async Task SearchItemsAsync()
+    {
+        if (_client is null)
+            return;
+        string q = SearchQuery.Trim();
+        SearchResults.Clear();
+        Raise(nameof(HasSearchResults));
+        if (q.Length < 2)
+        {
+            SearchStatus = q.Length == 0 ? "" : "Au moins 2 caractères.";
+            return;
+        }
+        try
+        {
+            var results = await _client.SearchItemsAsync(q);
+            foreach (var r in results)
+                SearchResults.Add(new ItemSearchResultViewModel(r));
+            Raise(nameof(HasSearchResults));
+            SearchStatus = results.Count == 0
+                ? $"Aucun « {q} » dans les stockpiles visibles."
+                : $"{results.Count} emplacement(s) — total {results.Sum(r => (long)r.Quantity):N0} unité(s).";
+        }
+        catch (AuthRequiredException) { ClearAuth(); }
+        catch (Exception ex) { SearchStatus = $"Erreur : {ex.Message}"; }
+    }
+
+    public void ClearSearch()
+    {
+        SearchQuery = "";
+        SearchResults.Clear();
+        Raise(nameof(HasSearchResults));
+        SearchStatus = "";
+    }
+
     public void EditStockpile(StockpileItemViewModel s)
     {
         _editingId = s.Id;
@@ -468,6 +533,83 @@ public sealed class StockpilesViewModel : ObservableObject
         SelectedCanManage = s.CanManage;
         Raise(nameof(IsStockpileSelected));
         await LoadItemsAsync();
+        await LoadTemplatesAsync();
+    }
+
+    // ---------- Templates d'objectifs de seuils ----------
+
+    public ObservableCollection<StockpileTemplateDto> Templates { get; } = new();
+    private StockpileTemplateDto? _selectedTemplate;
+    public StockpileTemplateDto? SelectedTemplate { get => _selectedTemplate; set => Set(ref _selectedTemplate, value); }
+    private string _templateName = "";
+    public string TemplateName { get => _templateName; set => Set(ref _templateName, value); }
+    public bool HasTemplates => Templates.Count > 0;
+
+    private async Task LoadTemplatesAsync()
+    {
+        if (_client is null)
+            return;
+        try
+        {
+            var list = await _client.GetTemplatesAsync();
+            Templates.Clear();
+            foreach (var t in list)
+                Templates.Add(t);
+            Raise(nameof(HasTemplates));
+        }
+        catch { /* meilleur effort */ }
+    }
+
+    /// <summary>Sauvegarde les seuils du stockpile ouvert comme template du régiment.</summary>
+    public async Task SaveTemplateAsync()
+    {
+        if (_client is null || _selectedId is null || Busy)
+            return;
+        if (string.IsNullOrWhiteSpace(TemplateName)) { Status = "Donne un nom au template."; return; }
+        Busy = true;
+        try
+        {
+            var t = await _client.CreateTemplateAsync(new CreateTemplateFromStockpileRequest(_selectedId, TemplateName.Trim()));
+            Status = $"Template « {t?.Name} » enregistré ({t?.ItemCount} seuil(s)).";
+            TemplateName = "";
+            await LoadTemplatesAsync();
+        }
+        catch (FriendException fex) { Status = fex.Message; }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
+    }
+
+    /// <summary>Applique le template sélectionné au stockpile ouvert.</summary>
+    public async Task ApplyTemplateAsync()
+    {
+        if (_client is null || _selectedId is null || Busy)
+            return;
+        if (SelectedTemplate is null) { Status = "Choisis un template."; return; }
+        Busy = true;
+        try
+        {
+            ApplyItems(await _client.ApplyTemplateAsync(new ApplyTemplateRequest(SelectedTemplate.Id, _selectedId)));
+            Status = $"Template « {SelectedTemplate.Name} » appliqué.";
+        }
+        catch (FriendException fex) { Status = fex.Message; }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
+    }
+
+    public async Task DeleteTemplateAsync()
+    {
+        if (_client is null || SelectedTemplate is null || Busy)
+            return;
+        Busy = true;
+        try
+        {
+            await _client.DeleteTemplateAsync(SelectedTemplate.Id);
+            Status = $"Template « {SelectedTemplate.Name} » supprimé.";
+            SelectedTemplate = null;
+            await LoadTemplatesAsync();
+        }
+        catch (Exception ex) { Status = $"Erreur : {ex.Message}"; }
+        finally { Busy = false; }
     }
 
     public void CloseDetail()
@@ -480,13 +622,23 @@ public sealed class StockpilesViewModel : ObservableObject
         Raise(nameof(HasNoItems));
     }
 
+    private Dictionary<string, List<HistoryPointDto>> _history = new(StringComparer.OrdinalIgnoreCase);
+
     private async Task LoadItemsAsync()
     {
         if (_client is null || _selectedId is null)
             return;
         try
         {
-            ApplyItems(await _client.GetItemsAsync(_selectedId));
+            var items = await _client.GetItemsAsync(_selectedId);
+            // Historique (tendances) — meilleur effort : la vue items marche sans lui.
+            try
+            {
+                _history = (await _client.GetHistoryAsync(_selectedId))
+                    .ToDictionary(h => h.Code, h => h.Points, StringComparer.OrdinalIgnoreCase);
+            }
+            catch { _history = new(StringComparer.OrdinalIgnoreCase); }
+            ApplyItems(items);
         }
         catch (Exception ex) { Status = $"Erreur items : {ex.Message}"; }
     }
@@ -495,7 +647,7 @@ public sealed class StockpilesViewModel : ObservableObject
     {
         Items.Clear();
         foreach (var i in items)
-            Items.Add(new StockpileLineViewModel(i, SelectedCanManage));
+            Items.Add(new StockpileLineViewModel(i, SelectedCanManage, _history.GetValueOrDefault(i.Code)));
         Raise(nameof(HasNoItems));
     }
 

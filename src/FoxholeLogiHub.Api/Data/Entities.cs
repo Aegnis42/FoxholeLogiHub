@@ -40,6 +40,8 @@ public sealed class Regiment
     public string Faction { get; set; } = "Unknown";
     public string InviteCode { get; set; } = "";
     public string OwnerSteamId { get; set; } = "";
+    // Webhook Discord du régiment ("" = désactivé) — alertes stock/ravitaillement/menaces.
+    public string DiscordWebhookUrl { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 }
 
@@ -151,6 +153,42 @@ public sealed class ResupplyRequestItem
     public int Quantity { get; set; }
 }
 
+/// <summary>
+/// Instantané de la quantité d'un item à un moment donné (pris à chaque import/capture).
+/// Sert à l'historique et aux prévisions d'épuisement. Rétention : 30 jours.
+/// </summary>
+public sealed class StockpileItemSnapshot
+{
+    public long Id { get; set; }
+    public string StockpileId { get; set; } = "";
+    public string Code { get; set; } = "";
+    public int Quantity { get; set; }
+    // Unix ms (long) : comparable/triable sur SQLite ET PostgreSQL (DateTimeOffset ne l'est pas sur SQLite).
+    public long TakenAtUnixMs { get; set; }
+}
+
+/// <summary>Template d'objectifs de seuils, partagé au régiment (ex. « dépôt de front »).</summary>
+public sealed class StockpileTemplate
+{
+    public string Id { get; set; } = "";
+    public string RegimentId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string CreatedBySteamId { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>Un item d'un template de seuils (objectif bas/critique).</summary>
+public sealed class StockpileTemplateItem
+{
+    public int Id { get; set; }
+    public string TemplateId { get; set; } = "";
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Category { get; set; } = "";
+    public int LowThreshold { get; set; }
+    public int CriticalThreshold { get; set; }
+}
+
 public sealed class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -168,6 +206,9 @@ public sealed class AppDbContext : DbContext
     public DbSet<StockpileItem> StockpileItems => Set<StockpileItem>();
     public DbSet<ResupplyRequest> ResupplyRequests => Set<ResupplyRequest>();
     public DbSet<ResupplyRequestItem> ResupplyRequestItems => Set<ResupplyRequestItem>();
+    public DbSet<StockpileItemSnapshot> StockpileItemSnapshots => Set<StockpileItemSnapshot>();
+    public DbSet<StockpileTemplate> StockpileTemplates => Set<StockpileTemplate>();
+    public DbSet<StockpileTemplateItem> StockpileTemplateItems => Set<StockpileTemplateItem>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -239,6 +280,24 @@ public sealed class AppDbContext : DbContext
         {
             e.HasKey(i => i.Id);
             e.HasIndex(i => i.RequestId);
+        });
+
+        b.Entity<StockpileItemSnapshot>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.HasIndex(s => new { s.StockpileId, s.TakenAtUnixMs });
+        });
+
+        b.Entity<StockpileTemplate>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.HasIndex(t => t.RegimentId);
+        });
+
+        b.Entity<StockpileTemplateItem>(e =>
+        {
+            e.HasKey(i => i.Id);
+            e.HasIndex(i => i.TemplateId);
         });
     }
 }

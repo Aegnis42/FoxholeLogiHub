@@ -76,6 +76,56 @@ public static class StockpileEndpoints
             return Results.Ok(await BuildListAsync(db, me, war));
         }).RequireAuthorization();
 
+        // Recherche globale d'un item dans tous les stockpiles visibles (les miens + alliés + publics).
+        app.MapGet("/api/stockpiles/items/search", async (string? q, ClaimsPrincipal p, AppDbContext db, WarStateService war) =>
+        {
+            string me = Me(p);
+            string query = Validate.Str(q ?? "", 64).Trim().ToLowerInvariant();
+            if (query.Length < 2)
+                return Results.Ok(new List<StockpileItemSearchResultDto>());
+
+            var visible = await BuildListAsync(db, me, war);
+            var byId = visible.ToDictionary(s => s.Id);
+            var ids = byId.Keys.ToList();
+
+            var items = await db.StockpileItems
+                .Where(i => ids.Contains(i.StockpileId) && i.Quantity > 0
+                    && (i.Name.ToLower().Contains(query) || i.Code.ToLower().Contains(query)))
+                .OrderByDescending(i => i.Quantity)
+                .Take(100)
+                .ToListAsync();
+
+            return Results.Ok(items.Select(i =>
+            {
+                var s = byId[i.StockpileId];
+                return new StockpileItemSearchResultDto(s.Id, s.Name, s.Hex, s.Town, s.Type,
+                    s.RegimentName, s.IsOwn, i.Code, i.Name, i.Category, i.Quantity);
+            }).ToList());
+        }).RequireAuthorization();
+
+        // Repositionnement depuis la carte (déplacement de pin).
+        app.MapPost("/api/stockpiles/position", async (SetStockpilePositionRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub, WarStateService war) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+                return Results.Forbid();
+            var s = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.Id && x.RegimentId == ctx.Value.reg.Id);
+            if (s is null)
+                return Results.NotFound(new ApiError("Stockpile introuvable."));
+            if (string.IsNullOrWhiteSpace(req.Hex))
+                return Results.BadRequest(new ApiError("Hexagone requis."));
+
+            s.Hex = Validate.Str(req.Hex, 48);
+            s.Town = Validate.Str(req.Town, 64);
+            s.MapX = Math.Clamp(req.MapX, 0, 1);
+            s.MapY = Math.Clamp(req.MapY, 0, 1);
+            s.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync();
+            await NotifyRegimentAsync(hub, db, ctx.Value.reg.Id, PresenceEvents.StockpilesChanged);
+            return Results.Ok(await BuildListAsync(db, me, war));
+        }).RequireAuthorization();
+
         app.MapPost("/api/stockpiles/delete", async (DeleteStockpileRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub, WarStateService war) =>
         {
             string me = Me(p);
@@ -196,7 +246,7 @@ public static class StockpileEndpoints
         }).RequireAuthorization();
 
         // Remplace tout le contenu (import auto / capture).
-        app.MapPost("/api/stockpiles/items/import", async (ImportStockpileItemsRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        app.MapPost("/api/stockpiles/items/import", async (ImportStockpileItemsRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub, DiscordNotifier discord) =>
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
@@ -249,9 +299,197 @@ public static class StockpileEndpoints
 
             db.StockpileItems.AddRange(newItems);
             sp.UpdatedAt = DateTimeOffset.UtcNow;
+
+            // Instantané pour l'historique et les prévisions d'épuisement (+ rétention 30 jours).
+            long snapAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            db.StockpileItemSnapshots.AddRange(newItems.Select(i => new StockpileItemSnapshot
+            {
+                StockpileId = sp.Id,
+                Code = i.Code,
+                Quantity = i.Quantity,
+                TakenAtUnixMs = snapAtMs,
+            }));
+            long snapCutoffMs = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeMilliseconds();
+            await db.StockpileItemSnapshots
+                .Where(s => s.StockpileId == sp.Id && s.TakenAtUnixMs < snapCutoffMs)
+                .ExecuteDeleteAsync();
+
+            await db.SaveChangesAsync();
+            await NotifyRegimentAsync(hub, db, sp.RegimentId, PresenceEvents.StockpilesChanged);
+
+            // Webhook Discord : items passés SOUS le seuil critique avec cet import (agrégé).
+            if (!sp.IsPublic && ctx.Value.reg.DiscordWebhookUrl.Length > 0)
+            {
+                static bool IsCrit(int qty, int crit) => crit > 0 && qty <= crit;
+                var critBefore = existingItems.Where(i => IsCrit(i.Quantity, i.CriticalThreshold))
+                    .Select(i => i.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var newlyCritical = newItems
+                    .Where(i => IsCrit(i.Quantity, i.CriticalThreshold) && !critBefore.Contains(i.Code))
+                    .OrderBy(i => i.Quantity)
+                    .ToList();
+                if (newlyCritical.Count > 0)
+                {
+                    var lines = newlyCritical.Take(8)
+                        .Select(i => $"• {i.Name} : **{i.Quantity}** (seuil {i.CriticalThreshold})");
+                    string more = newlyCritical.Count > 8 ? $"\n… et {newlyCritical.Count - 8} autre(s)" : "";
+                    discord.Send(ctx.Value.reg.DiscordWebhookUrl,
+                        $"🚨 **{sp.Name}** ({sp.Hex}{(sp.Town.Length > 0 ? $" · {sp.Town}" : "")}) — stock critique :\n"
+                        + string.Join("\n", lines) + more);
+                }
+            }
+
+            return Results.Ok(await ItemsAsync(db, sp.Id));
+        }).RequireAuthorization();
+
+        // Historique des quantités (instantanés d'import, 30 jours) pour les tendances/prévisions.
+        app.MapGet("/api/stockpiles/{id}/history", async (string id, ClaimsPrincipal p, AppDbContext db) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null)
+                return Results.Ok(new List<StockpileItemHistoryDto>());
+            var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == id);
+            if (sp is null)
+                return Results.NotFound(new ApiError("Stockpile introuvable."));
+            if (!await CanSeeAsync(db, sp, ctx.Value.reg.Id))
+                return Results.Forbid();
+
+            long cutoffMs = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeMilliseconds();
+            var rows = await db.StockpileItemSnapshots
+                .Where(s => s.StockpileId == id && s.TakenAtUnixMs >= cutoffMs)
+                .OrderBy(s => s.TakenAtUnixMs)
+                .ToListAsync();
+            return Results.Ok(rows
+                .GroupBy(r => r.Code, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new StockpileItemHistoryDto(
+                    g.Key,
+                    g.Select(r => new HistoryPointDto(DateTimeOffset.FromUnixTimeMilliseconds(r.TakenAtUnixMs), r.Quantity)).ToList()))
+                .ToList());
+        }).RequireAuthorization();
+
+        // --- Templates d'objectifs de seuils (partagés au régiment) ---
+
+        app.MapGet("/api/stockpiles/templates", async (ClaimsPrincipal p, AppDbContext db) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null)
+                return Results.Ok(new List<StockpileTemplateDto>());
+            string regId = ctx.Value.reg.Id;
+            var templates = await db.StockpileTemplates.Where(t => t.RegimentId == regId)
+                .OrderBy(t => t.Name).ToListAsync();
+            var counts = await db.StockpileTemplateItems
+                .Where(i => templates.Select(t => t.Id).Contains(i.TemplateId))
+                .GroupBy(i => i.TemplateId)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Key, x => x.Count);
+            return Results.Ok(templates
+                .Select(t => new StockpileTemplateDto(t.Id, t.Name, counts.GetValueOrDefault(t.Id)))
+                .ToList());
+        }).RequireAuthorization();
+
+        // Crée (ou remplace, à nom égal) un template depuis les seuils définis d'un stockpile.
+        app.MapPost("/api/stockpiles/templates", async (CreateTemplateFromStockpileRequest req, ClaimsPrincipal p, AppDbContext db) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+                return Results.Forbid();
+            string name = Validate.Str(req.Name ?? "", 48).Trim();
+            if (name.Length == 0)
+                return Results.BadRequest(new ApiError("Donne un nom au template."));
+            var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
+            if (sp is null)
+                return Results.NotFound(new ApiError("Stockpile introuvable."));
+
+            var items = await db.StockpileItems
+                .Where(i => i.StockpileId == sp.Id && (i.LowThreshold > 0 || i.CriticalThreshold > 0))
+                .ToListAsync();
+            if (items.Count == 0)
+                return Results.BadRequest(new ApiError("Aucun seuil défini sur ce stockpile."));
+
+            // Nom déjà pris dans le régiment → on remplace (chemin naturel de mise à jour).
+            var existing = await db.StockpileTemplates
+                .FirstOrDefaultAsync(t => t.RegimentId == ctx.Value.reg.Id && t.Name == name);
+            if (existing is not null)
+            {
+                await db.StockpileTemplateItems.Where(i => i.TemplateId == existing.Id).ExecuteDeleteAsync();
+                db.StockpileTemplates.Remove(existing);
+            }
+
+            var tpl = new StockpileTemplate
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                RegimentId = ctx.Value.reg.Id,
+                Name = name,
+                CreatedBySteamId = me,
+                CreatedAt = DateTimeOffset.UtcNow,
+            };
+            db.StockpileTemplates.Add(tpl);
+            db.StockpileTemplateItems.AddRange(items.Select(i => new StockpileTemplateItem
+            {
+                TemplateId = tpl.Id,
+                Code = i.Code,
+                Name = i.Name,
+                Category = i.Category,
+                LowThreshold = i.LowThreshold,
+                CriticalThreshold = i.CriticalThreshold,
+            }));
+            await db.SaveChangesAsync();
+            return Results.Ok(new StockpileTemplateDto(tpl.Id, tpl.Name, items.Count));
+        }).RequireAuthorization();
+
+        // Applique les seuils du template au stockpile : items existants → seuils mis à jour,
+        // items absents → créés à quantité 0 (alerte « plus en stock » immédiate, c'est le but).
+        app.MapPost("/api/stockpiles/templates/apply", async (ApplyTemplateRequest req, ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+                return Results.Forbid();
+            var tpl = await db.StockpileTemplates.FirstOrDefaultAsync(t => t.Id == req.TemplateId && t.RegimentId == ctx.Value.reg.Id);
+            var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
+            if (tpl is null || sp is null)
+                return Results.NotFound(new ApiError("Template ou stockpile introuvable."));
+
+            var tplItems = await db.StockpileTemplateItems.Where(i => i.TemplateId == tpl.Id).ToListAsync();
+            var current = await db.StockpileItems.Where(i => i.StockpileId == sp.Id).ToListAsync();
+            var byCode = current.ToDictionary(i => i.Code, StringComparer.OrdinalIgnoreCase);
+            foreach (var ti in tplItems)
+            {
+                if (byCode.TryGetValue(ti.Code, out var item))
+                {
+                    item.LowThreshold = ti.LowThreshold;
+                    item.CriticalThreshold = ti.CriticalThreshold;
+                }
+                else
+                {
+                    db.StockpileItems.Add(new StockpileItem
+                    {
+                        StockpileId = sp.Id, Code = ti.Code, Name = ti.Name, Category = ti.Category,
+                        Quantity = 0, LowThreshold = ti.LowThreshold, CriticalThreshold = ti.CriticalThreshold,
+                    });
+                }
+            }
+            sp.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
             await NotifyRegimentAsync(hub, db, sp.RegimentId, PresenceEvents.StockpilesChanged);
             return Results.Ok(await ItemsAsync(db, sp.Id));
+        }).RequireAuthorization();
+
+        app.MapPost("/api/stockpiles/templates/delete", async (DeleteTemplateRequest req, ClaimsPrincipal p, AppDbContext db) =>
+        {
+            string me = Me(p);
+            var ctx = await MyRegimentAsync(db, me);
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+                return Results.Forbid();
+            var tpl = await db.StockpileTemplates.FirstOrDefaultAsync(t => t.Id == req.TemplateId && t.RegimentId == ctx.Value.reg.Id);
+            if (tpl is null)
+                return Results.NotFound(new ApiError("Template introuvable."));
+            await db.StockpileTemplateItems.Where(i => i.TemplateId == tpl.Id).ExecuteDeleteAsync();
+            db.StockpileTemplates.Remove(tpl);
+            await db.SaveChangesAsync();
+            return Results.Ok();
         }).RequireAuthorization();
 
         // --- Tableau de bord : alertes de stock (items sous seuil) sur tous les stockpiles visibles ---
