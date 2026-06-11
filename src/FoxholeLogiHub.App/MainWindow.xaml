@@ -840,7 +840,7 @@
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="TYPE" Style="{StaticResource Label}"/>
                                                 <ComboBox ItemsSource="{Binding Types}" DisplayMemberPath="Label" SelectedValuePath="Value"
-                                                          SelectedValue="{Binding FormType}" Padding="6" FontSize="14"/>
+                                                          SelectedValue="{Binding FormType}" Padding="7" FontSize="14"/>
                                             </StackPanel>
                                         </Grid>
                                         <Grid Margin="0,0,0,8">
@@ -851,7 +851,7 @@
                                             <StackPanel Grid.Column="0" Margin="0,0,8,0">
                                                 <TextBlock Text="HEXAGONE" Style="{StaticResource Label}"/>
                                                 <ComboBox IsEditable="True" Text="{Binding FormHex, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Hexagone…"
-                                                          ItemsSource="{Binding Hexes}" Padding="6" FontSize="14"/>
+                                                          ItemsSource="{Binding Hexes}" Padding="7" FontSize="14"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="LIEU (optionnel)" Style="{StaticResource Label}"/>
