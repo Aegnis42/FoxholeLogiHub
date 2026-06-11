@@ -761,6 +761,12 @@
                                                                 <CheckBox Content="Gérer le MPF" IsChecked="{Binding PMpf}"
                                                                           IsEnabled="{Binding GranularEnabled}"
                                                                           ToolTip="Récupérer/supprimer les commandes MPF des autres membres (chacun gère toujours les siennes)"/>
+                                                                <CheckBox Content="Créer des demandes" IsChecked="{Binding PResupCreate}"
+                                                                          IsEnabled="{Binding GranularEnabled}"
+                                                                          ToolTip="Créer des demandes de ravitaillement"/>
+                                                                <CheckBox Content="Gérer les demandes" IsChecked="{Binding PResupManage}"
+                                                                          IsEnabled="{Binding GranularEnabled}"
+                                                                          ToolTip="Livrer/rouvrir/supprimer les demandes du régiment, changer leur visibilité, réattribuer une prise en charge (le créateur et le preneur gèrent toujours les leurs)"/>
                                                             </WrapPanel>
                                                         </StackPanel>
                                                     </Border>

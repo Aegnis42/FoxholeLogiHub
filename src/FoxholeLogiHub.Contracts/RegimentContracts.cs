@@ -20,9 +20,12 @@ public enum RegimentPermission
     StockpileEdit = 256,     // modifier le contenu : import F8, items, seuils, templates, position, transferts
     StockpileDelete = 512,   // supprimer un stockpile
     MpfManage = 1024,        // récupérer/supprimer les commandes MPF des autres membres
+    ResupplyCreate = 2048,   // créer des demandes de ravitaillement
+    ResupplyManage = 4096,   // gérer les demandes du régiment : livrer/rouvrir/supprimer/visibilité/réattribuer
 
     /// <summary>Masque des permissions couvertes par le parapluie ManageStockpiles.</summary>
-    LogiGranular = StockpileCreate | StockpileShare | StockpileEdit | StockpileDelete | MpfManage,
+    LogiGranular = StockpileCreate | StockpileShare | StockpileEdit | StockpileDelete | MpfManage
+        | ResupplyCreate | ResupplyManage,
 }
 
 public sealed record CreateRegimentRequest(string Name, string Tag, string Faction);

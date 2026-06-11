@@ -28,6 +28,8 @@ public static class ResupplyEndpoints
             var ctx = await MyRegimentAsync(db, me);
             if (ctx is null)
                 return Results.BadRequest(new ApiError("Rejoins un régiment d'abord."));
+            if (!await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyCreate))
+                return Results.Forbid();
             var items = (req.Items ?? new List<ResupplyItemDto>())
                 .Where(i => !string.IsNullOrWhiteSpace(i.Code) && i.Quantity > 0)
                 .ToList();
@@ -103,9 +105,10 @@ public static class ResupplyEndpoints
                 if (r.Status == ResupplyStatus.Open)
                     r.Status = ResupplyStatus.Claimed;
             }
-            else if (r.RegimentId == myRegId)
+            else if (r.RegimentId == myRegId
+                && await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyManage))
             {
-                r.ClaimedBySteamId = me; // le régiment propriétaire peut réattribuer
+                r.ClaimedBySteamId = me; // réattribution réservée aux gestionnaires de demandes
             }
             else
             {
@@ -170,8 +173,12 @@ public static class ResupplyEndpoints
         {
             Scope.Own => r.RegimentId == myRegId
                 && (r.CreatedBySteamId == me
-                    || await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles)),
-            Scope.OwnerOrClaimer => r.RegimentId == myRegId || r.ClaimedBySteamId == me,
+                    || await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyManage)),
+            // Livrer/rouvrir : créateur, preneur en charge, ou gestionnaire des demandes du régiment.
+            Scope.OwnerOrClaimer => r.ClaimedBySteamId == me
+                || (r.RegimentId == myRegId
+                    && (r.CreatedBySteamId == me
+                        || await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyManage))),
             _ => false,
         };
         if (!allowed)
@@ -210,7 +217,7 @@ public static class ResupplyEndpoints
         if (ctx is null)
             return new List<ResupplyRequestDto>();
         string regId = ctx.Value.reg.Id;
-        bool canManageAll = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles);
+        bool canManageAll = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyManage);
         var allies = await AlliedIdsAsync(db, regId);
 
         // Visibles : les miennes + alliance (régiments alliés) + publiques (tout le monde).

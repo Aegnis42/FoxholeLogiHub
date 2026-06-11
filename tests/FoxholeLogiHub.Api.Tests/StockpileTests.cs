@@ -75,6 +75,50 @@ public sealed class StockpileTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Permissions_granulaires_ravitaillement()
+    {
+        var (chef, reg) = await UserWithRegimentAsync(_factory, "Alpha", "ALP");
+        var member = _factory.ClientFor(NewSteamId());
+        await PostAsync(member, "/api/users", new UpsertUserRequest("Logi", "Wardens"));
+        await PostAsync(member, "/api/regiments/join", new JoinRegimentRequest(reg.InviteCode));
+        string memberId = (await GetAsync<RegimentDto>(member, "/api/regiments/mine"))!
+            .Members.Single(m => m.DisplayName == "Logi").SteamId;
+        string t = Tag();
+        var items = new List<ResupplyItemDto> { new("RifleAmmo", "Rifle Ammo", "Munitions", 100) };
+
+        // Rôle sans aucune permission : créer une demande est refusé.
+        var dtoNone = await PostAsync<RegimentDto>(chef, "/api/regiments/roles", new CreateRoleRequest($"Rien-{t}", 0));
+        int noneId = dtoNone!.Roles.Single(r => r.Name == $"Rien-{t}").Id;
+        await PostAsync(chef, "/api/regiments/members/role", new SetMemberRoleRequest(memberId, noneId));
+        var ko = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"KO-{t}", "Deadlands", "", items, 1, "", 0));
+        Assert.Equal(HttpStatusCode.Forbidden, ko.StatusCode);
+
+        // ResupplyCreate : créer oui ; supprimer/livrer la demande d'un AUTRE : non.
+        var dtoCreate = await PostAsync<RegimentDto>(chef, "/api/regiments/roles",
+            new CreateRoleRequest($"Crea-{t}", (int)RegimentPermission.ResupplyCreate));
+        int createId = dtoCreate!.Roles.Single(r => r.Name == $"Crea-{t}").Id;
+        await PostAsync(chef, "/api/regiments/members/role", new SetMemberRoleRequest(memberId, createId));
+        var okCreate = await PostRawAsync(member, "/api/resupply", new CreateResupplyRequest($"OK-{t}", "Deadlands", "", items, 1, "", 0));
+        Assert.True(okCreate.IsSuccessStatusCode);
+
+        var chefList = await PostAsync<List<ResupplyRequestDto>>(chef, "/api/resupply",
+            new CreateResupplyRequest($"DuChef-{t}", "Deadlands", "", items, 1, "", 0));
+        string chefReqId = chefList!.Single(r => r.Title == $"DuChef-{t}").Id;
+        var koDone = await PostRawAsync(member, "/api/resupply/done", new ResupplyActionRequest(chefReqId));
+        Assert.Equal(HttpStatusCode.Forbidden, koDone.StatusCode);
+        var koDel = await PostRawAsync(member, "/api/resupply/delete", new ResupplyActionRequest(chefReqId));
+        Assert.Equal(HttpStatusCode.Forbidden, koDel.StatusCode);
+
+        // + ResupplyManage : livrer la demande d'un autre devient possible.
+        var dtoMan = await PostAsync<RegimentDto>(chef, "/api/regiments/roles",
+            new CreateRoleRequest($"Gest-{t}", (int)(RegimentPermission.ResupplyCreate | RegimentPermission.ResupplyManage)));
+        int manId = dtoMan!.Roles.Single(r => r.Name == $"Gest-{t}").Id;
+        await PostAsync(chef, "/api/regiments/members/role", new SetMemberRoleRequest(memberId, manId));
+        var okDone = await PostRawAsync(member, "/api/resupply/done", new ResupplyActionRequest(chefReqId));
+        Assert.True(okDone.IsSuccessStatusCode);
+    }
+
+    [Fact]
     public async Task Visibilite_public_allie_et_partage_du_prive()
     {
         var (a, regA) = await UserWithRegimentAsync(_factory, "Alpha", "ALP");

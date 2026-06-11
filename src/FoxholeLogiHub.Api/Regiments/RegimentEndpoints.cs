@@ -40,8 +40,8 @@ public static class RegimentEndpoints
             db.Regiments.Add(reg);
 
             var chef = new RegimentRole { RegimentId = reg.Id, Name = "Chef", Permissions = AllPermissions };
-            var officier = new RegimentRole { RegimentId = reg.Id, Name = "Officier", Permissions = (int)(RegimentPermission.ManageMembers | RegimentPermission.Invite | RegimentPermission.ManageAlliances) };
-            var membre = new RegimentRole { RegimentId = reg.Id, Name = "Membre", Permissions = 0, IsDefault = true };
+            var officier = new RegimentRole { RegimentId = reg.Id, Name = "Officier", Permissions = (int)(RegimentPermission.ManageMembers | RegimentPermission.Invite | RegimentPermission.ManageAlliances | RegimentPermission.ResupplyCreate | RegimentPermission.ResupplyManage) };
+            var membre = new RegimentRole { RegimentId = reg.Id, Name = "Membre", Permissions = (int)RegimentPermission.ResupplyCreate, IsDefault = true };
             db.RegimentRoles.AddRange(chef, officier, membre);
             await db.SaveChangesAsync();
 
