@@ -49,7 +49,16 @@ public static class RegimentGuards
         if (reg.OwnerSteamId == steamId)
             return true;
         var role = await db.RegimentRoles.FirstOrDefaultAsync(r => r.Id == member.RoleId);
-        return role is not null && ((RegimentPermission)role.Permissions & perm) == perm;
+        if (role is null)
+            return false;
+        var perms = (RegimentPermission)role.Permissions;
+        if ((perms & perm) == perm)
+            return true;
+        // Les permissions logistiques granulaires sont toutes couvertes par le parapluie
+        // ManageStockpiles (compatibilité : les rôles existants gardent leurs droits).
+        return perm != RegimentPermission.None
+            && (perm & RegimentPermission.LogiGranular) == perm
+            && perms.HasFlag(RegimentPermission.ManageStockpiles);
     }
 
     /// <summary>Ids des régiments en alliance acceptée avec <paramref name="regId"/>.</summary>

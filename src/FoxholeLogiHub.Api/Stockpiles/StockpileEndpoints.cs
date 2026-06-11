@@ -23,7 +23,9 @@ public static class StockpileEndpoints
             var ctx = await MyRegimentAsync(db, me);
             if (ctx is null)
                 return Results.BadRequest(new ApiError("Rejoins ou crée un régiment d'abord."));
-            if (!await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            // Public = visible par toute l'alliance -> permission de partage requise.
+            if (!await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me,
+                    req.IsPublic ? RegimentPermission.StockpileShare : RegimentPermission.StockpileCreate))
                 return Results.Forbid();
             if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Hex) || string.IsNullOrWhiteSpace(req.Type))
                 return Results.BadRequest(new ApiError("Nom, hexagone et type requis."));
@@ -56,11 +58,15 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileEdit))
                 return Results.Forbid();
             var s = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.Id && x.RegimentId == ctx.Value.reg.Id);
             if (s is null)
                 return Results.NotFound(new ApiError("Stockpile introuvable."));
+            // Basculer la visibilite publique = exposer a l'alliance -> permission de partage.
+            if (req.IsPublic != s.IsPublic
+                && !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileShare))
+                return Results.Forbid();
             if (!StockpileTypes.All.Contains(req.Type))
                 return Results.BadRequest(new ApiError("Type de stockpile inconnu."));
 
@@ -108,7 +114,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileEdit))
                 return Results.Forbid();
             var s = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.Id && x.RegimentId == ctx.Value.reg.Id);
             if (s is null)
@@ -130,7 +136,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileDelete))
                 return Results.Forbid();
             var s = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.Id && x.RegimentId == ctx.Value.reg.Id);
             if (s is null)
@@ -147,7 +153,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileShare))
                 return Results.Forbid();
             var s = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
             if (s is null)
@@ -171,7 +177,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileShare))
                 return Results.Forbid();
             var s = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
             if (s is null)
@@ -204,7 +210,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileEdit))
                 return Results.Forbid();
             var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
             if (sp is null)
@@ -250,7 +256,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileEdit))
                 return Results.Forbid();
             var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
             if (sp is null)
@@ -384,7 +390,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileEdit))
                 return Results.Forbid();
             if (req.Quantity <= 0)
                 return Results.BadRequest(new ApiError("Quantité invalide."));
@@ -478,7 +484,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileEdit))
                 return Results.Forbid();
             string name = Validate.Str(req.Name ?? "", 48).Trim();
             if (name.Length == 0)
@@ -530,7 +536,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileEdit))
                 return Results.Forbid();
             var tpl = await db.StockpileTemplates.FirstOrDefaultAsync(t => t.Id == req.TemplateId && t.RegimentId == ctx.Value.reg.Id);
             var sp = await db.Stockpiles.FirstOrDefaultAsync(x => x.Id == req.StockpileId && x.RegimentId == ctx.Value.reg.Id);
@@ -566,7 +572,7 @@ public static class StockpileEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileEdit))
                 return Results.Forbid();
             var tpl = await db.StockpileTemplates.FirstOrDefaultAsync(t => t.Id == req.TemplateId && t.RegimentId == ctx.Value.reg.Id);
             if (tpl is null)
@@ -649,7 +655,7 @@ public static class StockpileEndpoints
 
         string myRegId = ctx.Value.reg.Id;
         string myFaction = ctx.Value.reg.Faction;
-        bool canManage = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles);
+        bool canManage = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.StockpileEdit);
 
         var own = await db.Stockpiles.AsNoTracking().Where(s => s.RegimentId == myRegId).ToListAsync();
 

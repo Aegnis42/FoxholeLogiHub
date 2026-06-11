@@ -10,7 +10,19 @@ public enum RegimentPermission
     Invite = 4,           // inviter des amis, voir/régénérer le code
     ManageRegiment = 8,    // éditer le régiment, le supprimer
     ManageAlliances = 16,  // proposer/accepter/rompre des alliances
-    ManageStockpiles = 32, // créer/éditer/partager les stockpiles
+
+    /// <summary>Parapluie « admin logistique » : couvre TOUTES les permissions granulaires ci-dessous.</summary>
+    ManageStockpiles = 32,
+
+    // Permissions logistiques granulaires (chacune est aussi accordée par ManageStockpiles).
+    StockpileCreate = 64,    // créer des stockpiles du régiment (privés)
+    StockpileShare = 128,    // créer des stockpiles publics / partager-départager à l'alliance
+    StockpileEdit = 256,     // modifier le contenu : import F8, items, seuils, templates, position, transferts
+    StockpileDelete = 512,   // supprimer un stockpile
+    MpfManage = 1024,        // récupérer/supprimer les commandes MPF des autres membres
+
+    /// <summary>Masque des permissions couvertes par le parapluie ManageStockpiles.</summary>
+    LogiGranular = StockpileCreate | StockpileShare | StockpileEdit | StockpileDelete | MpfManage,
 }
 
 public sealed record CreateRegimentRequest(string Name, string Tag, string Faction);

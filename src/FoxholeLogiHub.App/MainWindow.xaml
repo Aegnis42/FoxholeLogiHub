@@ -731,11 +731,36 @@
                                                                          CaretBrush="White" VerticalAlignment="Center"/>
                                                             </DockPanel>
                                                             <WrapPanel Margin="0,8,0,0">
-                                                                <CheckBox Content="Membres" IsChecked="{Binding PMembers}"/>
-                                                                <CheckBox Content="Rôles" IsChecked="{Binding PRoles}"/>
-                                                                <CheckBox Content="Inviter" IsChecked="{Binding PInvite}"/>
-                                                                <CheckBox Content="Régiment" IsChecked="{Binding PRegiment}"/>
-                                                                <CheckBox Content="Alliances" IsChecked="{Binding PAlliances}"/>
+                                                                <CheckBox Content="Membres" IsChecked="{Binding PMembers}"
+                                                                          ToolTip="Changer le rôle des membres, exclure"/>
+                                                                <CheckBox Content="Rôles" IsChecked="{Binding PRoles}"
+                                                                          ToolTip="Créer/modifier/supprimer des rôles"/>
+                                                                <CheckBox Content="Inviter" IsChecked="{Binding PInvite}"
+                                                                          ToolTip="Inviter des amis, voir/régénérer le code"/>
+                                                                <CheckBox Content="Régiment" IsChecked="{Binding PRegiment}"
+                                                                          ToolTip="Éditer le régiment, le supprimer"/>
+                                                                <CheckBox Content="Alliances" IsChecked="{Binding PAlliances}"
+                                                                          ToolTip="Proposer/accepter/rompre des alliances"/>
+                                                            </WrapPanel>
+                                                            <TextBlock Text="LOGISTIQUE" Style="{StaticResource Label}" Margin="0,10,0,2"/>
+                                                            <WrapPanel>
+                                                                <CheckBox Content="⭐ Admin logistique (tout)" IsChecked="{Binding PStockAdmin}"
+                                                                          ToolTip="Donne TOUTES les permissions logistiques ci-dessous"/>
+                                                                <CheckBox Content="Créer des stockpiles" IsChecked="{Binding PStockCreate}"
+                                                                          IsEnabled="{Binding GranularEnabled}"
+                                                                          ToolTip="Créer des stockpiles privés du régiment"/>
+                                                                <CheckBox Content="Partager à l'alliance" IsChecked="{Binding PStockShare}"
+                                                                          IsEnabled="{Binding GranularEnabled}"
+                                                                          ToolTip="Créer des stockpiles publics, partager/départager aux alliés, basculer la visibilité"/>
+                                                                <CheckBox Content="Modifier le contenu" IsChecked="{Binding PStockEdit}"
+                                                                          IsEnabled="{Binding GranularEnabled}"
+                                                                          ToolTip="Import F8, items, seuils, templates, position sur la carte, transferts"/>
+                                                                <CheckBox Content="Supprimer" IsChecked="{Binding PStockDelete}"
+                                                                          IsEnabled="{Binding GranularEnabled}"
+                                                                          ToolTip="Supprimer des stockpiles du régiment"/>
+                                                                <CheckBox Content="Gérer le MPF" IsChecked="{Binding PMpf}"
+                                                                          IsEnabled="{Binding GranularEnabled}"
+                                                                          ToolTip="Récupérer/supprimer les commandes MPF des autres membres (chacun gère toujours les siennes)"/>
                                                             </WrapPanel>
                                                         </StackPanel>
                                                     </Border>

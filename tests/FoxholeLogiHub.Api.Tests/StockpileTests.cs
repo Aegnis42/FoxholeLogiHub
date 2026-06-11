@@ -34,6 +34,47 @@ public sealed class StockpileTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Permissions_granulaires_et_parapluie_ManageStockpiles()
+    {
+        var (chef, reg) = await UserWithRegimentAsync(_factory, "Alpha", "ALP");
+        var member = _factory.ClientFor(NewSteamId());
+        await PostAsync(member, "/api/users", new UpsertUserRequest("Logi", "Wardens"));
+        await PostAsync(member, "/api/regiments/join", new JoinRegimentRequest(reg.InviteCode));
+        string memberId = (await GetAsync<RegimentDto>(member, "/api/regiments/mine"))!
+            .Members.Single(m => m.DisplayName == "Logi").SteamId;
+        string t = Tag();
+
+        // Rôle granulaire : créer (privé) + modifier le contenu — ni partage, ni suppression.
+        int perms = (int)(RegimentPermission.StockpileCreate | RegimentPermission.StockpileEdit);
+        var dto = await PostAsync<RegimentDto>(chef, "/api/regiments/roles", new CreateRoleRequest($"Logi-{t}", perms));
+        int roleId = dto!.Roles.Single(r => r.Name == $"Logi-{t}").Id;
+        await PostAsync(chef, "/api/regiments/members/role", new SetMemberRoleRequest(memberId, roleId));
+
+        // Créer un PRIVÉ : oui. Créer un PUBLIC (alliance) : non — StockpileShare manquant.
+        var okPriv = await PostRawAsync(member, "/api/stockpiles", Sp($"G-Priv-{t}", false));
+        Assert.True(okPriv.IsSuccessStatusCode);
+        var koPub = await PostRawAsync(member, "/api/stockpiles", Sp($"G-Pub-{t}", true));
+        Assert.Equal(HttpStatusCode.Forbidden, koPub.StatusCode);
+
+        // Modifier le contenu : oui. Supprimer : non.
+        var list = await GetAsync<List<StockpileDto>>(member, "/api/stockpiles");
+        string spId = list.Single(s => s.Name == $"G-Priv-{t}").Id;
+        var okSet = await PostRawAsync(member, "/api/stockpiles/items/set",
+            new SetStockpileItemRequest(spId, "RifleAmmo", "Rifle Ammo", "Munitions", 100, 0, 0));
+        Assert.True(okSet.IsSuccessStatusCode);
+        var koDel = await PostRawAsync(member, "/api/stockpiles/delete", new DeleteStockpileRequest(spId));
+        Assert.Equal(HttpStatusCode.Forbidden, koDel.StatusCode);
+
+        // Parapluie : ManageStockpiles seul couvre TOUT (compatibilité des rôles existants).
+        var dto2 = await PostAsync<RegimentDto>(chef, "/api/regiments/roles",
+            new CreateRoleRequest($"Admin-{t}", (int)RegimentPermission.ManageStockpiles));
+        int adminRoleId = dto2!.Roles.Single(r => r.Name == $"Admin-{t}").Id;
+        await PostAsync(chef, "/api/regiments/members/role", new SetMemberRoleRequest(memberId, adminRoleId));
+        var okDel = await PostRawAsync(member, "/api/stockpiles/delete", new DeleteStockpileRequest(spId));
+        Assert.True(okDel.IsSuccessStatusCode);
+    }
+
+    [Fact]
     public async Task Visibilite_public_allie_et_partage_du_prive()
     {
         var (a, regA) = await UserWithRegimentAsync(_factory, "Alpha", "ALP");

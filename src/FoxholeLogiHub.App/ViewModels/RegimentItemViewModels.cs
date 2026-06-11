@@ -45,6 +45,7 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
 {
     private string _name;
     private bool _pMembers, _pRoles, _pInvite, _pRegiment, _pAlliances;
+    private bool _pStockAdmin, _pStockCreate, _pStockShare, _pStockEdit, _pStockDelete, _pMpf;
 
     public RegimentRoleItemViewModel(RegimentRoleDto dto, bool canEdit)
     {
@@ -58,6 +59,12 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
         _pInvite = perms.HasFlag(RegimentPermission.Invite);
         _pRegiment = perms.HasFlag(RegimentPermission.ManageRegiment);
         _pAlliances = perms.HasFlag(RegimentPermission.ManageAlliances);
+        _pStockAdmin = perms.HasFlag(RegimentPermission.ManageStockpiles);
+        _pStockCreate = perms.HasFlag(RegimentPermission.StockpileCreate);
+        _pStockShare = perms.HasFlag(RegimentPermission.StockpileShare);
+        _pStockEdit = perms.HasFlag(RegimentPermission.StockpileEdit);
+        _pStockDelete = perms.HasFlag(RegimentPermission.StockpileDelete);
+        _pMpf = perms.HasFlag(RegimentPermission.MpfManage);
     }
 
     public int Id { get; }
@@ -72,6 +79,26 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
     public bool PRegiment { get => _pRegiment; set => Set(ref _pRegiment, value); }
     public bool PAlliances { get => _pAlliances; set => Set(ref _pAlliances, value); }
 
+    /// <summary>Parapluie logistique : couvre toutes les permissions granulaires ci-dessous.</summary>
+    public bool PStockAdmin
+    {
+        get => _pStockAdmin;
+        set
+        {
+            Set(ref _pStockAdmin, value);
+            Raise(nameof(GranularEnabled));
+        }
+    }
+
+    public bool PStockCreate { get => _pStockCreate; set => Set(ref _pStockCreate, value); }
+    public bool PStockShare { get => _pStockShare; set => Set(ref _pStockShare, value); }
+    public bool PStockEdit { get => _pStockEdit; set => Set(ref _pStockEdit, value); }
+    public bool PStockDelete { get => _pStockDelete; set => Set(ref _pStockDelete, value); }
+    public bool PMpf { get => _pMpf; set => Set(ref _pMpf, value); }
+
+    /// <summary>Les cases granulaires sont grisées quand le parapluie donne déjà tout.</summary>
+    public bool GranularEnabled => CanEdit && !PStockAdmin;
+
     public int ComposePermissions()
     {
         RegimentPermission p = RegimentPermission.None;
@@ -80,6 +107,12 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
         if (PInvite) p |= RegimentPermission.Invite;
         if (PRegiment) p |= RegimentPermission.ManageRegiment;
         if (PAlliances) p |= RegimentPermission.ManageAlliances;
+        if (PStockAdmin) p |= RegimentPermission.ManageStockpiles;
+        if (PStockCreate) p |= RegimentPermission.StockpileCreate;
+        if (PStockShare) p |= RegimentPermission.StockpileShare;
+        if (PStockEdit) p |= RegimentPermission.StockpileEdit;
+        if (PStockDelete) p |= RegimentPermission.StockpileDelete;
+        if (PMpf) p |= RegimentPermission.MpfManage;
         return (int)p;
     }
 }

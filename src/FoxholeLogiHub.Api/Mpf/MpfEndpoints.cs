@@ -27,7 +27,7 @@ public static class MpfEndpoints
             if (ctx is null)
                 return Results.Ok(new List<MpfOrderDto>());
             string regId = ctx.Value.reg.Id;
-            bool canManage = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles);
+            bool canManage = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.MpfManage);
 
             var rows = await db.MpfOrders.AsNoTracking()
                 .Where(o => o.RegimentId == regId)
@@ -94,7 +94,7 @@ public static class MpfEndpoints
         if (order is null)
             return Results.NotFound(new ApiError("Commande introuvable."));
         if (order.CreatedBySteamId != me
-            && !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles))
+            && !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.MpfManage))
             return Results.Forbid();
 
         db.MpfOrders.Remove(order);
