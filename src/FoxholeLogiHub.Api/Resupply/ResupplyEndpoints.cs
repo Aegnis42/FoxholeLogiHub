@@ -11,7 +11,7 @@ namespace FoxholeLogiHub.Api.Resupply;
 public static class ResupplyEndpoints
 {
     /// <summary>
-    /// Qui peut agir sur une demande : Own = créateur ou ManageStockpiles du régiment propriétaire
+    /// Qui peut agir sur une demande : Own = créateur ou ResupplyManage du régiment propriétaire
     /// (supprimer, changer la visibilité) ; OwnerOrClaimer = membre du régiment propriétaire OU
     /// preneur en charge (livré, rouvrir) — un inconnu ne peut pas clore la demande d'autrui.
     /// </summary>
@@ -28,7 +28,10 @@ public static class ResupplyEndpoints
             var ctx = await MyRegimentAsync(db, me);
             if (ctx is null)
                 return Results.BadRequest(new ApiError("Rejoins un régiment d'abord."));
-            if (!await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyCreate))
+            // Demander du ravitaillement à SON régiment (visibilité privée) : ouvert à tous.
+            // Publier au-delà du régiment (alliance ou publique) : permission « Publier des demandes ».
+            if (Math.Clamp(req.Visibility, 0, 2) != ResupplyVisibility.Regiment
+                && !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyShare))
                 return Results.Forbid();
             var items = (req.Items ?? new List<ResupplyItemDto>())
                 .Where(i => !string.IsNullOrWhiteSpace(i.Code) && i.Quantity > 0)
@@ -145,9 +148,20 @@ public static class ResupplyEndpoints
             await MutateAsync(db, hub, Me(p), req.Id, Scope.OwnerOrClaimer, r =>
             { r.Status = r.ClaimedBySteamId.Length > 0 ? ResupplyStatus.Claimed : ResupplyStatus.Open; })).RequireAuthorization();
 
-        // Changer la visibilité (créateur ou ManageStockpiles, sur ses propres demandes).
+        // Changer la visibilité (créateur ou gestionnaire). Exposer au-delà du régiment
+        // (alliance/publique) exige en plus la permission « Publier des demandes ».
         app.MapPost("/api/resupply/visibility", async (SetResupplyVisibilityRequest req, System.Security.Claims.ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>
-            await MutateAsync(db, hub, Me(p), req.Id, Scope.Own, r => r.Visibility = Math.Clamp(req.Visibility, 0, 2))).RequireAuthorization();
+        {
+            string me = Me(p);
+            int newVis = Math.Clamp(req.Visibility, 0, 2);
+            if (newVis != ResupplyVisibility.Regiment)
+            {
+                var ctx = await MyRegimentAsync(db, me);
+                if (ctx is null || !await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ResupplyShare))
+                    return Results.Forbid();
+            }
+            return await MutateAsync(db, hub, me, req.Id, Scope.Own, r => r.Visibility = newVis);
+        }).RequireAuthorization();
 
         // Supprimer (créateur ou ManageStockpiles, sur ses propres demandes).
         app.MapPost("/api/resupply/delete", async (ResupplyActionRequest req, System.Security.Claims.ClaimsPrincipal p, AppDbContext db, IHubContext<PresenceHub> hub) =>

@@ -46,7 +46,7 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
     private string _name;
     private bool _pMembers, _pRoles, _pInvite, _pRegiment, _pAlliances;
     private bool _pStockAdmin, _pStockCreate, _pStockShare, _pStockEdit, _pStockDelete, _pMpf;
-    private bool _pResupCreate, _pResupManage;
+    private bool _pResupShare, _pResupManage;
 
     public RegimentRoleItemViewModel(RegimentRoleDto dto, bool canEdit)
     {
@@ -66,7 +66,7 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
         _pStockEdit = perms.HasFlag(RegimentPermission.StockpileEdit);
         _pStockDelete = perms.HasFlag(RegimentPermission.StockpileDelete);
         _pMpf = perms.HasFlag(RegimentPermission.MpfManage);
-        _pResupCreate = perms.HasFlag(RegimentPermission.ResupplyCreate);
+        _pResupShare = perms.HasFlag(RegimentPermission.ResupplyShare);
         _pResupManage = perms.HasFlag(RegimentPermission.ResupplyManage);
     }
 
@@ -98,7 +98,7 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
     public bool PStockEdit { get => _pStockEdit; set => Set(ref _pStockEdit, value); }
     public bool PStockDelete { get => _pStockDelete; set => Set(ref _pStockDelete, value); }
     public bool PMpf { get => _pMpf; set => Set(ref _pMpf, value); }
-    public bool PResupCreate { get => _pResupCreate; set => Set(ref _pResupCreate, value); }
+    public bool PResupShare { get => _pResupShare; set => Set(ref _pResupShare, value); }
     public bool PResupManage { get => _pResupManage; set => Set(ref _pResupManage, value); }
 
     /// <summary>Les cases granulaires sont grisées quand le parapluie donne déjà tout.</summary>
@@ -118,7 +118,7 @@ public sealed class RegimentRoleItemViewModel : ObservableObject
         if (PStockEdit) p |= RegimentPermission.StockpileEdit;
         if (PStockDelete) p |= RegimentPermission.StockpileDelete;
         if (PMpf) p |= RegimentPermission.MpfManage;
-        if (PResupCreate) p |= RegimentPermission.ResupplyCreate;
+        if (PResupShare) p |= RegimentPermission.ResupplyShare;
         if (PResupManage) p |= RegimentPermission.ResupplyManage;
         return (int)p;
     }
