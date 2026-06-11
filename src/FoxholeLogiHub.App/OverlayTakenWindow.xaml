@@ -8,12 +8,12 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
-    <Border Background="#EE13171E" CornerRadius="10" BorderBrush="#FF2A3340" BorderThickness="1">
+    <Border Background="#F20C1118" CornerRadius="10" BorderBrush="#FF232C3A" BorderThickness="1">
         <DockPanel Margin="10">
 
             <DockPanel DockPanel.Dock="Top" Background="Transparent" MouseLeftButtonDown="OnDragWindow" Margin="0,0,0,6">
                 <Button DockPanel.Dock="Right" Content="✕" Click="OnCloseClick"
-                        Background="Transparent" Foreground="#FF9AA4B2" BorderThickness="0"
+                        Background="Transparent" Foreground="#FF94A1B2" BorderThickness="0"
                         Padding="6,0" FontSize="13" Cursor="Hand"/>
                 <TextBlock Text="🔧 Prises en charge" Foreground="White" FontWeight="Bold"
                            FontSize="12.5" VerticalAlignment="Center"/>
@@ -21,7 +21,7 @@
 
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <TextBlock Text="Aucune demande prise en charge." Foreground="#FF6B7280" FontSize="11">
+                    <TextBlock Text="Aucune demande prise en charge." Foreground="#FF5E6B7E" FontSize="11">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -36,7 +36,7 @@
                     <ItemsControl ItemsSource="{Binding Resupply.TakenRequests}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FF1A202A" CornerRadius="6" Padding="7,5" Margin="0,0,0,4">
+                                <Border Background="#FF161D28" CornerRadius="6" Padding="7,5" Margin="0,0,0,4">
                                     <StackPanel>
                                         <DockPanel>
                                             <Border DockPanel.Dock="Right" Background="#33FFFFFF" CornerRadius="3" Padding="4,1"
@@ -46,9 +46,9 @@
                                             <TextBlock Text="{Binding Title}" Foreground="White" FontSize="11.5" FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </DockPanel>
-                                        <TextBlock Foreground="#FF6B7280" FontSize="9.5">
+                                        <TextBlock Foreground="#FF5E6B7E" FontSize="9.5">
                                             <Run Text="{Binding LocationLabel, Mode=OneWay}"/>
-                                            <Run Text="{Binding ClaimInfo, Mode=OneWay}" Foreground="#FF7FA8D9"/>
+                                            <Run Text="{Binding ClaimInfo, Mode=OneWay}" Foreground="#FF6CA6F2"/>
                                         </TextBlock>
                                         <ItemsControl ItemsSource="{Binding Items}" Margin="0,3,0,0">
                                             <ItemsControl.ItemsPanel>
@@ -58,13 +58,13 @@
                                                 <DataTemplate>
                                                     <StackPanel Orientation="Horizontal" Margin="0,0,7,2">
                                                         <Image Source="{Binding Icon}" Width="13" Height="13" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding QtyText}" Foreground="#FFB8C4D0" FontSize="10" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding QtyText}" Foreground="#FFB6C2D1" FontSize="10" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                         <Button Content="✓ Livré" Click="OnDeliverRequest" HorizontalAlignment="Right"
-                                                Background="#FF2F6B3A" Foreground="White" BorderThickness="0"
+                                                Background="#FF1F8A4C" Foreground="White" BorderThickness="0"
                                                 Padding="8,2" FontSize="10" Cursor="Hand" Margin="0,3,0,0"
                                                 Visibility="{Binding CanComplete, Converter={StaticResource BoolToVis}}"/>
                                     </StackPanel>

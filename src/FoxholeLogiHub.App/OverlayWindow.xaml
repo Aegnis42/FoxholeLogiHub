@@ -9,36 +9,36 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
 
-    <Border Background="#EE13171E" CornerRadius="10" BorderBrush="#FF2A3340" BorderThickness="1">
+    <Border Background="#F20C1118" CornerRadius="10" BorderBrush="#FF232C3A" BorderThickness="1">
         <DockPanel Margin="10">
 
             <!-- En-tête (déplaçable) -->
             <DockPanel DockPanel.Dock="Top" Background="Transparent" MouseLeftButtonDown="OnDragWindow" Margin="0,0,0,6">
                 <Button DockPanel.Dock="Right" Content="✕" Click="OnCloseClick"
-                        Background="Transparent" Foreground="#FF9AA4B2" BorderThickness="0"
+                        Background="Transparent" Foreground="#FF94A1B2" BorderThickness="0"
                         Padding="6,0" FontSize="13" Cursor="Hand" ToolTip="Fermer l'overlay (F9 pour rouvrir)"/>
                 <Image Source="pack://application:,,,/Assets/logo.png" Width="18" Height="18"
                        RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
                 <TextBlock Text="LogiHub" Foreground="White" FontWeight="Bold" FontSize="13"
                            VerticalAlignment="Center" Margin="6,0,0,0"/>
-                <TextBlock Text="— glisser pour déplacer" Foreground="#FF4A515C" FontSize="10"
+                <TextBlock Text="— glisser pour déplacer" Foreground="#FF5E6B7E" FontSize="10"
                            VerticalAlignment="Center" Margin="8,0,0,0"/>
             </DockPanel>
 
             <!-- Bannière de guerre (compacte) -->
-            <TextBlock DockPanel.Dock="Top" Text="{Binding Stockpiles.WarBanner}" Foreground="#FF7FA8D9"
+            <TextBlock DockPanel.Dock="Top" Text="{Binding Stockpiles.WarBanner}" Foreground="#FF6CA6F2"
                        FontSize="10.5" TextWrapping="Wrap" Margin="0,0,0,6"/>
 
             <!-- Ouvrir les panneaux (fenêtres indépendantes, déplaçables) -->
             <UniformGrid DockPanel.Dock="Top" Columns="3" Margin="0,0,0,6">
                 <Button Content="📦 Stockpile" Click="OnTogglePanelStock" Margin="0,0,3,0"
-                        Background="#FF222A36" Foreground="#FFB8C4D0" BorderThickness="0" Padding="4,4"
+                        Background="#FF1C2532" Foreground="#FFB6C2D1" BorderThickness="0" Padding="4,4"
                         FontSize="10.5" Cursor="Hand" ToolTip="Fenêtre : contenu d'un stockpile au choix"/>
                 <Button Content="🚚 Demandes" Click="OnTogglePanelResupply" Margin="0,0,3,0"
-                        Background="#FF222A36" Foreground="#FFB8C4D0" BorderThickness="0" Padding="4,4"
+                        Background="#FF1C2532" Foreground="#FFB6C2D1" BorderThickness="0" Padding="4,4"
                         FontSize="10.5" Cursor="Hand" ToolTip="Fenêtre : demandes ouvertes + en créer une"/>
                 <Button Content="🔧 Prises" Click="OnTogglePanelTaken"
-                        Background="#FF222A36" Foreground="#FFB8C4D0" BorderThickness="0" Padding="4,4"
+                        Background="#FF1C2532" Foreground="#FFB6C2D1" BorderThickness="0" Padding="4,4"
                         FontSize="10.5" Cursor="Hand" ToolTip="Fenêtre : demandes prises en charge par le régiment"/>
             </UniformGrid>
 
@@ -48,11 +48,11 @@
                     <!-- Recherche rapide -->
                     <DockPanel Margin="0,0,0,4">
                         <Button DockPanel.Dock="Right" Content="🔍" Click="OnSearchClick"
-                                Background="#FF2A475E" Foreground="White" BorderThickness="0"
+                                Background="#FF2D63D8" Foreground="White" BorderThickness="0"
                                 Padding="8,3" Margin="4,0,0,0" Cursor="Hand"/>
                         <TextBox Text="{Binding Stockpiles.SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                                  KeyDown="OnSearchKeyDown" FontSize="12" Padding="5"
-                                 Background="#FF1B212B" Foreground="White" BorderBrush="#FF2A3340"
+                                 Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A"
                                  BorderThickness="1" CaretBrush="White"
                                  ToolTip="Trouver un item dans tous les stockpiles (Entrée)"/>
                     </DockPanel>
@@ -60,12 +60,12 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <DockPanel Margin="0,1">
-                                    <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FF7FC97F"
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FF53C272"
                                                FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                     <StackPanel>
                                         <TextBlock Text="{Binding Name}" Foreground="White" FontSize="11.5"/>
-                                        <TextBlock Text="{Binding WhereText}" Foreground="#FF6B7280" FontSize="9.5" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding WhereText}" Foreground="#FF5E6B7E" FontSize="9.5" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </DockPanel>
                             </DataTemplate>
@@ -73,8 +73,8 @@
                     </ItemsControl>
 
                     <!-- Alertes de stock -->
-                    <TextBlock Text="🚨 ALERTES" Foreground="#FF9AA4B2" FontSize="10" FontWeight="Bold" Margin="0,4,0,3"/>
-                    <TextBlock Text="Aucune alerte — tout est au vert." Foreground="#FF4A8C5C" FontSize="11"
+                    <TextBlock Text="🚨 ALERTES" Foreground="#FF94A1B2" FontSize="10" FontWeight="Bold" Margin="0,4,0,3"/>
+                    <TextBlock Text="Aucune alerte — tout est au vert." Foreground="#FF3FB960" FontSize="11"
                                Visibility="{Binding Stockpiles.NoAlerts, Converter={StaticResource BoolToVis}}"/>
                     <ItemsControl ItemsSource="{Binding Stockpiles.Alerts}">
                         <ItemsControl.ItemTemplate>
@@ -84,10 +84,10 @@
                                                VerticalAlignment="Center">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="#FFC88A2E"/>
+                                                <Setter Property="Foreground" Value="#FFE8A33D"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsCritical}" Value="True">
-                                                        <Setter Property="Foreground" Value="#FFE05252"/>
+                                                        <Setter Property="Foreground" Value="#FFE5484D"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -96,7 +96,7 @@
                                     <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                     <StackPanel>
                                         <TextBlock Text="{Binding Name}" Foreground="White" FontSize="11.5"/>
-                                        <TextBlock Text="{Binding StockpileName}" Foreground="#FF6B7280" FontSize="9.5" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding StockpileName}" Foreground="#FF5E6B7E" FontSize="9.5" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </DockPanel>
                             </DataTemplate>
@@ -104,7 +104,7 @@
                     </ItemsControl>
 
                     <!-- File MPF -->
-                    <TextBlock Text="🏭 MPF" Foreground="#FF9AA4B2" FontSize="10" FontWeight="Bold" Margin="0,8,0,3"
+                    <TextBlock Text="🏭 MPF" Foreground="#FF94A1B2" FontSize="10" FontWeight="Bold" Margin="0,8,0,3"
                                Visibility="{Binding Stockpiles.HasMpf, Converter={StaticResource BoolToVis}}"/>
                     <ItemsControl ItemsSource="{Binding Stockpiles.MpfOrders}">
                         <ItemsControl.ItemTemplate>
@@ -115,7 +115,7 @@
                                     <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                     <TextBlock Foreground="White" FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
                                         <Run Text="{Binding Name, Mode=OneWay}"/>
-                                        <Run Text="{Binding CratesText, Mode=OneWay}" Foreground="#FF7FC97F" FontSize="10"/>
+                                        <Run Text="{Binding CratesText, Mode=OneWay}" Foreground="#FF53C272" FontSize="10"/>
                                     </TextBlock>
                                 </DockPanel>
                             </DataTemplate>
@@ -123,7 +123,7 @@
                     </ItemsControl>
 
                     <TextBlock Text="F8 : importer le stockpile ouvert en jeu · F9 : afficher/masquer"
-                               Foreground="#FF3E454F" FontSize="9" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                               Foreground="#FF5E6B7E" FontSize="9" Margin="0,8,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </ScrollViewer>
         </DockPanel>

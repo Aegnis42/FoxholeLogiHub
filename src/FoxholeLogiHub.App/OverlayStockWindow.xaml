@@ -5,12 +5,12 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False"
         Width="300" SizeToContent="Height" MaxHeight="560" ResizeMode="NoResize">
-    <Border Background="#EE13171E" CornerRadius="10" BorderBrush="#FF2A3340" BorderThickness="1">
+    <Border Background="#F20C1118" CornerRadius="10" BorderBrush="#FF232C3A" BorderThickness="1">
         <DockPanel Margin="10">
 
             <DockPanel DockPanel.Dock="Top" Background="Transparent" MouseLeftButtonDown="OnDragWindow" Margin="0,0,0,6">
                 <Button DockPanel.Dock="Right" Content="✕" Click="OnCloseClick"
-                        Background="Transparent" Foreground="#FF9AA4B2" BorderThickness="0"
+                        Background="Transparent" Foreground="#FF94A1B2" BorderThickness="0"
                         Padding="6,0" FontSize="13" Cursor="Hand"/>
                 <TextBlock Text="📦 Stockpile" Foreground="White" FontWeight="Bold" FontSize="12.5"
                            VerticalAlignment="Center"/>
@@ -24,7 +24,7 @@
                     <DataTemplate>
                         <TextBlock>
                             <Run Text="{Binding Name, Mode=OneWay}"/>
-                            <Run Text="{Binding Hex, Mode=OneWay, StringFormat=' — {0}'}" Foreground="#FF8A93A0"/>
+                            <Run Text="{Binding Hex, Mode=OneWay, StringFormat=' — {0}'}" Foreground="#FF94A1B2"/>
                         </TextBlock>
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
@@ -32,7 +32,7 @@
 
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <TextBlock Text="Choisis un stockpile ci-dessus." Foreground="#FF6B7280" FontSize="11">
+                    <TextBlock Text="Choisis un stockpile ci-dessus." Foreground="#FF5E6B7E" FontSize="11">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed"/>

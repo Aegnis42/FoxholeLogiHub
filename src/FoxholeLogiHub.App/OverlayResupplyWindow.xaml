@@ -8,12 +8,12 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
-    <Border Background="#EE13171E" CornerRadius="10" BorderBrush="#FF2A3340" BorderThickness="1">
+    <Border Background="#F20C1118" CornerRadius="10" BorderBrush="#FF232C3A" BorderThickness="1">
         <DockPanel Margin="10">
 
             <DockPanel DockPanel.Dock="Top" Background="Transparent" MouseLeftButtonDown="OnDragWindow" Margin="0,0,0,6">
                 <Button DockPanel.Dock="Right" Content="✕" Click="OnCloseClick"
-                        Background="Transparent" Foreground="#FF9AA4B2" BorderThickness="0"
+                        Background="Transparent" Foreground="#FF94A1B2" BorderThickness="0"
                         Padding="6,0" FontSize="13" Cursor="Hand"/>
                 <TextBlock Text="🚚 Demandes de ravitaillement" Foreground="White" FontWeight="Bold"
                            FontSize="12.5" VerticalAlignment="Center"/>
@@ -23,24 +23,24 @@
                 <StackPanel>
 
                     <!-- Mini-formulaire de création -->
-                    <Border Background="#FF1A212B" CornerRadius="6" Padding="7" Margin="0,0,0,8">
+                    <Border Background="#FF161D28" CornerRadius="6" Padding="7" Margin="0,0,0,8">
                         <StackPanel>
-                            <TextBlock Text="NOUVELLE DEMANDE" Foreground="#FF6B7280" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
+                            <TextBlock Text="NOUVELLE DEMANDE" Foreground="#FF5E6B7E" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
                             <TextBox Text="{Binding Resupply.NewTitle, UpdateSourceTrigger=PropertyChanged}"
-                                     FontSize="11.5" Padding="4" Background="#FF12161C" Foreground="White"
-                                     BorderBrush="#FF2A3340" BorderThickness="1" CaretBrush="White"
+                                     FontSize="11.5" Padding="4" Background="#FF10161F" Foreground="White"
+                                     BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                      ToolTip="Titre (ex. : Tenir Callahan's Gate)"/>
                             <ComboBox IsEditable="True" ItemsSource="{Binding Resupply.Hexes}"
                                       Text="{Binding Resupply.NewHex, UpdateSourceTrigger=PropertyChanged}"
                                       FontSize="11.5" Padding="4" Margin="0,4,0,0" ToolTip="Hexagone"/>
                             <DockPanel Margin="0,4,0,0">
                                 <Button DockPanel.Dock="Right" Content="➕" Click="OnAddDraftItem"
-                                        Background="#FF2A475E" Foreground="White" BorderThickness="0"
+                                        Background="#FF2D63D8" Foreground="White" BorderThickness="0"
                                         Padding="8,2" Margin="4,0,0,0" Cursor="Hand" ToolTip="Ajouter l'item à la demande"/>
                                 <TextBox DockPanel.Dock="Right" Width="52" Margin="4,0,0,0"
                                          Text="{Binding Resupply.DraftItemQuantity, UpdateSourceTrigger=PropertyChanged}"
-                                         FontSize="11.5" Padding="4" Background="#FF12161C" Foreground="White"
-                                         BorderBrush="#FF2A3340" BorderThickness="1" CaretBrush="White" ToolTip="Quantité"/>
+                                         FontSize="11.5" Padding="4" Background="#FF10161F" Foreground="White"
+                                         BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White" ToolTip="Quantité"/>
                                 <ComboBox IsEditable="True" ItemsSource="{Binding Resupply.ItemNames}"
                                           Text="{Binding Resupply.DraftItemName, UpdateSourceTrigger=PropertyChanged}"
                                           FontSize="11.5" Padding="4" ToolTip="Item"/>
@@ -51,12 +51,12 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="#FF252C38" CornerRadius="4" Padding="5,2" Margin="0,0,4,4">
+                                        <Border Background="#FF1F2937" CornerRadius="4" Padding="5,2" Margin="0,0,4,4">
                                             <StackPanel Orientation="Horizontal">
                                                 <Image Source="{Binding Icon}" Width="13" Height="13" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                 <TextBlock FontSize="10.5" Foreground="White" VerticalAlignment="Center">
                                                     <Run Text="{Binding Name, Mode=OneWay}"/>
-                                                    <Run Text="{Binding QtyText, Mode=OneWay}" Foreground="#FF7FC97F"/>
+                                                    <Run Text="{Binding QtyText, Mode=OneWay}" Foreground="#FF53C272"/>
                                                 </TextBlock>
                                             </StackPanel>
                                         </Border>
@@ -64,17 +64,17 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <Button Content="Créer la demande" Click="OnCreateRequest" HorizontalAlignment="Right"
-                                    Background="#FF2F6B3A" Foreground="White" BorderThickness="0"
+                                    Background="#FF1F8A4C" Foreground="White" BorderThickness="0"
                                     Padding="10,4" Margin="0,4,0,0" FontSize="11" Cursor="Hand"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Demandes ouvertes -->
-                    <TextBlock Text="OUVERTES" Foreground="#FF6B7280" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
+                    <TextBlock Text="OUVERTES" Foreground="#FF5E6B7E" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
                     <ItemsControl ItemsSource="{Binding Resupply.OpenRequests}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FF1A202A" CornerRadius="6" Padding="7,5" Margin="0,0,0,4">
+                                <Border Background="#FF161D28" CornerRadius="6" Padding="7,5" Margin="0,0,0,4">
                                     <StackPanel>
                                         <DockPanel>
                                             <Border DockPanel.Dock="Right" Background="#33FFFFFF" CornerRadius="3" Padding="4,1"
@@ -84,7 +84,7 @@
                                             <TextBlock Text="{Binding Title}" Foreground="White" FontSize="11.5" FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </DockPanel>
-                                        <TextBlock Text="{Binding LocationLabel}" Foreground="#FF6B7280" FontSize="9.5"/>
+                                        <TextBlock Text="{Binding LocationLabel}" Foreground="#FF5E6B7E" FontSize="9.5"/>
                                         <ItemsControl ItemsSource="{Binding Items}" Margin="0,3,0,0">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
@@ -93,13 +93,13 @@
                                                 <DataTemplate>
                                                     <StackPanel Orientation="Horizontal" Margin="0,0,7,2">
                                                         <Image Source="{Binding Icon}" Width="13" Height="13" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding QtyText}" Foreground="#FFB8C4D0" FontSize="10" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding QtyText}" Foreground="#FFB6C2D1" FontSize="10" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                         <Button Content="{Binding ClaimButtonText}" Click="OnClaimRequest" HorizontalAlignment="Right"
-                                                Background="#FF2A475E" Foreground="White" BorderThickness="0"
+                                                Background="#FF2D63D8" Foreground="White" BorderThickness="0"
                                                 Padding="8,2" FontSize="10" Cursor="Hand" Margin="0,3,0,0"
                                                 Visibility="{Binding CanClaim, Converter={StaticResource BoolToVis}}"/>
                                     </StackPanel>

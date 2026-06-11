@@ -35,6 +35,10 @@ public partial class MainWindow : Window
         DataContext = _vm;
         Loaded += (_, _) => _vm.Load();
 
+        // WindowChrome déborde de ~7 px hors écran en plein écran : compense par un padding.
+        StateChanged += (_, _) =>
+            WindowRoot.Padding = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
+
         // Ajuste la vue de la carte à sa première apparition (le viewport n'est mesuré
         // qu'une fois l'onglet visible).
         MapViewport.IsVisibleChanged += (_, _) =>
@@ -306,6 +310,20 @@ public partial class MainWindow : Window
     private void OnNavMap(object sender, RoutedEventArgs e) => _vm.ShowMap();
     private void OnNavCalculator(object sender, RoutedEventArgs e) => _vm.ShowCalculator();
     private void OnNavSettings(object sender, RoutedEventArgs e) => _vm.ShowSettings();
+
+    // --- Barre de titre personnalisée (WindowChrome) ---
+
+    private void OnCaptionMinimize(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
+
+    private void OnCaptionMaximize(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized)
+            SystemCommands.RestoreWindow(this);
+        else
+            SystemCommands.MaximizeWindow(this);
+    }
+
+    private void OnCaptionClose(object sender, RoutedEventArgs e) => Close();
 
     // --- Paramètres ---
 

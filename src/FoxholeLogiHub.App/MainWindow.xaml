@@ -5,96 +5,64 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="FoxholeLogiHub" Height="720" Width="980"
-        Background="#FF1B1E24" Foreground="#FFE6E6E6"
-        FontFamily="Segoe UI">
+        Background="{StaticResource B.Bg}" Foreground="{StaticResource B.Text}"
+        FontFamily="{StaticResource F.Ui}"
+        WindowStyle="SingleBorderWindow">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="36" ResizeBorderThickness="6" CornerRadius="0"
+                      GlassFrameThickness="0,0,0,1" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-
         <!-- Contre-échelle des marqueurs/labels de la carte (partagée : mise à jour par le
              code-behind à chaque zoom → tous les éléments gardent une taille écran lisible). -->
         <ScaleTransform x:Key="MapMarkerScale" ScaleX="1" ScaleY="1"/>
         <ScaleTransform x:Key="MapLabelScale" ScaleX="1" ScaleY="1"/>
-
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#FFE6E6E6"/>
-        </Style>
-        <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background" Value="#FF252A33"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-        </Style>
-        <Style x:Key="Label" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#FF9AA4B2"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Margin" Value="0,0,0,2"/>
-        </Style>
-        <Style x:Key="FlatButton" TargetType="Button">
-            <Setter Property="Background" Value="#FF333A45"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="14,7"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#FFE6E6E6"/>
-            <Setter Property="Margin" Value="0,0,14,4"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style x:Key="NavButtonBase" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#FFC7CDD6"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding" Value="14,10"/>
-            <Setter Property="Margin" Value="0,2"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
 
-    <Grid>
+    <Border x:Name="WindowRoot" Background="{StaticResource B.Bg}">
+      <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ====================== BARRE DE TITRE ====================== -->
+        <Border Grid.Row="0" Background="{StaticResource B.BgDeep}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="12,0,0,0">
+                    <Image Source="pack://application:,,,/Assets/logo.png" Width="18" Height="18"
+                           RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                    <TextBlock Text="FoxholeLogiHub" FontSize="12.5" FontWeight="SemiBold"
+                               Foreground="{StaticResource B.TextDim}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    <TextBlock Text="{Binding AppVersion}" FontSize="10.5" Foreground="{StaticResource B.TextMuted}"
+                               VerticalAlignment="Center" Margin="8,1,0,0"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="OnCaptionMinimize"/>
+                    <Button Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="OnCaptionMaximize"/>
+                    <Button Style="{StaticResource CaptionClose}" Content="&#xE8BB;" Click="OnCaptionClose"/>
+                </StackPanel>
+                <Border/>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="180"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <Border Grid.Column="0" Background="#FF15181E" Padding="14">
+        <Border Grid.Column="0" Background="{StaticResource B.BgDeep}" Padding="12,10,12,12" BorderBrush="{StaticResource B.Border}" BorderThickness="0,1,1,0">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,4,0,18">
-                    <Image Source="pack://application:,,,/Assets/logo.png" Width="26" Height="26"
-                           RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
-                    <TextBlock Text="FoxholeLogiHub" FontSize="16" FontWeight="Bold"
-                               VerticalAlignment="Center" Margin="8,0,0,0"/>
-                </StackPanel>
-
                 <StackPanel DockPanel.Dock="Top">
                     <Button Click="OnNavDashboard">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsDashboardActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -102,7 +70,7 @@
                         </Button.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📊  Dashboard" VerticalAlignment="Center"/>
-                            <Border Background="#FFC03A3A" CornerRadius="9" Padding="6,1" Margin="8,0,0,0"
+                            <Border Background="#FFD23B41" CornerRadius="9" Padding="6,1" Margin="8,0,0,0"
                                     VerticalAlignment="Center"
                                     Visibility="{Binding Stockpiles.HasCritical, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding Stockpiles.CriticalCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
@@ -114,7 +82,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsMapActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -126,7 +95,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsCalculatorActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -138,7 +108,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsSettingsActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -150,7 +121,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsProfileActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -162,7 +134,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsFriendsActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -174,7 +147,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsRegimentActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -186,7 +160,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsStockpilesActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -198,7 +173,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsResupplyActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -206,7 +182,7 @@
                         </Button.Style>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🚚  Ravitaillement" VerticalAlignment="Center"/>
-                            <Border Background="#FF2A6E8F" CornerRadius="9" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                            <Border Background="#FF2D63D8" CornerRadius="9" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
                                     Visibility="{Binding Resupply.HasOpen, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding Resupply.OpenCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
                             </Border>
@@ -217,7 +193,8 @@
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsTakenActive}" Value="True">
-                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Tag" Value="Active"/>
+                                        <Setter Property="Background" Value="#FF151D2B"/>
                                         <Setter Property="Foreground" Value="White"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -235,13 +212,13 @@
 
                 <!-- Mise à jour prête + version (Velopack) -->
                 <Button DockPanel.Dock="Bottom" Content="{Binding UpdateLabel}" Style="{StaticResource FlatButton}"
-                        Background="#FF2F6B3A" Padding="8,6" Margin="0,0,0,8" Click="OnApplyUpdate"
+                        Background="#FF1F8A4C" Padding="8,6" Margin="0,0,0,8" Click="OnApplyUpdate"
                         Visibility="{Binding UpdateReady, Converter={StaticResource BoolToVis}}"
                         ToolTip="La nouvelle version est téléchargée — redémarre pour l'appliquer"/>
                 <Button DockPanel.Dock="Bottom" Content="🗖 Overlay en jeu (F9)" Style="{StaticResource FlatButton}"
-                        Background="#FF262B34" Padding="8,5" Margin="0,0,0,8" Click="OnToggleOverlay"
+                        Background="#FF1A222E" Padding="8,5" Margin="0,0,0,8" Click="OnToggleOverlay"
                         ToolTip="Petite fenêtre toujours visible : alertes, MPF, recherche — par-dessus le jeu en mode fenêtré sans bordure. F9 pour basculer."/>
-                <TextBlock DockPanel.Dock="Bottom" Text="{Binding AppVersion}" Foreground="#FF4A515C"
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding AppVersion}" Foreground="#FF5E6B7E"
                            FontSize="10.5" Margin="4,0,0,6"/>
 
                 <!-- Présence en bas -->
@@ -249,7 +226,7 @@
                     <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,6,0">
                         <Ellipse.Style>
                             <Style TargetType="Ellipse">
-                                <Setter Property="Fill" Value="#FF6B7280"/>
+                                <Setter Property="Fill" Value="#FF5E6B7E"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Friends.Connected}" Value="True">
                                         <Setter Property="Fill" Value="#FF4CC26A"/>
@@ -258,7 +235,7 @@
                             </Style>
                         </Ellipse.Style>
                     </Ellipse>
-                    <TextBlock Text="{Binding Friends.Status}" FontSize="10" Foreground="#FF9AA4B2"
+                    <TextBlock Text="{Binding Friends.Status}" FontSize="10" Foreground="#FF94A1B2"
                                TextWrapping="Wrap" Width="130"/>
                 </StackPanel>
             </DockPanel>
@@ -276,14 +253,14 @@
 
                 <StackPanel Grid.Row="0" Margin="0,0,0,14">
                     <TextBlock Text="Tableau de bord" FontSize="22" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding Stockpiles.WarBanner}" Foreground="#FF7FA8D9" FontSize="12" Margin="0,4,0,0"
+                    <TextBlock Text="{Binding Stockpiles.WarBanner}" Foreground="#FF6CA6F2" FontSize="12" Margin="0,4,0,0"
                                Visibility="{Binding Stockpiles.HasWar, Converter={StaticResource BoolToVis}}"/>
-                    <TextBlock Text="{Binding Stockpiles.AlertsSummary}" Foreground="#FF9AA4B2" FontSize="13" Margin="0,3,0,0"/>
+                    <TextBlock Text="{Binding Stockpiles.AlertsSummary}" Foreground="#FF94A1B2" FontSize="13" Margin="0,3,0,0"/>
                 </StackPanel>
 
                 <!-- Non connecté -->
                 <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam (onglet Amis) pour voir tes alertes."
-                           Foreground="#FF6B7280" FontSize="14"
+                           Foreground="#FF5E6B7E" FontSize="14"
                            Visibility="{Binding Stockpiles.ShowAuthNeeded, Converter={StaticResource BoolToVis}}"/>
 
                 <!-- Alertes -->
@@ -296,7 +273,7 @@
                             <ItemsControl ItemsSource="{Binding Stockpiles.ThreatenedStockpiles}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="#FF2A1B1B" BorderBrush="#FFC03A3A" BorderThickness="1"
+                                        <Border Background="#FF2A1B1B" BorderBrush="#FFD23B41" BorderThickness="1"
                                                 CornerRadius="8" Margin="0,0,0,6" Padding="12,8">
                                             <DockPanel>
                                                 <Border DockPanel.Dock="Right" Background="{Binding ThreatBrush}" CornerRadius="4"
@@ -305,7 +282,7 @@
                                                 </Border>
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="{Binding LocationLabel}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                    <TextBlock Text="{Binding LocationLabel}" Foreground="#FF94A1B2" FontSize="11"/>
                                                 </StackPanel>
                                             </DockPanel>
                                         </Border>
@@ -315,7 +292,7 @@
                         </StackPanel>
 
                         <TextBlock Text="Aucune alerte. Définis des seuils bas/critique sur tes items (onglet Stockpiles) pour les voir apparaître ici."
-                                   Foreground="#FF6B7280" FontSize="13" TextWrapping="Wrap"
+                                   Foreground="#FF5E6B7E" FontSize="13" TextWrapping="Wrap"
                                    Visibility="{Binding Stockpiles.NoAlerts, Converter={StaticResource BoolToVis}}"/>
                         <ItemsControl ItemsSource="{Binding Stockpiles.AlertsView}">
                             <ItemsControl.GroupStyle>
@@ -324,10 +301,10 @@
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="0,14,0,6">
                                                 <TextBlock Text="📦" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" Foreground="#FFE6E6E6"
+                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" Foreground="#FFE9EDF3"
                                                            VerticalAlignment="Center"/>
-                                                <Border Background="#FF333A45" CornerRadius="9" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding ItemCount}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                <Border Background="#FF202A38" CornerRadius="9" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ItemCount}" Foreground="#FF94A1B2" FontSize="11"/>
                                                 </Border>
                                             </StackPanel>
                                         </DataTemplate>
@@ -336,14 +313,14 @@
                             </ItemsControl.GroupStyle>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#FF20242C" CornerRadius="8" Margin="0,0,0,6">
+                                    <Border Background="#FF131A24" CornerRadius="8" Margin="0,0,0,6">
                                         <Grid>
                                             <Border Width="4" HorizontalAlignment="Left" Background="{Binding SeverityBrush}"
                                                     CornerRadius="8,0,0,8"/>
                                             <DockPanel Margin="14,8,12,8">
                                                 <Grid Width="36" Height="36" DockPanel.Dock="Left" Margin="0,0,12,0" VerticalAlignment="Center">
-                                                    <Border Background="#FF1B1E24" CornerRadius="6"/>
-                                                    <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontWeight="Bold"
+                                                    <Border Background="#FF10161F" CornerRadius="6"/>
+                                                    <TextBlock Text="{Binding Initial}" Foreground="#FF94A1B2" FontWeight="Bold"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     <Image Source="{Binding Icon}" Width="34" Height="34"
                                                            RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -351,7 +328,7 @@
                                                 <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
                                                     <TextBlock Text="{Binding QuantityText}" FontWeight="Bold" FontSize="17"
                                                                Foreground="{Binding SeverityBrush}" TextAlignment="Right"/>
-                                                    <TextBlock Text="{Binding ThresholdText}" Foreground="#FF6B7280" FontSize="10"
+                                                    <TextBlock Text="{Binding ThresholdText}" Foreground="#FF5E6B7E" FontSize="10"
                                                                TextAlignment="Right"/>
                                                 </StackPanel>
                                                 <StackPanel VerticalAlignment="Center">
@@ -418,9 +395,9 @@
                                         Margin="10,0,0,0" Click="OnSaveProfileClick"/>
                             </Grid>
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <TextBlock Text="Steam : " Foreground="#FF9AA4B2" FontSize="12"/>
+                                <TextBlock Text="Steam : " Foreground="#FF94A1B2" FontSize="12"/>
                                 <TextBlock Text="{Binding SteamId}" FontSize="12"/>
-                                <TextBlock Text="  ·  pseudo Steam : " Foreground="#FF9AA4B2" FontSize="12"/>
+                                <TextBlock Text="  ·  pseudo Steam : " Foreground="#FF94A1B2" FontSize="12"/>
                                 <TextBlock Text="{Binding PersonaName}" FontSize="12"/>
                             </StackPanel>
                         </StackPanel>
@@ -464,7 +441,7 @@
                             <ItemsControl ItemsSource="{Binding Loadouts}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="#FF2E343F" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                                        <Border Background="#FF1F2937" CornerRadius="6" Padding="12" Margin="0,0,0,10">
                                             <StackPanel>
                                                 <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Bold"
                                                            Margin="0,0,0,8"/>
@@ -473,11 +450,11 @@
                                                         <DataTemplate>
                                                             <DockPanel Margin="0,1">
                                                                 <TextBlock Text="{Binding Slot}" Width="80"
-                                                                           Foreground="#FF7FA8D9" FontSize="12"/>
+                                                                           Foreground="#FF6CA6F2" FontSize="12"/>
                                                                 <TextBlock Text="{Binding CodeName}" FontSize="13"/>
                                                                 <TextBlock Text="{Binding Quantity, StringFormat='×{0}'}"
                                                                            DockPanel.Dock="Right" HorizontalAlignment="Right"
-                                                                           Foreground="#FF9AA4B2"/>
+                                                                           Foreground="#FF94A1B2"/>
                                                             </DockPanel>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
@@ -491,7 +468,7 @@
                                                                 <TextBlock Text="{Binding CodeName}" FontSize="13"/>
                                                                 <TextBlock Text="{Binding Quantity, StringFormat='×{0}'}"
                                                                            DockPanel.Dock="Right" HorizontalAlignment="Right"
-                                                                           Foreground="#FF9AA4B2"/>
+                                                                           Foreground="#FF94A1B2"/>
                                                             </DockPanel>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
@@ -505,7 +482,7 @@
                     </DockPanel>
                 </Border>
 
-                <TextBlock Grid.Row="4" Text="{Binding Status}" Foreground="#FF9AA4B2" FontSize="12"/>
+                <TextBlock Grid.Row="4" Text="{Binding Status}" Foreground="#FF94A1B2" FontSize="12"/>
             </Grid>
 
             <!-- ====================== AMIS ====================== -->
@@ -531,11 +508,11 @@
                             <StackPanel>
                                 <TextBlock Text="MON CODE D'AMI" Style="{StaticResource Label}"/>
                                 <TextBox Text="{Binding MyFriendCode, Mode=OneWay}" IsReadOnly="True"
-                                         FontSize="26" FontWeight="Bold" Foreground="#FF7FA8D9"
+                                         FontSize="26" FontWeight="Bold" Foreground="#FF6CA6F2"
                                          Background="Transparent" BorderThickness="0" Padding="0"
                                          FontFamily="Consolas"/>
                                 <TextBlock Text="Partage ce code pour qu'on t'ajoute en ami."
-                                           Foreground="#FF9AA4B2" FontSize="11" Margin="0,4,0,0"/>
+                                           Foreground="#FF94A1B2" FontSize="11" Margin="0,4,0,0"/>
                             </StackPanel>
                         </DockPanel>
                     </Grid>
@@ -551,8 +528,8 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" Text="{Binding AddCodeInput, UpdateSourceTrigger=PropertyChanged}"
-                                     FontSize="15" Padding="8" Background="#FF1B1E24" Foreground="White"
-                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                     FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
+                                     BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                      VerticalContentAlignment="Center"/>
                             <Button Grid.Column="1" Content="Envoyer" Style="{StaticResource FlatButton}"
                                     Margin="10,0,0,0" Click="OnSendRequestClick" IsEnabled="{Binding Connected}"/>
@@ -591,7 +568,7 @@
 
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding Faction}" FontSize="11" Foreground="#FF9AA4B2"/>
+                                                <TextBlock Text="{Binding Faction}" FontSize="11" Foreground="#FF94A1B2"/>
                                             </StackPanel>
 
                                             <Button Grid.Column="2" Content="Accepter" Style="{StaticResource FlatButton}"
@@ -614,14 +591,14 @@
                                    Margin="0,0,0,12"/>
                         <Grid DockPanel.Dock="Top">
                             <TextBlock Text="Aucun ami pour l'instant. Partage ton code ou ajoute un code ci-dessus."
-                                       Foreground="#FF6B7280" FontSize="13"
+                                       Foreground="#FF5E6B7E" FontSize="13"
                                        Visibility="{Binding HasNoFriends, Converter={StaticResource BoolToVis}}"/>
                         </Grid>
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding Friends}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="#FF2E343F" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                        <Border Background="#FF1F2937" CornerRadius="6" Padding="10" Margin="0,0,0,8">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/>
@@ -641,13 +618,13 @@
                                                         </Ellipse.Fill>
                                                     </Ellipse>
                                                     <Ellipse Width="12" Height="12" HorizontalAlignment="Right"
-                                                             VerticalAlignment="Bottom" Stroke="#FF2E343F"
+                                                             VerticalAlignment="Bottom" Stroke="#FF1F2937"
                                                              StrokeThickness="2" Fill="{Binding StatusBrush}"/>
                                                 </Grid>
 
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="{Binding Faction}" FontSize="11" Foreground="#FF9AA4B2"/>
+                                                    <TextBlock Text="{Binding Faction}" FontSize="11" Foreground="#FF94A1B2"/>
                                                 </StackPanel>
 
                                                 <TextBlock Grid.Column="2" Text="{Binding StatusText}" FontSize="12"
@@ -672,14 +649,14 @@
               <Grid DataContext="{Binding Regiment}">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Régiment" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
-                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,8,0,0"/>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="#FF94A1B2" FontSize="12" Margin="0,8,0,0"/>
 
                     <Grid>
                         <!-- État : connexion requise -->
                         <Border Style="{StaticResource Card}" VerticalAlignment="Top"
                                 Visibility="{Binding ShowAuthNeeded, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="Connecte-toi avec Steam (onglet Amis) pour créer ou gérer ton régiment."
-                                       Foreground="#FF9AA4B2" FontSize="13" TextWrapping="Wrap"/>
+                                       Foreground="#FF94A1B2" FontSize="13" TextWrapping="Wrap"/>
                         </Border>
 
                         <!-- État : pas de régiment -->
@@ -704,7 +681,7 @@
                                                             <StackPanel VerticalAlignment="Center">
                                                                 <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold"/>
                                                                 <TextBlock Text="{Binding FromDisplayName, StringFormat='Invité par {0}'}"
-                                                                           FontSize="11" Foreground="#FF9AA4B2"/>
+                                                                           FontSize="11" Foreground="#FF94A1B2"/>
                                                             </StackPanel>
                                                         </DockPanel>
                                                     </Border>
@@ -718,15 +695,15 @@
                                     <StackPanel>
                                         <TextBlock Text="CRÉER UN RÉGIMENT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
                                         <TextBox Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"
-                                                 FontSize="15" Padding="8" Background="#FF1B1E24" Foreground="White"
-                                                 BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                 FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
+                                                 BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                  ToolTip="Nom du régiment"/>
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Créer" Style="{StaticResource FlatButton}"
-                                                    Background="#FF2A475E" Padding="16,8" Margin="10,0,0,0" Click="OnCreateRegiment"/>
+                                                    Background="#FF2D63D8" Padding="16,8" Margin="10,0,0,0" Click="OnCreateRegiment"/>
                                             <TextBox Text="{Binding NewTag, UpdateSourceTrigger=PropertyChanged}"
-                                                     FontSize="15" Padding="8" Background="#FF1B1E24" Foreground="White"
-                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                     FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
+                                                     BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      ToolTip="Tag court, ex. FOX"/>
                                         </DockPanel>
                                     </StackPanel>
@@ -739,8 +716,8 @@
                                             <Button DockPanel.Dock="Right" Content="Rejoindre" Style="{StaticResource FlatButton}"
                                                     Padding="16,8" Margin="10,0,0,0" Click="OnJoinRegiment"/>
                                             <TextBox Text="{Binding JoinCode, UpdateSourceTrigger=PropertyChanged}"
-                                                     FontSize="15" Padding="8" Background="#FF1B1E24" Foreground="White"
-                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                     FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
+                                                     BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      VerticalContentAlignment="Center"/>
                                         </DockPanel>
                                     </StackPanel>
@@ -757,7 +734,7 @@
                                     <DockPanel>
                                         <StackPanel DockPanel.Dock="Right" VerticalAlignment="Top" HorizontalAlignment="Right">
                                             <Button Content="Régénérer le code" Style="{StaticResource FlatButton}"
-                                                    Background="#FF333A45" Padding="10,5" Margin="0,0,0,6" Click="OnRegenCode"
+                                                    Background="#FF202A38" Padding="10,5" Margin="0,0,0,6" Click="OnRegenCode"
                                                     Visibility="{Binding CanInvite, Converter={StaticResource BoolToVis}}"/>
                                             <Button Content="🏁 Fin de guerre (reset)" Style="{StaticResource FlatButton}"
                                                     Background="#FF4A3A2A" Padding="10,5" Margin="0,0,0,6" Click="OnWarReset"
@@ -782,12 +759,12 @@
                                         <StackPanel>
                                             <TextBlock FontSize="22" FontWeight="Bold">
                                                 <Run Text="{Binding Name, Mode=OneWay}"/>
-                                                <Run Text="{Binding Tag, Mode=OneWay, StringFormat=' [{0}]'}" Foreground="#FF9AA4B2"/>
+                                                <Run Text="{Binding Tag, Mode=OneWay, StringFormat=' [{0}]'}" Foreground="#FF94A1B2"/>
                                             </TextBlock>
-                                            <TextBlock Text="{Binding Faction}" FontSize="12" Foreground="#FF7FA8D9" Margin="0,2,0,8"/>
+                                            <TextBlock Text="{Binding Faction}" FontSize="12" Foreground="#FF6CA6F2" Margin="0,2,0,8"/>
                                             <TextBlock Text="CODE D'INVITATION" Style="{StaticResource Label}"/>
                                             <TextBox Text="{Binding InviteCode, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas"
-                                                     FontSize="20" FontWeight="Bold" Foreground="#FF7FA8D9"
+                                                     FontSize="20" FontWeight="Bold" Foreground="#FF6CA6F2"
                                                      Background="Transparent" BorderThickness="0" Padding="0"/>
                                         </StackPanel>
                                     </DockPanel>
@@ -798,27 +775,27 @@
                                         Visibility="{Binding IAmOwner, Converter={StaticResource BoolToVis}}">
                                     <StackPanel>
                                         <TextBlock Text="🔔 Webhook Discord" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                        <TextBlock Foreground="#FF9AA4B2" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"
+                                        <TextBlock Foreground="#FF94A1B2" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"
                                                    Text="Les alertes du régiment (stock critique, stockpile menacé, demandes de ravitaillement créées/prises/livrées) seront postées dans ton salon Discord. Crée un webhook dans Discord : Paramètres du salon → Intégrations → Webhooks, puis colle son URL ici."/>
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Enregistrer" Style="{StaticResource FlatButton}"
-                                                    Background="#FF2A475E" Padding="14,6" Margin="8,0,0,0" Click="OnSaveWebhook"/>
+                                                    Background="#FF2D63D8" Padding="14,6" Margin="8,0,0,0" Click="OnSaveWebhook"/>
                                             <TextBox Text="{Binding WebhookInput, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="7"
-                                                     Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                                     Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                                      CaretBrush="White" ToolTip="https://discord.com/api/webhooks/…"/>
                                         </DockPanel>
                                         <DockPanel Margin="0,6,0,0">
                                             <Button DockPanel.Dock="Right" Content="Désactiver" Style="{StaticResource FlatButton}"
-                                                    Background="#FF5A3535" Padding="10,6" Margin="8,0,0,0" Click="OnDisableWebhook"
+                                                    Background="#FF8E3438" Padding="10,6" Margin="8,0,0,0" Click="OnDisableWebhook"
                                                     ToolTip="Coupe le webhook et sa mention"/>
-                                            <TextBlock DockPanel.Dock="Left" Text="Rôle à mentionner :" Foreground="#FF9AA4B2" FontSize="12"
+                                            <TextBlock DockPanel.Dock="Left" Text="Rôle à mentionner :" Foreground="#FF94A1B2" FontSize="12"
                                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                                             <TextBox Text="{Binding WebhookTagInput, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="7"
-                                                     Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                                     Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                                      CaretBrush="White"
                                                      ToolTip="ID du rôle Discord (clic droit sur le rôle → Copier l'identifiant), ou @everyone / @here — pingué en tête de chaque alerte. Vide = aucune mention. Le rôle doit être mentionnable."/>
                                         </DockPanel>
-                                        <TextBlock Text="{Binding WebhookState}" Foreground="#FF7FA8D9" FontSize="12" Margin="0,6,0,0"/>
+                                        <TextBlock Text="{Binding WebhookState}" Foreground="#FF6CA6F2" FontSize="12" Margin="0,6,0,0"/>
                                     </StackPanel>
                                 </Border>
 
@@ -829,7 +806,7 @@
                                         <ItemsControl ItemsSource="{Binding Members}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                                    <Border Background="#FF1F2937" CornerRadius="6" Padding="10" Margin="0,0,0,8">
                                                         <Grid>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="Auto"/>
@@ -843,11 +820,11 @@
                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                 <Ellipse><Ellipse.Fill><ImageBrush ImageSource="{Binding AvatarUrl}" Stretch="UniformToFill"/></Ellipse.Fill></Ellipse>
                                                                 <Ellipse Width="11" Height="11" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                                         Stroke="#FF2E343F" StrokeThickness="2" Fill="{Binding StatusBrush}"/>
+                                                                         Stroke="#FF1F2937" StrokeThickness="2" Fill="{Binding StatusBrush}"/>
                                                             </Grid>
                                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                                 <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"/>
-                                                                <TextBlock Text="{Binding RoleBadge}" FontSize="11" Foreground="#FF9AA4B2"/>
+                                                                <TextBlock Text="{Binding RoleBadge}" FontSize="11" Foreground="#FF94A1B2"/>
                                                             </StackPanel>
                                                             <ComboBox Grid.Column="2" Width="120" Margin="0,0,8,0" VerticalAlignment="Center"
                                                                       ItemsSource="{Binding Roles}" DisplayMemberPath="Name" SelectedValuePath="Id"
@@ -871,10 +848,10 @@
                                         <ItemsControl ItemsSource="{Binding Friends}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="8" Margin="0,0,0,6">
+                                                    <Border Background="#FF1F2937" CornerRadius="6" Padding="8" Margin="0,0,0,6">
                                                         <DockPanel>
                                                             <Button DockPanel.Dock="Right" Content="Inviter" Style="{StaticResource FlatButton}"
-                                                                    Background="#FF2A475E" Padding="12,5" Click="OnInviteFriendToReg"/>
+                                                                    Background="#FF2D63D8" Padding="12,5" Click="OnInviteFriendToReg"/>
                                                             <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontSize="13"/>
                                                         </DockPanel>
                                                     </Border>
@@ -891,7 +868,7 @@
                                         <ItemsControl ItemsSource="{Binding Roles}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                                    <Border Background="#FF1F2937" CornerRadius="6" Padding="10" Margin="0,0,0,8">
                                                         <StackPanel>
                                                             <DockPanel>
                                                                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
@@ -921,8 +898,8 @@
                                             <Button DockPanel.Dock="Right" Content="+ Rôle" Style="{StaticResource FlatButton}"
                                                     Padding="14,6" Margin="10,0,0,0" Click="OnCreateRole"/>
                                             <TextBox Text="{Binding NewRoleName, UpdateSourceTrigger=PropertyChanged}"
-                                                     FontSize="13" Padding="6" Background="#FF1B1E24" Foreground="White"
-                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                     FontSize="13" Padding="6" Background="#FF10161F" Foreground="White"
+                                                     BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      VerticalContentAlignment="Center" ToolTip="Nom du nouveau rôle"/>
                                         </DockPanel>
                                     </StackPanel>
@@ -935,7 +912,7 @@
                                         <ItemsControl ItemsSource="{Binding Alliances}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                                                    <Border Background="#FF1F2937" CornerRadius="6" Padding="10" Margin="0,0,0,8">
                                                         <DockPanel>
                                                             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                                                                 <Button Content="Accepter" Style="{StaticResource FlatButton}"
@@ -952,7 +929,7 @@
                                                                     Background="{Binding FactionBrush}"/>
                                                             <StackPanel VerticalAlignment="Center">
                                                                 <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold"/>
-                                                                <TextBlock Text="{Binding StateText}" FontSize="11" Foreground="#FF9AA4B2"/>
+                                                                <TextBlock Text="{Binding StateText}" FontSize="11" Foreground="#FF94A1B2"/>
                                                             </StackPanel>
                                                         </DockPanel>
                                                     </Border>
@@ -961,10 +938,10 @@
                                         </ItemsControl>
                                         <DockPanel Margin="0,4,0,0" Visibility="{Binding CanManageAlliances, Converter={StaticResource BoolToVis}}">
                                             <Button DockPanel.Dock="Right" Content="Proposer" Style="{StaticResource FlatButton}"
-                                                    Background="#FF2A475E" Padding="14,6" Margin="10,0,0,0" Click="OnProposeAlliance"/>
+                                                    Background="#FF2D63D8" Padding="14,6" Margin="10,0,0,0" Click="OnProposeAlliance"/>
                                             <TextBox Text="{Binding AllianceCode, UpdateSourceTrigger=PropertyChanged}"
-                                                     FontSize="13" Padding="6" Background="#FF1B1E24" Foreground="White"
-                                                     BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                     FontSize="13" Padding="6" Background="#FF10161F" Foreground="White"
+                                                     BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      VerticalContentAlignment="Center" ToolTip="Code d'invitation du régiment à allier"/>
                                         </DockPanel>
                                     </StackPanel>
@@ -981,17 +958,17 @@
               <Grid DataContext="{Binding Stockpiles}">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Stockpiles" FontSize="22" FontWeight="Bold" Margin="0,0,0,16"/>
-                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,8,0,0"/>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="#FF94A1B2" FontSize="12" Margin="0,8,0,0"/>
                     <Grid>
                         <Border Style="{StaticResource Card}" VerticalAlignment="Top"
                                 Visibility="{Binding ShowAuthNeeded, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="Connecte-toi avec Steam (onglet Amis) pour gérer les stockpiles."
-                                       Foreground="#FF9AA4B2" FontSize="13" TextWrapping="Wrap"/>
+                                       Foreground="#FF94A1B2" FontSize="13" TextWrapping="Wrap"/>
                         </Border>
                         <Border Style="{StaticResource Card}" VerticalAlignment="Top"
                                 Visibility="{Binding ShowNoRegiment, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="Rejoins ou crée un régiment (onglet Régiment) : les stockpiles appartiennent au régiment."
-                                       Foreground="#FF9AA4B2" FontSize="13" TextWrapping="Wrap"/>
+                                       Foreground="#FF94A1B2" FontSize="13" TextWrapping="Wrap"/>
                         </Border>
 
                         <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -1009,8 +986,8 @@
                                             <StackPanel Grid.Column="0" Margin="0,0,8,0">
                                                 <TextBlock Text="NOM" Style="{StaticResource Label}"/>
                                                 <TextBox Text="{Binding FormName, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontSize="14" Padding="7" Background="#FF1B1E24" Foreground="White"
-                                                         BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"/>
+                                                         FontSize="14" Padding="7" Background="#FF10161F" Foreground="White"
+                                                         BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="TYPE" Style="{StaticResource Label}"/>
@@ -1031,8 +1008,8 @@
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="LIEU (optionnel)" Style="{StaticResource Label}"/>
                                                 <TextBox Text="{Binding FormTown, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontSize="14" Padding="7" Background="#FF1B1E24" Foreground="White"
-                                                         BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"/>
+                                                         FontSize="14" Padding="7" Background="#FF10161F" Foreground="White"
+                                                         BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"/>
                                             </StackPanel>
                                         </Grid>
                                         <StackPanel Margin="0,0,0,8"
@@ -1040,7 +1017,7 @@
                                             <TextBlock Text="CODE (mot de passe du Port/Dépôt)" Style="{StaticResource Label}"/>
                                             <TextBox Text="{Binding FormCode, UpdateSourceTrigger=PropertyChanged}" MaxLength="8" Width="160"
                                                      HorizontalAlignment="Left" FontFamily="Consolas" FontSize="15" Padding="7"
-                                                     Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"/>
+                                                     Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"/>
                                         </StackPanel>
                                         <DockPanel>
                                             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
@@ -1048,7 +1025,7 @@
                                                         Padding="12,7" Margin="0,0,8,0" Click="OnCancelStockpileEdit"
                                                         Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
                                                 <Button Content="{Binding SubmitLabel}" Style="{StaticResource FlatButton}"
-                                                        Background="#FF2A475E" Padding="16,7" Click="OnSubmitStockpile"/>
+                                                        Background="#FF2D63D8" Padding="16,7" Click="OnSubmitStockpile"/>
                                             </StackPanel>
                                             <CheckBox Content="Public (visible par les alliés)" IsChecked="{Binding FormIsPublic}" VerticalAlignment="Center"/>
                                         </DockPanel>
@@ -1060,17 +1037,17 @@
                                     <StackPanel>
                                         <TextBlock Text="🔍 Trouver un item" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
                                         <DockPanel>
-                                            <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                            <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource FlatButton}" Background="#FF202A38"
                                                     Padding="10,6" Margin="6,0,0,0" Click="OnStockpileSearchClear"
                                                     Visibility="{Binding HasSearchResults, Converter={StaticResource BoolToVis}}"/>
-                                            <Button DockPanel.Dock="Right" Content="Chercher" Style="{StaticResource FlatButton}" Background="#FF2A475E"
+                                            <Button DockPanel.Dock="Right" Content="Chercher" Style="{StaticResource FlatButton}" Background="#FF2D63D8"
                                                     Padding="14,6" Margin="8,0,0,0" Click="OnStockpileSearch"/>
                                             <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Padding="7"
-                                                     Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                                     Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                                      CaretBrush="White" KeyDown="OnStockpileSearchKey"
                                                      ToolTip="Nom ou code d'item (ex. 7.92, Bmats, bandage…) — cherche dans tous les stockpiles visibles"/>
                                         </DockPanel>
-                                        <TextBlock Text="{Binding SearchStatus}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,6,0,0"/>
+                                        <TextBlock Text="{Binding SearchStatus}" Foreground="#FF94A1B2" FontSize="12" Margin="0,6,0,0"/>
                                         <ItemsControl ItemsSource="{Binding SearchResults}" Margin="0,6,0,0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
@@ -1078,11 +1055,11 @@
                                                         <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,8,0"
                                                                VerticalAlignment="Center"
                                                                Visibility="{Binding HasIcon, Converter={StaticResource BoolToVis}}"/>
-                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FF7FC97F"
+                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FF53C272"
                                                                    FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                         <StackPanel VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13"/>
-                                                            <TextBlock Text="{Binding WhereText}" Foreground="#FF9AA4B2" FontSize="11" TextWrapping="Wrap"/>
+                                                            <TextBlock Text="{Binding WhereText}" Foreground="#FF94A1B2" FontSize="11" TextWrapping="Wrap"/>
                                                         </StackPanel>
                                                     </DockPanel>
                                                 </DataTemplate>
@@ -1095,12 +1072,12 @@
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
                                         <TextBlock Text="Stockpiles (les miens + ceux des alliés)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Aucun stockpile pour l'instant." Foreground="#FF6B7280" FontSize="13"
+                                        <TextBlock Text="Aucun stockpile pour l'instant." Foreground="#FF5E6B7E" FontSize="13"
                                                    Visibility="{Binding HasNoStockpiles, Converter={StaticResource BoolToVis}}"/>
                                         <ItemsControl ItemsSource="{Binding Stockpiles}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="#FF2E343F" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                                    <Border Background="#FF1F2937" CornerRadius="6" Padding="12" Margin="0,0,0,8">
                                                         <StackPanel>
                                                             <DockPanel>
                                                                 <Border DockPanel.Dock="Right" Background="{Binding VisibilityBrush}" CornerRadius="4"
@@ -1113,22 +1090,22 @@
                                                                     <TextBlock Text="{Binding ThreatLabel}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                                                                 </Border>
                                                                 <Button DockPanel.Dock="Right" Content="Items" Style="{StaticResource FlatButton}"
-                                                                        Background="#FF333A45" Padding="10,4" Margin="0,0,8,0" VerticalAlignment="Top"
+                                                                        Background="#FF202A38" Padding="10,4" Margin="0,0,8,0" VerticalAlignment="Top"
                                                                         Click="OnSelectStockpile"/>
                                                                 <StackPanel>
                                                                     <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold"/>
                                                                     <StackPanel Orientation="Horizontal">
-                                                                        <TextBlock Text="{Binding TypeLabel}" Foreground="#FF7FA8D9" FontSize="12"/>
-                                                                        <TextBlock Text="  ·  " Foreground="#FF6B7280" FontSize="12"/>
-                                                                        <TextBlock Text="{Binding LocationLabel}" Foreground="#FF9AA4B2" FontSize="12"/>
+                                                                        <TextBlock Text="{Binding TypeLabel}" Foreground="#FF6CA6F2" FontSize="12"/>
+                                                                        <TextBlock Text="  ·  " Foreground="#FF5E6B7E" FontSize="12"/>
+                                                                        <TextBlock Text="{Binding LocationLabel}" Foreground="#FF94A1B2" FontSize="12"/>
                                                                     </StackPanel>
                                                                 </StackPanel>
                                                             </DockPanel>
                                                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
                                                                         Visibility="{Binding HasCode, Converter={StaticResource BoolToVis}}">
-                                                                <TextBlock Text="Code : " Foreground="#FF9AA4B2" FontSize="12" VerticalAlignment="Center"/>
+                                                                <TextBlock Text="Code : " Foreground="#FF94A1B2" FontSize="12" VerticalAlignment="Center"/>
                                                                 <TextBox Text="{Binding Code, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas"
-                                                                         FontSize="14" FontWeight="Bold" Foreground="#FF7FA8D9" Background="Transparent"
+                                                                         FontSize="14" FontWeight="Bold" Foreground="#FF6CA6F2" Background="Transparent"
                                                                          BorderThickness="0" Padding="0"/>
                                                             </StackPanel>
                                                             <TextBlock Text="{Binding RegimentName, StringFormat='Régiment allié : {0}'}"
@@ -1137,7 +1114,7 @@
 
                                                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
                                                                         Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}">
-                                                                <Button Content="Modifier" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                                                <Button Content="Modifier" Style="{StaticResource FlatButton}" Background="#FF202A38"
                                                                         Padding="10,4" Margin="0,0,6,0" Click="OnEditStockpile"/>
                                                                 <Button Content="Supprimer" Style="{StaticResource FlatButton}" Background="#FF3A3030"
                                                                         Padding="10,4" Click="OnDeleteStockpile"/>
@@ -1145,7 +1122,7 @@
 
                                                             <StackPanel Margin="0,8,0,0"
                                                                         Visibility="{Binding ShowShareSection, Converter={StaticResource BoolToVis}}">
-                                                                <TextBlock Text="Partager avec un allié :" Foreground="#FF9AA4B2" FontSize="11" Margin="0,0,0,4"/>
+                                                                <TextBlock Text="Partager avec un allié :" Foreground="#FF94A1B2" FontSize="11" Margin="0,0,0,4"/>
                                                                 <ItemsControl ItemsSource="{Binding ShareTargets}">
                                                                     <ItemsControl.ItemsPanel>
                                                                         <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
@@ -1173,17 +1150,17 @@
                                     <StackPanel>
                                         <DockPanel Margin="0,0,0,10">
                                             <Button DockPanel.Dock="Right" Content="Fermer" Style="{StaticResource FlatButton}"
-                                                    Background="#FF333A45" Padding="10,4" Click="OnCloseDetail"/>
+                                                    Background="#FF202A38" Padding="10,4" Click="OnCloseDetail"/>
                                             <TextBlock Text="{Binding SelectedName, StringFormat='Contenu — {0}'}"
                                                        FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         </DockPanel>
 
-                                        <Border Background="#FF22384A" CornerRadius="6" Padding="10" Margin="0,0,0,10"
+                                        <Border Background="#FF1A2A47" CornerRadius="6" Padding="10" Margin="0,0,0,10"
                                                 Visibility="{Binding SelectedCanManage, Converter={StaticResource BoolToVis}}">
                                             <DockPanel>
                                                 <Button DockPanel.Dock="Right" Content="📷 Importer (capture)" Style="{StaticResource FlatButton}"
-                                                        Background="#FF2A6E8F" Padding="14,6" Click="OnImportCapture"/>
-                                                <TextBlock VerticalAlignment="Center" Foreground="#FFB8C4D0" FontSize="11" TextWrapping="Wrap"
+                                                        Background="#FF2D63D8" Padding="14,6" Click="OnImportCapture"/>
+                                                <TextBlock VerticalAlignment="Center" Foreground="#FFB6C2D1" FontSize="11" TextWrapping="Wrap"
                                                            Text="Remplissage auto (FIR) : ouvre le stockpile en VUE-CARTE en jeu, puis clique (4 s pour basculer) — ou appuie sur F8 directement en jeu. Compatible mods d'icônes."/>
                                             </DockPanel>
                                         </Border>
@@ -1194,21 +1171,21 @@
                                                        Style="{StaticResource Label}" Margin="0,0,0,4"/>
                                             <DockPanel>
                                                 <Button DockPanel.Dock="Right" Content="Définir" Style="{StaticResource FlatButton}"
-                                                        Background="#FF2A475E" Padding="14,6" Margin="6,0,0,0" Click="OnSetItem"/>
+                                                        Background="#FF2D63D8" Padding="14,6" Margin="6,0,0,0" Click="OnSetItem"/>
                                                 <TextBox DockPanel.Dock="Right" Width="70" Margin="6,0,0,0"
                                                          Text="{Binding NewItemCritical, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontSize="14" Padding="6" Background="#FF1B1E24" Foreground="White"
-                                                         BorderBrush="#FFC03A3A" BorderThickness="1" CaretBrush="White"
+                                                         FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
+                                                         BorderBrush="#FFD23B41" BorderThickness="1" CaretBrush="White"
                                                          VerticalContentAlignment="Center" ToolTip="Seuil critique (🔴 ≤)"/>
                                                 <TextBox DockPanel.Dock="Right" Width="70" Margin="6,0,0,0"
                                                          Text="{Binding NewItemLow, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontSize="14" Padding="6" Background="#FF1B1E24" Foreground="White"
-                                                         BorderBrush="#FFC88A2E" BorderThickness="1" CaretBrush="White"
+                                                         FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
+                                                         BorderBrush="#FFE8A33D" BorderThickness="1" CaretBrush="White"
                                                          VerticalContentAlignment="Center" ToolTip="Seuil bas (🟠 ≤)"/>
                                                 <TextBox DockPanel.Dock="Right" Width="80" Margin="6,0,0,0"
                                                          Text="{Binding NewItemQuantity, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontSize="14" Padding="6" Background="#FF1B1E24" Foreground="White"
-                                                         BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                         FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
+                                                         BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                          VerticalContentAlignment="Center" ToolTip="Quantité (0 = retirer)"/>
                                                 <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
                                                           Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"/>
@@ -1219,25 +1196,25 @@
                                                 <TextBlock DockPanel.Dock="Left" Text="🎯 TEMPLATE :" Style="{StaticResource Label}"
                                                            VerticalAlignment="Center" Margin="0,0,6,0"/>
                                                 <Button DockPanel.Dock="Right" Content="💾 Sauver les seuils" Style="{StaticResource FlatButton}"
-                                                        Background="#FF2F6B3A" Padding="10,5" Margin="6,0,0,0" Click="OnSaveTemplate"
+                                                        Background="#FF1F8A4C" Padding="10,5" Margin="6,0,0,0" Click="OnSaveTemplate"
                                                         ToolTip="Enregistre les seuils définis sur ce stockpile comme template du régiment"/>
                                                 <TextBox DockPanel.Dock="Right" Width="150" Margin="10,0,0,0"
                                                          Text="{Binding TemplateName, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontSize="12.5" Padding="5" Background="#FF1B1E24" Foreground="White"
-                                                         BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                         FontSize="12.5" Padding="5" Background="#FF10161F" Foreground="White"
+                                                         BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                          VerticalContentAlignment="Center" ToolTip="Nom du template à créer (ex. « Dépôt de front »)"/>
                                                 <Button DockPanel.Dock="Right" Content="🗑" Style="{StaticResource FlatButton}"
                                                         Background="#FF3A3030" Padding="8,5" Margin="6,0,0,0" Click="OnDeleteTemplate"
                                                         ToolTip="Supprimer le template sélectionné"/>
                                                 <Button DockPanel.Dock="Right" Content="Appliquer" Style="{StaticResource FlatButton}"
-                                                        Background="#FF2A475E" Padding="10,5" Margin="6,0,0,0" Click="OnApplyTemplate"
+                                                        Background="#FF2D63D8" Padding="10,5" Margin="6,0,0,0" Click="OnApplyTemplate"
                                                         ToolTip="Applique les seuils du template à ce stockpile (items absents créés à 0)"/>
                                                 <ComboBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}"
                                                           FontSize="12.5" Padding="5" VerticalAlignment="Center">
                                                     <ComboBox.ItemTemplate>
                                                         <DataTemplate>
                                                             <TextBlock>
-                                                                <Run Text="{Binding Name, Mode=OneWay}"/><Run Text="{Binding ItemCount, Mode=OneWay, StringFormat=' ({0} seuils)'}" Foreground="#FF9AA4B2"/>
+                                                                <Run Text="{Binding Name, Mode=OneWay}"/><Run Text="{Binding ItemCount, Mode=OneWay, StringFormat=' ({0} seuils)'}" Foreground="#FF94A1B2"/>
                                                             </TextBlock>
                                                         </DataTemplate>
                                                     </ComboBox.ItemTemplate>
@@ -1245,19 +1222,19 @@
                                             </DockPanel>
 
                                             <!-- Transfert d'un item vers un autre stockpile (bouton ⇄ des cartes) -->
-                                            <Border Background="#FF22384A" CornerRadius="6" Padding="9" Margin="0,8,0,0"
+                                            <Border Background="#FF1A2A47" CornerRadius="6" Padding="9" Margin="0,8,0,0"
                                                     Visibility="{Binding TransferActive, Converter={StaticResource BoolToVis}}">
                                                 <DockPanel>
                                                     <TextBlock DockPanel.Dock="Left" Text="{Binding TransferTitle}" FontWeight="SemiBold"
                                                                Foreground="White" FontSize="12.5" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                     <Button DockPanel.Dock="Right" Content="Annuler" Style="{StaticResource FlatButton}"
-                                                            Background="#FF333A45" Padding="9,4" Margin="6,0,0,0" Click="OnCancelTransfer"/>
+                                                            Background="#FF202A38" Padding="9,4" Margin="6,0,0,0" Click="OnCancelTransfer"/>
                                                     <Button DockPanel.Dock="Right" Content="⇄ Transférer" Style="{StaticResource FlatButton}"
-                                                            Background="#FF2F6B3A" Padding="10,4" Margin="8,0,0,0" Click="OnConfirmTransfer"/>
+                                                            Background="#FF1F8A4C" Padding="10,4" Margin="8,0,0,0" Click="OnConfirmTransfer"/>
                                                     <TextBox DockPanel.Dock="Left" Width="80" Margin="0,0,8,0"
                                                              Text="{Binding TransferQty, UpdateSourceTrigger=PropertyChanged}"
-                                                             FontSize="13" Padding="5" Background="#FF1B1E24" Foreground="White"
-                                                             BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                             FontSize="13" Padding="5" Background="#FF10161F" Foreground="White"
+                                                             BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                              VerticalContentAlignment="Center" ToolTip="Quantité à transférer"/>
                                                     <ComboBox ItemsSource="{Binding TransferTargets}" SelectedItem="{Binding TransferTarget}"
                                                               DisplayMemberPath="Name" FontSize="12.5" Padding="5" VerticalAlignment="Center"
@@ -1266,14 +1243,14 @@
                                             </Border>
                                         </StackPanel>
 
-                                        <TextBlock Text="Aucun item. Ajoute-en ci-dessus ou via 📷 Importer." Foreground="#FF6B7280" FontSize="13"
+                                        <TextBlock Text="Aucun item. Ajoute-en ci-dessus ou via 📷 Importer." Foreground="#FF5E6B7E" FontSize="13"
                                                    Visibility="{Binding HasNoItems, Converter={StaticResource BoolToVis}}"/>
                                         <ItemsControl ItemsSource="{Binding ItemsView}">
                                             <ItemsControl.GroupStyle>
                                                 <GroupStyle>
                                                     <GroupStyle.HeaderTemplate>
                                                         <DataTemplate>
-                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#FF9AA4B2"
+                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#FF94A1B2"
                                                                        FontSize="12" Margin="2,10,0,6"/>
                                                         </DataTemplate>
                                                     </GroupStyle.HeaderTemplate>
@@ -1284,21 +1261,21 @@
                                             </ItemsControl.GroupStyle>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Width="158" Background="#FF2E343F" CornerRadius="8" Margin="0,0,8,8">
+                                                    <Border Width="158" Background="#FF1F2937" CornerRadius="8" Margin="0,0,8,8">
                                                         <Grid>
                                                             <Border Width="4" HorizontalAlignment="Left" Background="{Binding StatusBrush}"
                                                                     CornerRadius="8,0,0,8"/>
                                                             <StackPanel Margin="12,8,8,8">
                                                                 <DockPanel>
                                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
-                                                                        <Button Content="ⓘ" Style="{StaticResource FlatButton}" Background="#FF2A3340"
+                                                                        <Button Content="ⓘ" Style="{StaticResource FlatButton}" Background="#FF232C3A"
                                                                                 Padding="6,1" Margin="0,0,4,0" Click="OnItemDetails" FontSize="11"
                                                                                 ToolTip="Détails / recette de craft"/>
-                                                                        <Button Content="⇄" Style="{StaticResource FlatButton}" Background="#FF2A475E"
+                                                                        <Button Content="⇄" Style="{StaticResource FlatButton}" Background="#FF2D63D8"
                                                                                 Padding="6,1" Margin="0,0,4,0" Click="OnTransferItem" FontSize="11"
                                                                                 ToolTip="Transférer vers un autre stockpile"
                                                                                 Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
-                                                                        <Button Content="✎" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                                                        <Button Content="✎" Style="{StaticResource FlatButton}" Background="#FF202A38"
                                                                                 Padding="6,1" Margin="0,0,4,0" Click="OnEditItem" FontSize="11"
                                                                                 Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                                         <Button Content="×" Style="{StaticResource FlatButton}" Background="#FF3A3030"
@@ -1306,13 +1283,13 @@
                                                                                 Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                                     </StackPanel>
                                                                     <Grid Width="40" Height="40" HorizontalAlignment="Left">
-                                                                        <Border Background="#FF1B1E24" CornerRadius="6"/>
-                                                                        <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontWeight="Bold"
+                                                                        <Border Background="#FF10161F" CornerRadius="6"/>
+                                                                        <TextBlock Text="{Binding Initial}" Foreground="#FF94A1B2" FontWeight="Bold"
                                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                         <Image Source="{Binding Icon}" Width="38" Height="38" RenderOptions.BitmapScalingMode="HighQuality"/>
                                                                     </Grid>
                                                                 </DockPanel>
-                                                                <TextBlock Text="{Binding Name}" FontSize="12" Foreground="#FFE6E6E6"
+                                                                <TextBlock Text="{Binding Name}" FontSize="12" Foreground="#FFE9EDF3"
                                                                            TextWrapping="Wrap" Height="30" Margin="0,6,0,2"/>
                                                                 <DockPanel>
                                                                     <Border DockPanel.Dock="Right" Background="{Binding StatusBrush}" CornerRadius="4"
@@ -1321,7 +1298,7 @@
                                                                         <TextBlock Text="{Binding StatusLabel}" Foreground="White" FontSize="10"/>
                                                                     </Border>
                                                                     <TextBlock Text="{Binding QuantityText}" FontWeight="Bold" FontSize="18"
-                                                                               Foreground="#FFE6E6E6"/>
+                                                                               Foreground="#FFE9EDF3"/>
                                                                 </DockPanel>
                                                                 <TextBlock Text="{Binding TrendText}" Foreground="{Binding TrendBrush}" FontSize="10.5"
                                                                            ToolTip="{Binding TrendTooltip}" Margin="0,3,0,0"
@@ -1334,15 +1311,15 @@
                                         </ItemsControl>
 
                                         <!-- Journal des transferts récents du régiment -->
-                                        <Expander Margin="0,10,0,0" Foreground="#FF9AA4B2"
+                                        <Expander Margin="0,10,0,0" Foreground="#FF94A1B2"
                                                   Visibility="{Binding HasTransfers, Converter={StaticResource BoolToVis}}">
                                             <Expander.Header>
-                                                <TextBlock Text="⇄ Journal des transferts récents" FontSize="12" Foreground="#FF9AA4B2"/>
+                                                <TextBlock Text="⇄ Journal des transferts récents" FontSize="12" Foreground="#FF94A1B2"/>
                                             </Expander.Header>
                                             <ItemsControl ItemsSource="{Binding Transfers}" Margin="16,6,0,0">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <TextBlock Text="{Binding}" Foreground="#FFB8C4D0" FontSize="11.5" Margin="0,1"/>
+                                                        <TextBlock Text="{Binding}" Foreground="#FFB6C2D1" FontSize="11.5" Margin="0,1"/>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
@@ -1357,24 +1334,24 @@
                 <!-- ===== Fiche détaillée d'un item (gestion poussée : catégorie, caisse, recette) ===== -->
                 <Border Background="#CC0A0C10" Visibility="{Binding HasItemDetail, Converter={StaticResource BoolToVis}}">
                     <Border Width="430" MaxHeight="600" VerticalAlignment="Center" HorizontalAlignment="Center"
-                            Background="#FF1B1F27" CornerRadius="12" BorderBrush="#FF3A414C" BorderThickness="1"
+                            Background="#FF1B1F27" CornerRadius="12" BorderBrush="#FF232C3A" BorderThickness="1"
                             DataContext="{Binding ItemDetail}">
                         <DockPanel>
                             <!-- En-tête -->
                             <Border DockPanel.Dock="Top" Background="#FF222834" CornerRadius="12,12,0,0">
                                 <DockPanel Margin="16,14">
                                     <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource FlatButton}"
-                                            Background="#FF333A45" Padding="9,3" VerticalAlignment="Top" Click="OnCloseItemDetail"/>
+                                            Background="#FF202A38" Padding="9,3" VerticalAlignment="Top" Click="OnCloseItemDetail"/>
                                     <Grid Width="48" Height="48" DockPanel.Dock="Left" Margin="0,0,12,0" VerticalAlignment="Top">
                                         <Border Background="#FF12151B" CornerRadius="8"/>
-                                        <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontWeight="Bold"
+                                        <TextBlock Text="{Binding Initial}" Foreground="#FF94A1B2" FontWeight="Bold"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         <Image Source="{Binding Icon}" Width="44" Height="44" RenderOptions.BitmapScalingMode="HighQuality"/>
                                     </Grid>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"/>
-                                        <TextBlock Text="{Binding Category}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,1,0,0"/>
-                                        <TextBlock Text="{Binding CaliberLabel}" Foreground="#FF7FA8D9" FontSize="11"
+                                        <TextBlock Text="{Binding Category}" Foreground="#FF94A1B2" FontSize="12" Margin="0,1,0,0"/>
+                                        <TextBlock Text="{Binding CaliberLabel}" Foreground="#FF6CA6F2" FontSize="11"
                                                    Visibility="{Binding HasCaliber, Converter={StaticResource BoolToVis}}"/>
                                     </StackPanel>
                                 </DockPanel>
@@ -1383,7 +1360,7 @@
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <StackPanel Margin="16,12,16,16">
                                     <DockPanel Margin="0,0,0,12">
-                                        <TextBlock Text="📦 Caisse" Foreground="#FF9AA4B2" FontSize="12" Width="90" VerticalAlignment="Center"/>
+                                        <TextBlock Text="📦 Caisse" Foreground="#FF94A1B2" FontSize="12" Width="90" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding CrateText}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
                                     </DockPanel>
 
@@ -1392,24 +1369,24 @@
                                     <ItemsControl ItemsSource="{Binding Recipes}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Background="#FF20242C" CornerRadius="8" Margin="0,0,0,8" Padding="10,8">
+                                                <Border Background="#FF131A24" CornerRadius="8" Margin="0,0,0,8" Padding="10,8">
                                                     <StackPanel>
                                                         <DockPanel Margin="0,0,0,6">
                                                             <TextBlock DockPanel.Dock="Right" Text="{Binding OutputText}" Foreground="#FF6FCF8E"
                                                                        FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                                                        Visibility="{Binding HasOutput, Converter={StaticResource BoolToVis}}"/>
-                                                            <TextBlock Text="{Binding Header}" Foreground="#FFB8C4D0" FontSize="13" FontWeight="SemiBold"/>
+                                                            <TextBlock Text="{Binding Header}" Foreground="#FFB6C2D1" FontSize="13" FontWeight="SemiBold"/>
                                                         </DockPanel>
                                                         <ItemsControl ItemsSource="{Binding Ingredients}">
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <Border Background="#FF252A33" CornerRadius="6" Margin="0,0,0,4" Padding="6,4">
+                                                                    <Border Background="#FF141B24" CornerRadius="6" Margin="0,0,0,4" Padding="6,4">
                                                                         <DockPanel>
                                                                             <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FFE6B45A"
                                                                                        FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
                                                                             <Grid Width="26" Height="26" DockPanel.Dock="Left" Margin="0,0,8,0">
                                                                                 <Border Background="#FF12151B" CornerRadius="5"/>
-                                                                                <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontSize="10"
+                                                                                <TextBlock Text="{Binding Initial}" Foreground="#FF94A1B2" FontSize="10"
                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                                 <Image Source="{Binding Icon}" Width="24" Height="24"/>
                                                                             </Grid>
@@ -1419,7 +1396,7 @@
                                                                 </DataTemplate>
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
-                                                        <TextBlock Text="{Binding MetaText}" Foreground="#FF9AA4B2" FontSize="11" Margin="0,2,0,0"
+                                                        <TextBlock Text="{Binding MetaText}" Foreground="#FF94A1B2" FontSize="11" Margin="0,2,0,0"
                                                                    Visibility="{Binding HasMeta, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>
                                                 </Border>
@@ -1427,10 +1404,10 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                     <TextBlock Text="ℹ La MPF produit en lot (3/9/...) avec une remise de matériaux à volume."
-                                               Foreground="#FF6B7280" FontSize="10" TextWrapping="Wrap" Margin="0,2,0,0"
+                                               Foreground="#FF5E6B7E" FontSize="10" TextWrapping="Wrap" Margin="0,2,0,0"
                                                Visibility="{Binding HasMpf, Converter={StaticResource BoolToVis}}"/>
 
-                                    <TextBlock Text="{Binding NoRecipeText}" Foreground="#FF6B7280" FontSize="12" TextWrapping="Wrap"
+                                    <TextBlock Text="{Binding NoRecipeText}" Foreground="#FF5E6B7E" FontSize="12" TextWrapping="Wrap"
                                                Visibility="{Binding NoRecipe, Converter={StaticResource BoolToVis}}"/>
                                 </StackPanel>
                             </ScrollViewer>
@@ -1450,24 +1427,24 @@
 
                 <StackPanel Grid.Row="0" Margin="0,0,0,14">
                     <TextBlock Text="Ravitaillement" FontSize="22" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding Summary}" Foreground="#FF9AA4B2" FontSize="13" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding Summary}" Foreground="#FF94A1B2" FontSize="13" Margin="0,4,0,0"/>
                 </StackPanel>
 
-                <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam (onglet Amis)." Foreground="#FF6B7280" FontSize="14"
+                <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam (onglet Amis)." Foreground="#FF5E6B7E" FontSize="14"
                            Visibility="{Binding ShowAuthNeeded, Converter={StaticResource BoolToVis}}"/>
-                <TextBlock Grid.Row="1" Text="Rejoins un régiment pour gérer le ravitaillement." Foreground="#FF6B7280" FontSize="14"
+                <TextBlock Grid.Row="1" Text="Rejoins un régiment pour gérer le ravitaillement." Foreground="#FF5E6B7E" FontSize="14"
                            Visibility="{Binding ShowNoRegiment, Converter={StaticResource BoolToVis}}"/>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding ShowResupply, Converter={StaticResource BoolToVis}}">
                     <StackPanel>
                         <!-- Nouvelle demande (multi-items) -->
-                        <Border Background="#FF1B1E24" CornerRadius="8" Padding="14" Margin="0,0,0,14">
+                        <Border Background="#FF10161F" CornerRadius="8" Padding="14" Margin="0,0,0,14">
                             <StackPanel>
                                 <TextBlock Text="NOUVELLE DEMANDE (nom · hexagone · coordonnées · priorité · visibilité, puis ajoute des items)"
                                            Style="{StaticResource Label}" Margin="0,0,0,8"/>
                                 <TextBox Margin="0,0,0,8" Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Padding="7"
-                                         Background="#FF15181E" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                         Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                          CaretBrush="White" VerticalContentAlignment="Center" ToolTip="Nom de la demande"/>
                                 <DockPanel Margin="0,0,0,8">
                                     <ComboBox DockPanel.Dock="Right" Width="155" Margin="6,0,0,0" SelectedValuePath="Value"
@@ -1478,8 +1455,8 @@
                                               ItemsSource="{Binding Priorities}" FontSize="14" Padding="6" ToolTip="Priorité"/>
                                     <TextBox DockPanel.Dock="Right" Width="120" Margin="6,0,0,0"
                                              Text="{Binding NewCoords, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14" Padding="6" Background="#FF15181E" Foreground="White"
-                                             BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                             FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
+                                             BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                              VerticalContentAlignment="Center" ToolTip="Coordonnées (ex. E5, 123x456)"/>
                                     <ComboBox IsEditable="True" ItemsSource="{Binding Hexes}"
                                               Text="{Binding NewHex, UpdateSourceTrigger=PropertyChanged}"
@@ -1487,11 +1464,11 @@
                                 </DockPanel>
                                 <DockPanel Margin="0,0,0,8">
                                     <Button DockPanel.Dock="Right" Content="+ Ajouter l'item" Style="{StaticResource FlatButton}"
-                                            Background="#FF333A45" Padding="12,6" Margin="6,0,0,0" Click="OnAddDraftItem"/>
+                                            Background="#FF202A38" Padding="12,6" Margin="6,0,0,0" Click="OnAddDraftItem"/>
                                     <TextBox DockPanel.Dock="Right" Width="80" Margin="6,0,0,0"
                                              Text="{Binding DraftItemQuantity, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14" Padding="6" Background="#FF15181E" Foreground="White"
-                                             BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                             FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
+                                             BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                              VerticalContentAlignment="Center" ToolTip="Quantité"/>
                                     <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
                                               Text="{Binding DraftItemName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Item à ajouter"/>
@@ -1505,7 +1482,7 @@
                                                 <StackPanel Orientation="Horizontal">
                                                     <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,6,0"/>
                                                     <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding QtyText}" Foreground="#FF7FA8D9" FontSize="12" FontWeight="Bold"
+                                                    <TextBlock Text="{Binding QtyText}" Foreground="#FF6CA6F2" FontSize="12" FontWeight="Bold"
                                                                Margin="6,0,0,0" VerticalAlignment="Center"/>
                                                     <Button Content="×" Style="{StaticResource FlatButton}" Background="#FF3A3030"
                                                             Padding="6,0" Margin="8,0,0,0" FontSize="11" Click="OnRemoveDraftItem"/>
@@ -1516,9 +1493,9 @@
                                 </ItemsControl>
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Content="Créer la demande" Style="{StaticResource FlatButton}"
-                                            Background="#FF2A475E" Padding="14,6" Margin="6,0,0,0" Click="OnCreateResupply"/>
+                                            Background="#FF2D63D8" Padding="14,6" Margin="6,0,0,0" Click="OnCreateResupply"/>
                                     <TextBox Text="{Binding NewNote, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="6"
-                                             Background="#FF15181E" Foreground="White" BorderBrush="#FF3A414C" BorderThickness="1"
+                                             Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                              CaretBrush="White" VerticalContentAlignment="Center" ToolTip="Note (optionnel)"/>
                                 </DockPanel>
                             </StackPanel>
@@ -1531,23 +1508,23 @@
                             <ItemsControl ItemsSource="{Binding Needs}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="#FF20242C" CornerRadius="6" Margin="0,0,0,5" Padding="8,5">
+                                        <Border Background="#FF131A24" CornerRadius="6" Margin="0,0,0,5" Padding="8,5">
                                             <DockPanel>
                                                 <Button DockPanel.Dock="Right" Content="+ Brouillon" Style="{StaticResource FlatButton}"
-                                                        Background="#FF2A475E" Padding="10,3" Margin="6,0,0,0" FontSize="11"
+                                                        Background="#FF2D63D8" Padding="10,3" Margin="6,0,0,0" FontSize="11"
                                                         Click="OnCreateFromNeed" VerticalAlignment="Center"
                                                         ToolTip="Ajouter ce manque à la demande en cours de création"/>
                                                 <TextBlock DockPanel.Dock="Right" Text="{Binding DeficitText}" Foreground="{Binding DeficitBrush}"
                                                            FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Margin="6,0,0,0"/>
                                                 <Grid Width="30" Height="30" DockPanel.Dock="Left" Margin="0,0,10,0">
                                                     <Border Background="#FF12151B" CornerRadius="5"/>
-                                                    <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontSize="11"
+                                                    <TextBlock Text="{Binding Initial}" Foreground="#FF94A1B2" FontSize="11"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     <Image Source="{Binding Icon}" Width="28" Height="28"/>
                                                 </Grid>
                                                 <StackPanel VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13"/>
-                                                    <TextBlock Text="{Binding LocationLabel}" Foreground="#FF9AA4B2" FontSize="10"/>
+                                                    <TextBlock Text="{Binding LocationLabel}" Foreground="#FF94A1B2" FontSize="10"/>
                                                 </StackPanel>
                                             </DockPanel>
                                         </Border>
@@ -1561,36 +1538,36 @@
                             <StackPanel>
                                 <TextBlock Text="🏭 File MPF du régiment" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                 <TextBlock Text="Note tes commandes MPF (item, caisses, temps restant lu en jeu) : tout le régiment voit les comptes à rebours, et Discord prévient quand c'est prêt."
-                                           Foreground="#FF9AA4B2" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                           Foreground="#FF94A1B2" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,8"/>
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Content="➕ Noter" Style="{StaticResource FlatButton}"
-                                            Background="#FF2A475E" Padding="12,6" Margin="6,0,0,0" Click="OnCreateMpf"/>
+                                            Background="#FF2D63D8" Padding="12,6" Margin="6,0,0,0" Click="OnCreateMpf"/>
                                     <TextBox DockPanel.Dock="Right" Width="46" Margin="2,0,0,0" ToolTip="Minutes restantes"
                                              Text="{Binding MpfMinutes, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="13" Padding="5" Background="#FF1B1E24" Foreground="White"
-                                             BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
-                                    <TextBlock DockPanel.Dock="Right" Text="h" Foreground="#FF6B7280" VerticalAlignment="Center" Margin="3,0"/>
+                                             FontSize="13" Padding="5" Background="#FF10161F" Foreground="White"
+                                             BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
+                                    <TextBlock DockPanel.Dock="Right" Text="h" Foreground="#FF5E6B7E" VerticalAlignment="Center" Margin="3,0"/>
                                     <TextBox DockPanel.Dock="Right" Width="40" Margin="6,0,0,0" ToolTip="Heures restantes"
                                              Text="{Binding MpfHours, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="13" Padding="5" Background="#FF1B1E24" Foreground="White"
-                                             BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
+                                             FontSize="13" Padding="5" Background="#FF10161F" Foreground="White"
+                                             BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
                                     <ComboBox DockPanel.Dock="Right" Width="150" Margin="6,0,0,0" IsEditable="True" ToolTip="Hexagone du MPF (optionnel)"
                                               ItemsSource="{Binding Hexes}" Text="{Binding MpfHex, UpdateSourceTrigger=PropertyChanged}"
                                               FontSize="12.5" Padding="5"/>
                                     <TextBox DockPanel.Dock="Right" Width="60" Margin="6,0,0,0" ToolTip="Nombre de caisses"
                                              Text="{Binding MpfCrates, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="13" Padding="5" Background="#FF1B1E24" Foreground="White"
-                                             BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
+                                             FontSize="13" Padding="5" Background="#FF10161F" Foreground="White"
+                                             BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
                                     <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="12.5" Padding="5"
                                               Text="{Binding MpfItemName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Item produit"/>
                                 </DockPanel>
                                 <ItemsControl ItemsSource="{Binding MpfOrders}" Margin="0,8,0,0">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#FF262B34" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
+                                            <Border Background="#FF1A222E" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
                                                 <DockPanel>
                                                     <Button DockPanel.Dock="Right" Content="✔ Récupéré" Style="{StaticResource FlatButton}"
-                                                            Background="#FF2F6B3A" Padding="9,3" FontSize="11" Click="OnCollectMpf"
+                                                            Background="#FF1F8A4C" Padding="9,3" FontSize="11" Click="OnCollectMpf"
                                                             Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                     <TextBlock DockPanel.Dock="Right" Text="{Binding RemainingText}" Foreground="{Binding RemainingBrush}"
                                                                FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -1598,8 +1575,8 @@
                                                         <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                         <TextBlock VerticalAlignment="Center" FontSize="13" Foreground="White">
                                                             <Run Text="{Binding Name, Mode=OneWay}"/>
-                                                            <Run Text="{Binding CratesText, Mode=OneWay}" Foreground="#FF7FC97F"/>
-                                                            <Run Text="{Binding ByText, Mode=OneWay}" Foreground="#FF6B7280" FontSize="11"/>
+                                                            <Run Text="{Binding CratesText, Mode=OneWay}" Foreground="#FF53C272"/>
+                                                            <Run Text="{Binding ByText, Mode=OneWay}" Foreground="#FF5E6B7E" FontSize="11"/>
                                                         </TextBlock>
                                                     </StackPanel>
                                                 </DockPanel>
@@ -1614,12 +1591,12 @@
                         <TextBlock Text="DEMANDES OUVERTES" Style="{StaticResource Label}" Margin="0,0,0,6"
                                    Visibility="{Binding HasOpen, Converter={StaticResource BoolToVis}}"/>
                         <TextBlock Text="Aucune demande ouverte. Crée-en une ci-dessus, ou ajoute des manques au brouillon (+ Brouillon)."
-                                   Foreground="#FF6B7280" FontSize="13"
+                                   Foreground="#FF5E6B7E" FontSize="13"
                                    Visibility="{Binding NoOpen, Converter={StaticResource BoolToVis}}"/>
                         <ItemsControl ItemsSource="{Binding OpenRequests}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#FF20242C" CornerRadius="8" Margin="0,0,0,8">
+                                    <Border Background="#FF131A24" CornerRadius="8" Margin="0,0,0,8">
                                         <Grid>
                                             <Border Width="4" HorizontalAlignment="Left" Background="{Binding StatusBrush}" CornerRadius="8,0,0,8"/>
                                             <StackPanel Margin="14,10,12,10">
@@ -1635,7 +1612,7 @@
                                                     </StackPanel>
                                                     <StackPanel>
                                                         <TextBlock Text="{Binding Title}" Foreground="White" FontSize="15" FontWeight="Bold"/>
-                                                        <TextBlock Text="{Binding LocationLabel, StringFormat='📍 {0}'}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                        <TextBlock Text="{Binding LocationLabel, StringFormat='📍 {0}'}" Foreground="#FF94A1B2" FontSize="11"/>
                                                         <TextBlock Text="{Binding OwnerLabel}" Foreground="#FF6FA8CF" FontSize="10"
                                                                    Visibility="{Binding ShowOwner, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>
@@ -1648,13 +1625,13 @@
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,6,0"/>
                                                                     <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding QtyText}" Foreground="#FF7FA8D9" FontSize="12" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding QtyText}" Foreground="#FF6CA6F2" FontSize="12" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                                                 </StackPanel>
                                                             </Border>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
-                                                <TextBlock Text="{Binding Note}" Foreground="#FFB8C4D0" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                <TextBlock Text="{Binding Note}" Foreground="#FFB6C2D1" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
                                                            Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
                                                 <DockPanel Margin="0,8,0,0">
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
@@ -1669,8 +1646,8 @@
                                                                 Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding CreatedInfo}" Foreground="#FF6B7280" FontSize="10" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                                        <Button Content="🔒" Style="{StaticResource FlatButton}" Background="#FF333A45" Padding="6,2" Margin="0,0,3,0" FontSize="10"
+                                                        <TextBlock Text="{Binding CreatedInfo}" Foreground="#FF5E6B7E" FontSize="10" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                        <Button Content="🔒" Style="{StaticResource FlatButton}" Background="#FF202A38" Padding="6,2" Margin="0,0,3,0" FontSize="10"
                                                                 Click="OnVisRegiment" ToolTip="Rendre privé (régiment)"
                                                                 Visibility="{Binding CanSetRegiment, Converter={StaticResource BoolToVis}}"/>
                                                         <Button Content="🤝" Style="{StaticResource FlatButton}" Background="#FF2A4A5A" Padding="6,2" Margin="0,0,3,0" FontSize="10"
@@ -1702,20 +1679,20 @@
                 <StackPanel Grid.Row="0" Margin="0,0,0,14">
                     <TextBlock Text="Prises en charge" FontSize="22" FontWeight="Bold"/>
                     <TextBlock Text="Demandes prises par le régiment, avec le plan de production (crafts, récoltes, véhicules)."
-                               Foreground="#FF9AA4B2" FontSize="13" Margin="0,4,0,0"/>
+                               Foreground="#FF94A1B2" FontSize="13" Margin="0,4,0,0"/>
                 </StackPanel>
-                <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam (onglet Amis)." Foreground="#FF6B7280" FontSize="14"
+                <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam (onglet Amis)." Foreground="#FF5E6B7E" FontSize="14"
                            Visibility="{Binding ShowAuthNeeded, Converter={StaticResource BoolToVis}}"/>
                 <Grid Grid.Row="1" Visibility="{Binding ShowResupply, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="Aucune demande prise en charge. Va dans « Ravitaillement » et clique « Prendre en charge »."
-                               Foreground="#FF6B7280" FontSize="13" VerticalAlignment="Top"
+                               Foreground="#FF5E6B7E" FontSize="13" VerticalAlignment="Top"
                                Visibility="{Binding NoTaken, Converter={StaticResource BoolToVis}}"/>
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
                                   Visibility="{Binding HasTaken, Converter={StaticResource BoolToVis}}">
                         <ItemsControl ItemsSource="{Binding TakenRequests}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#FF20242C" CornerRadius="8" Margin="0,0,0,10">
+                                    <Border Background="#FF131A24" CornerRadius="8" Margin="0,0,0,10">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Style.Triggers>
@@ -1738,7 +1715,7 @@
                                                     </StackPanel>
                                                     <StackPanel>
                                                         <TextBlock Text="{Binding Title}" Foreground="White" FontSize="16" FontWeight="Bold"/>
-                                                        <TextBlock Text="{Binding LocationLabel, StringFormat='📍 {0}'}" Foreground="#FF9AA4B2" FontSize="11"/>
+                                                        <TextBlock Text="{Binding LocationLabel, StringFormat='📍 {0}'}" Foreground="#FF94A1B2" FontSize="11"/>
                                                         <TextBlock Text="{Binding OwnerLabel}" Foreground="#FF6FA8CF" FontSize="11"
                                                                    Visibility="{Binding ShowOwner, Converter={StaticResource BoolToVis}}"/>
                                                         <TextBlock Text="{Binding ClaimInfo}" Foreground="#FF6FA8CF" FontSize="11"
@@ -1754,13 +1731,13 @@
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,6,0"/>
                                                                     <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding QtyText}" Foreground="#FF7FA8D9" FontSize="12" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding QtyText}" Foreground="#FF6CA6F2" FontSize="12" FontWeight="Bold" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                                                 </StackPanel>
                                                             </Border>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
-                                                <Border Background="#FF15181E" CornerRadius="6" Margin="0,8,0,0" Padding="10">
+                                                <Border Background="#FF10161F" CornerRadius="6" Margin="0,8,0,0" Padding="10">
                                                     <StackPanel>
                                                         <TextBlock Text="🏭 CRAFTS À FAIRE" Style="{StaticResource Label}" Margin="0,0,0,5"
                                                                    Visibility="{Binding HasCrafts, Converter={StaticResource BoolToVis}}"/>
@@ -1768,14 +1745,14 @@
                                                                       Visibility="{Binding HasCrafts, Converter={StaticResource BoolToVis}}">
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <Border Background="#FF20242C" CornerRadius="6" Margin="0,0,0,4" Padding="6,4">
+                                                                    <Border Background="#FF131A24" CornerRadius="6" Margin="0,0,0,4" Padding="6,4">
                                                                         <DockPanel>
-                                                                            <Border DockPanel.Dock="Right" Background="#FF2A3340" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
-                                                                                <TextBlock Text="{Binding BuildingText}" Foreground="#FFB8C4D0" FontSize="10"/></Border>
+                                                                            <Border DockPanel.Dock="Right" Background="#FF232C3A" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                                                                <TextBlock Text="{Binding BuildingText}" Foreground="#FFB6C2D1" FontSize="10"/></Border>
                                                                             <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FFE6B45A" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" Margin="6,0,6,0"/>
                                                                             <Grid Width="24" Height="24" DockPanel.Dock="Left" Margin="0,0,8,0">
                                                                                 <Border Background="#FF12151B" CornerRadius="4"/>
-                                                                                <TextBlock Text="{Binding Initial}" Foreground="#FF9AA4B2" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                                <TextBlock Text="{Binding Initial}" Foreground="#FF94A1B2" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                                 <Image Source="{Binding Icon}" Width="22" Height="22"/>
                                                                             </Grid>
                                                                             <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
@@ -1791,7 +1768,7 @@
                                                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <Border Background="#FF20242C" CornerRadius="6" Margin="0,0,6,4" Padding="6,4">
+                                                                    <Border Background="#FF131A24" CornerRadius="6" Margin="0,0,6,4" Padding="6,4">
                                                                         <StackPanel Orientation="Horizontal">
                                                                             <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,6,0"/>
                                                                             <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
@@ -1801,18 +1778,18 @@
                                                                 </DataTemplate>
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
-                                                        <Border Background="#FF20242C" CornerRadius="6" Margin="0,8,0,0" Padding="8,5">
+                                                        <Border Background="#FF131A24" CornerRadius="6" Margin="0,8,0,0" Padding="8,5">
                                                             <DockPanel>
                                                                 <Button DockPanel.Dock="Right" Content="🗺 Où produire ?" Style="{StaticResource FlatButton}"
-                                                                        Background="#FF2A475E" FontSize="11" Padding="9,4" Click="OnResupplyProduceMap"
+                                                                        Background="#FF2D63D8" FontSize="11" Padding="9,4" Click="OnResupplyProduceMap"
                                                                         ToolTip="Voir sur la carte les usines, raffineries et champs de ressources utiles à ce plan"/>
-                                                                <TextBlock Text="{Binding VehiclesText, StringFormat='🚚 {0}'}" Foreground="#FFB8C4D0"
+                                                                <TextBlock Text="{Binding VehiclesText, StringFormat='🚚 {0}'}" Foreground="#FFB6C2D1"
                                                                            FontSize="12" VerticalAlignment="Center"/>
                                                             </DockPanel>
                                                         </Border>
                                                     </StackPanel>
                                                 </Border>
-                                                <TextBlock Text="{Binding Note}" Foreground="#FFB8C4D0" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                                                <TextBlock Text="{Binding Note}" Foreground="#FFB6C2D1" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
                                                            Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}"/>
                                                 <DockPanel Margin="0,8,0,0">
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
@@ -1821,12 +1798,12 @@
                                                                 Visibility="{Binding CanClaim, Converter={StaticResource BoolToVis}}"/>
                                                         <Button Content="✓ Livré" Background="#FF2F6B43" Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0"
                                                                 FontSize="11" Click="OnDoneResupply" Visibility="{Binding CanComplete, Converter={StaticResource BoolToVis}}"/>
-                                                        <Button Content="Rouvrir" Background="#FF333A45" Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0"
+                                                        <Button Content="Rouvrir" Background="#FF202A38" Style="{StaticResource FlatButton}" Padding="12,5" Margin="0,0,4,0"
                                                                 FontSize="11" Click="OnReopenResupply" Visibility="{Binding CanReopen, Converter={StaticResource BoolToVis}}"/>
                                                         <Button Content="×" Background="#FF3A3030" Style="{StaticResource FlatButton}" Padding="9,5" FontSize="11"
                                                                 Click="OnDeleteResupply" Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}"/>
                                                     </StackPanel>
-                                                    <TextBlock Text="{Binding CreatedInfo}" Foreground="#FF6B7280" FontSize="10" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding CreatedInfo}" Foreground="#FF5E6B7E" FontSize="10" VerticalAlignment="Center"/>
                                                 </DockPanel>
                                             </StackPanel>
                                         </Grid>
@@ -1847,22 +1824,22 @@
 
                 <DockPanel Grid.Row="0" Margin="0,0,0,10">
                     <Button DockPanel.Dock="Right" Content="🌍 Vue monde" Style="{StaticResource FlatButton}"
-                            Background="#FF333A45" Padding="12,6" VerticalAlignment="Top" Click="OnMapReset"
+                            Background="#FF202A38" Padding="12,6" VerticalAlignment="Top" Click="OnMapReset"
                             ToolTip="Dézoomer pour voir le monde entier"/>
                     <CheckBox DockPanel.Dock="Right" Content="⛏ Ressources" IsChecked="{Binding Map.ShowResources}"
-                              VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#FFB8C4D0"
+                              VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#FFB6C2D1"
                               ToolTip="Afficher les champs et mines de ressources (ferraille, composants, soufre, charbon, pétrole…)"/>
                     <ToggleButton DockPanel.Dock="Right" Content="📏 Mesurer" IsChecked="{Binding Map.MeasureActive}"
                                   Padding="10,5" Margin="0,0,12,0" VerticalAlignment="Top"
-                                  Background="#FF333A45" Foreground="White" BorderThickness="0"
+                                  Background="#FF202A38" Foreground="White" BorderThickness="0"
                                   ToolTip="Mesurer une distance : clique un point A puis un point B (re-clique pour recommencer)"/>
                     <StackPanel>
                         <TextBlock Text="Carte du monde" FontSize="22" FontWeight="Bold"/>
-                        <TextBlock Text="{Binding Map.Status}" Foreground="#FF9AA4B2" FontSize="12" Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding Map.Status}" Foreground="#FF94A1B2" FontSize="12" Margin="0,2,0,0"/>
                     </StackPanel>
                 </DockPanel>
 
-                <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam pour voir la carte." Foreground="#FF6B7280" FontSize="14"
+                <TextBlock Grid.Row="1" Text="Connecte-toi avec Steam pour voir la carte." Foreground="#FF5E6B7E" FontSize="14"
                            Visibility="{Binding Map.ShowAuthNeeded, Converter={StaticResource BoolToVis}}"/>
 
                 <Grid Grid.Row="1" Visibility="{Binding Map.Authed, Converter={StaticResource BoolToVis}}">
@@ -2034,7 +2011,7 @@
                                             <!-- Icône (selon type) posée au-dessus du point d'ancrage -->
                                             <Grid Canvas.Left="-9" Canvas.Top="-22" ToolTip="{Binding Tooltip}">
                                                 <Ellipse Width="20" Height="20" Margin="-2"
-                                                         Fill="#66C03A3A" Stroke="#FFC03A3A" StrokeThickness="1.5"
+                                                         Fill="#66C03A3A" Stroke="#FFD23B41" StrokeThickness="1.5"
                                                          Visibility="{Binding IsThreatened, Converter={StaticResource BoolToVis}}"/>
                                                 <TextBlock Text="{Binding Glyph}" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Grid>
@@ -2051,7 +2028,7 @@
                                       StrokeThickness="{Binding Map.CellStrokeThickness}"/>
                                 <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}"
                                         Canvas.Left="{Binding Map.MeasureLabelX}" Canvas.Top="{Binding Map.MeasureLabelY}">
-                                    <Border Canvas.Left="8" Canvas.Top="-26" Background="#E51E2530" CornerRadius="4"
+                                    <Border Canvas.Left="8" Canvas.Top="-26" Background="#E5141B26" CornerRadius="4"
                                             Padding="7,3" BorderBrush="#FFE7B73C" BorderThickness="1">
                                         <TextBlock Text="{Binding Map.MeasureLabel}" Foreground="White"
                                                    FontSize="11" FontWeight="SemiBold"/>
@@ -2069,7 +2046,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding Map.PickBanner}" Foreground="White" FontSize="12.5"
                                        FontWeight="SemiBold" VerticalAlignment="Center"/>
-                            <Button Content="Annuler" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                            <Button Content="Annuler" Style="{StaticResource FlatButton}" Background="#FF202A38"
                                     Padding="10,4" Margin="12,0,0,0" Click="OnMapPickCancel"/>
                         </StackPanel>
                     </Border>
@@ -2079,49 +2056,49 @@
                             Background="#D915181E" CornerRadius="6" Padding="10,6" IsHitTestVisible="False">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="10" Height="10" Fill="#FF245C8A" VerticalAlignment="Center"/>
-                            <TextBlock Text="Wardens" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
+                            <TextBlock Text="Wardens" Foreground="#FFB6C2D1" FontSize="11" Margin="4,0,10,0"/>
                             <Ellipse Width="10" Height="10" Fill="#FF516C42" VerticalAlignment="Center"/>
-                            <TextBlock Text="Colonials" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
+                            <TextBlock Text="Colonials" Foreground="#FFB6C2D1" FontSize="11" Margin="4,0,10,0"/>
                             <Ellipse Width="10" Height="10" Fill="#FF6E2222" VerticalAlignment="Center"/>
-                            <TextBlock Text="Rasée" Foreground="#FFB8C4D0" FontSize="11" Margin="4,0,10,0"/>
-                            <TextBlock Text="📦 Stockpile" Foreground="#FFB8C4D0" FontSize="11"/>
-                            <TextBlock Text="· molette = zoom · glisser = déplacer · clic = région" Foreground="#FF6B7280" FontSize="11" Margin="10,0,0,0"/>
+                            <TextBlock Text="Rasée" Foreground="#FFB6C2D1" FontSize="11" Margin="4,0,10,0"/>
+                            <TextBlock Text="📦 Stockpile" Foreground="#FFB6C2D1" FontSize="11"/>
+                            <TextBlock Text="· molette = zoom · glisser = déplacer · clic = région" Foreground="#FF5E6B7E" FontSize="11" Margin="10,0,0,0"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Panneau de détail -->
-                    <Border Grid.Column="1" Background="#FF1B1E24" CornerRadius="8" Margin="10,0,0,0" Padding="12">
+                    <Border Grid.Column="1" Background="#FF10161F" CornerRadius="8" Margin="10,0,0,0" Padding="12">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                                 <!-- Formulaire de pose d'un stockpile (clic droit / clic port-dépôt) -->
                                 <Border Background="#FF22272F" CornerRadius="6" Padding="10" Margin="0,0,0,12"
-                                        BorderBrush="#FF3A414C" BorderThickness="1"
+                                        BorderBrush="#FF232C3A" BorderThickness="1"
                                         Visibility="{Binding Map.PlacementActive, Converter={StaticResource BoolToVis}}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Map.PlacementTitle}" FontWeight="Bold" Foreground="White" FontSize="13"/>
-                                        <TextBlock Text="{Binding Map.PlacementInfo}" Foreground="#FF9AA4B2" FontSize="11"
+                                        <TextBlock Text="{Binding Map.PlacementInfo}" Foreground="#FF94A1B2" FontSize="11"
                                                    TextWrapping="Wrap" Margin="0,3,0,8"/>
                                         <TextBlock Text="NOM" Style="{StaticResource Label}"/>
                                         <TextBox Text="{Binding Map.PlacementName, UpdateSourceTrigger=PropertyChanged}"
-                                                 FontSize="13" Padding="6" Background="#FF1B1E24" Foreground="White"
-                                                 BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"/>
+                                                 FontSize="13" Padding="6" Background="#FF10161F" Foreground="White"
+                                                 BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"/>
                                         <TextBlock Text="CODE (optionnel)" Style="{StaticResource Label}" Margin="0,8,0,0"
                                                    Visibility="{Binding Map.PlacementUsesCode, Converter={StaticResource BoolToVis}}"/>
                                         <TextBox Text="{Binding Map.PlacementCode, UpdateSourceTrigger=PropertyChanged}"
-                                                 FontSize="13" Padding="6" Background="#FF1B1E24" Foreground="White"
-                                                 BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                                 FontSize="13" Padding="6" Background="#FF10161F" Foreground="White"
+                                                 BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                  Visibility="{Binding Map.PlacementUsesCode, Converter={StaticResource BoolToVis}}"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                            <Button Content="✔ Créer" Style="{StaticResource FlatButton}" Background="#FF2F6B3A"
+                                            <Button Content="✔ Créer" Style="{StaticResource FlatButton}" Background="#FF1F8A4C"
                                                     Padding="12,6" Click="OnMapPlacementCreate"/>
-                                            <Button Content="Annuler" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                            <Button Content="Annuler" Style="{StaticResource FlatButton}" Background="#FF202A38"
                                                     Padding="12,6" Margin="8,0,0,0" Click="OnMapPlacementCancel"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
 
                                 <TextBlock Text="Clique un hexagone pour voir ses villes, tes stockpiles et tes demandes sur place. Clic droit : poser un stockpile."
-                                           Foreground="#FF6B7280" FontSize="12" TextWrapping="Wrap"
+                                           Foreground="#FF5E6B7E" FontSize="12" TextWrapping="Wrap"
                                            Visibility="{Binding Map.NoSelection, Converter={StaticResource BoolToVis}}"/>
 
                                 <StackPanel Visibility="{Binding Map.HasSelection, Converter={StaticResource BoolToVis}}">
@@ -2134,8 +2111,8 @@
                                             <DataTemplate>
                                                 <DockPanel Margin="0,1">
                                                     <Ellipse Width="9" Height="9" Fill="{Binding Fill}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding TeamLabel}" Foreground="#FF9AA4B2" FontSize="11"/>
-                                                    <TextBlock Text="{Binding PanelName}" Foreground="#FFE6E6E6" FontSize="12"/>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding TeamLabel}" Foreground="#FF94A1B2" FontSize="11"/>
+                                                    <TextBlock Text="{Binding PanelName}" Foreground="#FFE9EDF3" FontSize="12"/>
                                                 </DockPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -2146,7 +2123,7 @@
                                     <ItemsControl ItemsSource="{Binding Map.SelectedStructureSummary}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding}" Foreground="#FFE6E6E6" FontSize="12" Margin="0,1"/>
+                                                <TextBlock Text="{Binding}" Foreground="#FFE9EDF3" FontSize="12" Margin="0,1"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -2157,15 +2134,15 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <StackPanel Margin="0,1">
-                                                    <TextBlock Foreground="#FFE6E6E6" FontSize="12">
+                                                    <TextBlock Foreground="#FFE9EDF3" FontSize="12">
                                                         <Run Text="📦 "/><Run Text="{Binding Name, Mode=OneWay}"/>
-                                                        <Run Text="{Binding TypeLabel, Mode=OneWay}" Foreground="#FF9AA4B2"/>
+                                                        <Run Text="{Binding TypeLabel, Mode=OneWay}" Foreground="#FF94A1B2"/>
                                                     </TextBlock>
-                                                    <TextBlock Text="{Binding ThreatLabel}" Foreground="#FFC03A3A" FontSize="11" Margin="18,0,0,0"
+                                                    <TextBlock Text="{Binding ThreatLabel}" Foreground="#FFD23B41" FontSize="11" Margin="18,0,0,0"
                                                                Visibility="{Binding IsThreatened, Converter={StaticResource BoolToVis}}"/>
                                                     <StackPanel Orientation="Horizontal" Margin="18,3,0,2"
                                                                 Visibility="{Binding CanManage, Converter={StaticResource BoolToVis}}">
-                                                        <Button Content="📍 Déplacer" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                                        <Button Content="📍 Déplacer" Style="{StaticResource FlatButton}" Background="#FF202A38"
                                                                 FontSize="10.5" Padding="7,3" Click="OnMapMovePin"
                                                                 ToolTip="Cliquer ensuite le nouvel emplacement sur la carte"/>
                                                         <Button Content="🗑" Style="{StaticResource FlatButton}" Background="#FF3A3030"
@@ -2182,7 +2159,7 @@
                                     <ItemsControl ItemsSource="{Binding Map.SelectedRequests}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding}" Foreground="#FFE6E6E6" FontSize="12" TextWrapping="Wrap" Margin="0,1"/>
+                                                <TextBlock Text="{Binding}" Foreground="#FFE9EDF3" FontSize="12" TextWrapping="Wrap" Margin="0,1"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -2203,7 +2180,7 @@
                 <StackPanel Grid.Row="0" Margin="0,0,0,14">
                     <TextBlock Text="Calculatrice logistique" FontSize="22" FontWeight="Bold"/>
                     <TextBlock Text="Compose une liste d'items : le plan de production complet (crafts, récoltes, véhicules) se calcule tout seul — sans créer de demande."
-                               Foreground="#FF9AA4B2" FontSize="13" Margin="0,4,0,0"/>
+                               Foreground="#FF94A1B2" FontSize="13" Margin="0,4,0,0"/>
                 </StackPanel>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -2213,11 +2190,11 @@
                                 <TextBlock Text="ITEMS À PRODUIRE (item · quantité)" Style="{StaticResource Label}" Margin="0,0,0,4"/>
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Content="➕ Ajouter" Style="{StaticResource FlatButton}"
-                                            Background="#FF2A475E" Padding="14,6" Margin="6,0,0,0" Click="OnCalcAddItem"/>
+                                            Background="#FF2D63D8" Padding="14,6" Margin="6,0,0,0" Click="OnCalcAddItem"/>
                                     <TextBox DockPanel.Dock="Right" Width="90" Margin="6,0,0,0"
                                              Text="{Binding ItemQuantity, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14" Padding="6" Background="#FF1B1E24" Foreground="White"
-                                             BorderBrush="#FF3A414C" BorderThickness="1" CaretBrush="White"
+                                             FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
+                                             BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                              VerticalContentAlignment="Center"/>
                                     <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
                                               Text="{Binding ItemName, UpdateSourceTrigger=PropertyChanged}"/>
@@ -2228,13 +2205,13 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#FF2E343F" CornerRadius="6" Padding="8,5" Margin="0,0,6,6">
+                                            <Border Background="#FF1F2937" CornerRadius="6" Padding="8,5" Margin="0,0,6,6">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Image Source="{Binding Icon}" Width="20" Height="20" Margin="0,0,6,0"
                                                            VerticalAlignment="Center"/>
                                                     <TextBlock VerticalAlignment="Center" FontSize="12.5" Foreground="White">
                                                         <Run Text="{Binding Name, Mode=OneWay}"/>
-                                                        <Run Text="{Binding Quantity, Mode=OneWay, StringFormat=' ×{0:N0}'}" Foreground="#FF7FC97F" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding Quantity, Mode=OneWay, StringFormat=' ×{0:N0}'}" Foreground="#FF53C272" FontWeight="SemiBold"/>
                                                     </TextBlock>
                                                     <Button Content="×" Style="{StaticResource FlatButton}" Background="#FF3A3030"
                                                             Padding="6,0" Margin="8,0,0,0" FontSize="11" Click="OnCalcRemoveItem"/>
@@ -2246,14 +2223,14 @@
                                 <DockPanel Margin="0,6,0,0">
                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                         <Button Content="🚚 Envoyer vers une demande" Style="{StaticResource FlatButton}"
-                                                Background="#FF2F6B3A" Padding="12,6" Click="OnCalcSendResupply"
+                                                Background="#FF1F8A4C" Padding="12,6" Click="OnCalcSendResupply"
                                                 Visibility="{Binding HasItems, Converter={StaticResource BoolToVis}}"
                                                 ToolTip="Préremplit le brouillon d'une demande de ravitaillement avec cette liste"/>
-                                        <Button Content="Vider" Style="{StaticResource FlatButton}" Background="#FF333A45"
+                                        <Button Content="Vider" Style="{StaticResource FlatButton}" Background="#FF202A38"
                                                 Padding="12,6" Margin="8,0,0,0" Click="OnCalcClear"
                                                 Visibility="{Binding HasItems, Converter={StaticResource BoolToVis}}"/>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding Status}" Foreground="#FF9AA4B2" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Status}" Foreground="#FF94A1B2" FontSize="12" VerticalAlignment="Center"/>
                                 </DockPanel>
                             </StackPanel>
                         </Border>
@@ -2264,12 +2241,12 @@
                                 <ItemsControl ItemsSource="{Binding Crafts}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#FF262B34" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
+                                            <Border Background="#FF1A222E" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
                                                 <DockPanel>
-                                                    <Border DockPanel.Dock="Right" Background="#FF2A3340" CornerRadius="4" Padding="7,2" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Building}" Foreground="#FF7FA8D9" FontSize="11"/>
+                                                    <Border DockPanel.Dock="Right" Background="#FF232C3A" CornerRadius="4" Padding="7,2" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Building}" Foreground="#FF6CA6F2" FontSize="11"/>
                                                     </Border>
-                                                    <TextBlock DockPanel.Dock="Right" Foreground="#FFE6E6E6" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"
+                                                    <TextBlock DockPanel.Dock="Right" Foreground="#FFE9EDF3" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"
                                                                Text="{Binding QtyText}" FontWeight="SemiBold"/>
                                                     <StackPanel Orientation="Horizontal">
                                                         <Image Source="{Binding Icon}" Width="22" Height="22" Margin="0,0,8,0" VerticalAlignment="Center"/>
@@ -2288,12 +2265,12 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#FF2E343F" CornerRadius="6" Padding="9,6" Margin="0,0,6,6">
+                                            <Border Background="#FF1F2937" CornerRadius="6" Padding="9,6" Margin="0,0,6,6">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Image Source="{Binding Icon}" Width="20" Height="20" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                                     <TextBlock VerticalAlignment="Center" FontSize="12.5" Foreground="White">
                                                         <Run Text="{Binding Name, Mode=OneWay}"/>
-                                                        <Run Text="{Binding QtyText, Mode=OneWay}" Foreground="#FFC88A2E" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding QtyText, Mode=OneWay}" Foreground="#FFE8A33D" FontWeight="SemiBold"/>
                                                     </TextBlock>
                                                 </StackPanel>
                                             </Border>
@@ -2301,8 +2278,8 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <Border Background="#FF20242C" CornerRadius="6" Margin="0,8,0,0" Padding="8,5">
-                                    <TextBlock Text="{Binding VehiclesText, StringFormat='🚚 {0}'}" Foreground="#FFB8C4D0" FontSize="12"/>
+                                <Border Background="#FF131A24" CornerRadius="6" Margin="0,8,0,0" Padding="8,5">
+                                    <TextBlock Text="{Binding VehiclesText, StringFormat='🚚 {0}'}" Foreground="#FFB6C2D1" FontSize="12"/>
                                 </Border>
                             </StackPanel>
                         </Border>
@@ -2319,7 +2296,7 @@
 
                 <StackPanel Grid.Row="0" Margin="0,0,0,14">
                     <TextBlock Text="Paramètres" FontSize="22" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding Settings.Status}" Foreground="#FF7FC97F" FontSize="12" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding Settings.Status}" Foreground="#FF53C272" FontSize="12" Margin="0,4,0,0"/>
                 </StackPanel>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -2337,9 +2314,9 @@
                                           IsChecked="{Binding AutoCheckUpdates}" FontSize="12.5"/>
                                 <DockPanel Margin="0,8,0,0">
                                     <Button DockPanel.Dock="Left" Content="🔄 Vérifier maintenant" Style="{StaticResource FlatButton}"
-                                            Background="#FF2A475E" Padding="10,5" Click="OnCheckUpdatesNow"/>
+                                            Background="#FF2D63D8" Padding="10,5" Click="OnCheckUpdatesNow"/>
                                     <TextBlock Text="{Binding DataContext.UpdateStatus, RelativeSource={RelativeSource AncestorType=Window}}"
-                                               Foreground="#FF9AA4B2" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                               Foreground="#FF94A1B2" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
                                 </DockPanel>
                             </StackPanel>
                         </Border>
@@ -2367,18 +2344,18 @@
                                 <TextBlock Text="🗖 OVERLAY &amp; RACCOURCIS" Style="{StaticResource Label}" Margin="0,0,0,8"/>
                                 <UniformGrid Columns="2" Margin="0,0,0,8">
                                     <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Text="Import du stockpile en jeu" Foreground="#FF9AA4B2" FontSize="11" Margin="0,0,0,3"/>
+                                        <TextBlock Text="Import du stockpile en jeu" Foreground="#FF94A1B2" FontSize="11" Margin="0,0,0,3"/>
                                         <ComboBox ItemsSource="{Binding HotkeyOptions}" SelectedItem="{Binding ImportHotkey}"
                                                   FontSize="12.5" Padding="5"/>
                                     </StackPanel>
                                     <StackPanel>
-                                        <TextBlock Text="Afficher/masquer l'overlay" Foreground="#FF9AA4B2" FontSize="11" Margin="0,0,0,3"/>
+                                        <TextBlock Text="Afficher/masquer l'overlay" Foreground="#FF94A1B2" FontSize="11" Margin="0,0,0,3"/>
                                         <ComboBox ItemsSource="{Binding HotkeyOptions}" SelectedItem="{Binding OverlayHotkey}"
                                                   FontSize="12.5" Padding="5"/>
                                     </StackPanel>
                                 </UniformGrid>
                                 <DockPanel Margin="0,0,0,8">
-                                    <TextBlock DockPanel.Dock="Left" Text="Opacité de l'overlay" Foreground="#FF9AA4B2"
+                                    <TextBlock DockPanel.Dock="Left" Text="Opacité de l'overlay" Foreground="#FF94A1B2"
                                                FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                     <TextBlock DockPanel.Dock="Right" Text="{Binding OverlayOpacityText}" Foreground="White"
                                                FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0"/>
@@ -2386,7 +2363,7 @@
                                             TickFrequency="0.05" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
                                 </DockPanel>
                                 <Button Content="↺ Réinitialiser les positions des fenêtres d'overlay" Style="{StaticResource FlatButton}"
-                                        Background="#FF333A45" Padding="10,5" HorizontalAlignment="Left" Click="OnResetOverlayPositions"/>
+                                        Background="#FF202A38" Padding="10,5" HorizontalAlignment="Left" Click="OnResetOverlayPositions"/>
                             </StackPanel>
                         </Border>
 
@@ -2398,11 +2375,11 @@
                                           IsChecked="{Binding MapShowResourcesDefault}" FontSize="12.5" Margin="0,0,0,8"/>
                                 <DockPanel Margin="0,0,0,6">
                                     <Button DockPanel.Dock="Right" Content="🗑 Vider" Style="{StaticResource FlatButton}"
-                                            Background="#FF5A3535" Padding="10,4" Margin="8,0,0,0" Click="OnClearTileCache"/>
-                                    <TextBlock Text="{Binding TileCacheText}" Foreground="#FF9AA4B2" FontSize="12" VerticalAlignment="Center"/>
+                                            Background="#FF8E3438" Padding="10,4" Margin="8,0,0,0" Click="OnClearTileCache"/>
+                                    <TextBlock Text="{Binding TileCacheText}" Foreground="#FF94A1B2" FontSize="12" VerticalAlignment="Center"/>
                                 </DockPanel>
                                 <Button Content="📂 Ouvrir le dossier de données (réglages, archives, cartes)" Style="{StaticResource FlatButton}"
-                                        Background="#FF333A45" Padding="10,5" HorizontalAlignment="Left" Click="OnOpenDataFolder"/>
+                                        Background="#FF202A38" Padding="10,5" HorizontalAlignment="Left" Click="OnOpenDataFolder"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -2411,29 +2388,31 @@
         </Grid>
 
         <!-- ====================== PORTE DE CONNEXION (au lancement) ====================== -->
-        <Border Grid.Column="0" Grid.ColumnSpan="2" Background="#FF0E1014"
+        <Border Grid.Column="0" Grid.ColumnSpan="2" Background="#FF0A0E14"
                 Visibility="{Binding Friends.NeedsLogin, Converter={StaticResource BoolToVis}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="400">
                 <Image Source="pack://application:,,,/Assets/logo.png" Width="130" Height="130"
                        RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,0,14"/>
                 <TextBlock Text="FoxholeLogiHub" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center"/>
-                <TextBlock Text="Gestion logistique pour Foxhole" Foreground="#FF9AA4B2" FontSize="13"
+                <TextBlock Text="Gestion logistique pour Foxhole" Foreground="#FF94A1B2" FontSize="13"
                            HorizontalAlignment="Center" Margin="0,4,0,0"/>
-                <Border Background="#FF1B1E24" CornerRadius="12" Padding="28,26" Margin="0,30,0,0"
-                        BorderBrush="#FF2A2F38" BorderThickness="1">
+                <Border Background="#FF10161F" CornerRadius="12" Padding="28,26" Margin="0,30,0,0"
+                        BorderBrush="#FF232C3A" BorderThickness="1">
                     <StackPanel>
                         <TextBlock Text="Connecte-toi avec Steam pour accéder à toutes les fonctionnalités : amis, régiment, stockpiles et ravitaillement."
-                                   Foreground="#FFB8C4D0" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"/>
+                                   Foreground="#FFB6C2D1" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"/>
                         <Button Content="🎮  Se connecter avec Steam" HorizontalAlignment="Center" Margin="0,20,0,0"
-                                Style="{StaticResource FlatButton}" Background="#FF2A6E8F" Padding="22,11" FontSize="15"
+                                Style="{StaticResource FlatButton}" Background="#FF2D63D8" Padding="22,11" FontSize="15"
                                 Click="OnSteamLoginClick"/>
-                        <TextBlock Text="{Binding Friends.Status}" Foreground="#FF9AA4B2" FontSize="11"
+                        <TextBlock Text="{Binding Friends.Status}" Foreground="#FF94A1B2" FontSize="11"
                                    HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,16,0,0"/>
                     </StackPanel>
                 </Border>
                 <TextBlock Text="La connexion ouvre ton navigateur (OpenID Steam) — aucun mot de passe n'est partagé avec l'app."
-                           Foreground="#FF6B7280" FontSize="10" TextWrapping="Wrap" TextAlignment="Center" Margin="0,16,0,0"/>
+                           Foreground="#FF5E6B7E" FontSize="10" TextWrapping="Wrap" TextAlignment="Center" Margin="0,16,0,0"/>
             </StackPanel>
         </Border>
-    </Grid>
+        </Grid>
+      </Grid>
+    </Border>
 </Window>
