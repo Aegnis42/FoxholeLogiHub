@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/FoxholeLogiHub.App/Assets/logo.png" alt="FoxholeLogiHub" width="170"/>
+</p>
+
 # FoxholeLogiHub
 
 Outil de logistique pour **Foxhole** : stockpiles partagés (avec import automatique par capture

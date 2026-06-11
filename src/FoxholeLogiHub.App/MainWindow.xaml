@@ -81,8 +81,12 @@
         <!-- Sidebar -->
         <Border Grid.Column="0" Background="#FF15181E" Padding="14">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="FoxholeLogiHub" FontSize="16" FontWeight="Bold"
-                           Margin="4,4,0,18"/>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,4,0,18">
+                    <Image Source="pack://application:,,,/Assets/logo.png" Width="26" Height="26"
+                           RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                    <TextBlock Text="FoxholeLogiHub" FontSize="16" FontWeight="Bold"
+                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                </StackPanel>
 
                 <StackPanel DockPanel.Dock="Top">
                     <Button Click="OnNavDashboard">
@@ -2045,6 +2049,8 @@
         <Border Grid.Column="0" Grid.ColumnSpan="2" Background="#FF0E1014"
                 Visibility="{Binding Friends.NeedsLogin, Converter={StaticResource BoolToVis}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="400">
+                <Image Source="pack://application:,,,/Assets/logo.png" Width="130" Height="130"
+                       RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,0,14"/>
                 <TextBlock Text="FoxholeLogiHub" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center"/>
                 <TextBlock Text="Gestion logistique pour Foxhole" Foreground="#FF9AA4B2" FontSize="13"
                            HorizontalAlignment="Center" Margin="0,4,0,0"/>

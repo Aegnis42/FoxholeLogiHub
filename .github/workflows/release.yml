@@ -57,6 +57,7 @@ jobs:
           vpk pack --packId FoxholeLogiHub --packVersion $env:VERSION
           --packDir publish --mainExe FoxholeLogiHub.App.exe
           --packTitle "FoxholeLogiHub" --packAuthors "Aegnis42"
+          --icon src/FoxholeLogiHub.App/Assets/icon.ico
 
       - name: Publier la GitHub Release
         shell: pwsh
