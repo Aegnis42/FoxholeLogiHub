@@ -245,11 +245,15 @@ public sealed class StockpilesViewModel : ObservableObject
             }
             Authed = true;
             RaiseViewFlags();
-            ApplyList(await _client.GetListAsync());
+            // Les trois requêtes sont indépendantes → en parallèle (3 allers-retours → 1).
+            var listTask = _client.GetListAsync();
+            var alertsTask = LoadAlertsAsync();
+            var warTask = LoadWarStatusAsync();
+            ApplyList(await listTask);
             if (IsStockpileSelected)
                 await LoadItemsAsync();
-            await LoadAlertsAsync();
-            await LoadWarStatusAsync();
+            await alertsTask;
+            await warTask;
             Status = HasRegiment ? $"{Stockpiles.Count} stockpile(s)." : "Rejoins un régiment pour gérer des stockpiles.";
         }
         catch (AuthRequiredException) { ClearAuth(); }

@@ -15,7 +15,7 @@ public sealed class RegimentClient : IDisposable
     public RegimentClient(string baseUrl, string token)
     {
         _baseUrl = baseUrl.TrimEnd('/');
-        _http = new HttpClient { BaseAddress = new Uri(_baseUrl), Timeout = TimeSpan.FromSeconds(15) };
+        _http = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.All }) { BaseAddress = new Uri(_baseUrl), Timeout = TimeSpan.FromSeconds(15) };
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 

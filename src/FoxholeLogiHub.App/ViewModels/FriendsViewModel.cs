@@ -157,9 +157,11 @@ public sealed class FriendsViewModel : ObservableObject
             UserDto me = await _client.UpsertUserAsync(_account.DisplayName, _account.Faction.ToString());
             MyFriendCode = Format(me.FriendCode);
 
-            await _client.UploadAvatarAsync(_account.AvatarPath ?? "");
-            await ReloadFriendsAsync();
-            await ReloadRequestsAsync();
+            // Démarrage plus rapide : l'avatar part en tâche de fond (purement cosmétique) et
+            // amis + demandes se chargent en parallèle (2 allers-retours → 1).
+            var client = _client;
+            _ = Task.Run(async () => { try { await client.UploadAvatarAsync(_account.AvatarPath ?? ""); } catch { } });
+            await Task.WhenAll(ReloadFriendsAsync(), ReloadRequestsAsync());
 
             await _client.ConnectPresenceAsync(new PresenceHandlers(
                 OnPresenceChanged, OnOnlineFriends, OnFriendRequestReceived, OnFriendsChanged,

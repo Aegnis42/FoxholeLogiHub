@@ -33,6 +33,13 @@ builder.Services.AddDbContext<AppDbContext>(o =>
         o.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=foxhole.db");
 });
 
+// Compression des réponses JSON (la carte de guerre et les listes d'items font des centaines de Ko).
+builder.Services.AddResponseCompression(o =>
+{
+    o.EnableForHttps = true;
+    o.MimeTypes = new[] { "application/json" };
+});
+
 builder.Services.AddSingleton<ConnectionTracker>();
 builder.Services.AddSingleton<IUserIdProvider, SteamIdUserIdProvider>();
 builder.Services.AddSignalR();
@@ -113,6 +120,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+app.UseResponseCompression();
 
 // Filet global : toute exception non gérée est loggée et renvoyée comme ApiError JSON cohérent
 // (au lieu d'un 500 vide), sans fuiter le détail de l'erreur au client.

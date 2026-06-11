@@ -313,13 +313,23 @@ public sealed class MapViewModel : ObservableObject
     /// Appelé par la vue à chaque changement de zoom : ajuste les épaisseurs de traits et bascule
     /// les couches labels/structures en mode « zoom profond » (tous les hexagones) au-delà de 1.6×.
     /// </summary>
+    private double _lastStrokeScale = -1;
+
     public void SetViewScale(double scale)
     {
         _viewScale = Math.Max(scale, 0.01);
-        Raise(nameof(CellStrokeThickness));
-        MapHexViewModel.StrokeScale = Math.Min(1.0 / _viewScale, 2.6);
-        foreach (var hex in Hexes)
-            hex.RaiseStroke();
+
+        // Les épaisseurs de traits ne sont recalculées que si le zoom a bougé de > 4 % :
+        // chaque recalcul notifie ~53 bordures + ~430 bissectrices (bindings), inutile à
+        // chaque cran de molette pour une variation invisible à l'écran.
+        if (Math.Abs(_viewScale - _lastStrokeScale) / Math.Max(_lastStrokeScale, 0.01) > 0.04)
+        {
+            _lastStrokeScale = _viewScale;
+            Raise(nameof(CellStrokeThickness));
+            MapHexViewModel.StrokeScale = Math.Min(1.0 / _viewScale, 2.6);
+            foreach (var hex in Hexes)
+                hex.RaiseStroke();
+        }
 
         bool deep = scale >= 1.6;
         if (deep != _deepZoom)

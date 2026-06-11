@@ -57,7 +57,7 @@ public sealed class FriendsClient : IAsyncDisposable
         _baseUrl = baseUrl.TrimEnd('/');
         _token = token;
         _liveToken = liveToken;
-        _http = new HttpClient { BaseAddress = new Uri(_baseUrl), Timeout = TimeSpan.FromSeconds(15) };
+        _http = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.All }) { BaseAddress = new Uri(_baseUrl), Timeout = TimeSpan.FromSeconds(15) };
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 

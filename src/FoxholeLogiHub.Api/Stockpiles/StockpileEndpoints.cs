@@ -88,7 +88,7 @@ public static class StockpileEndpoints
             var byId = visible.ToDictionary(s => s.Id);
             var ids = byId.Keys.ToList();
 
-            var items = await db.StockpileItems
+            var items = await db.StockpileItems.AsNoTracking()
                 .Where(i => ids.Contains(i.StockpileId) && i.Quantity > 0
                     && (i.Name.ToLower().Contains(query) || i.Code.ToLower().Contains(query)))
                 .OrderByDescending(i => i.Quantity)
@@ -364,7 +364,7 @@ public static class StockpileEndpoints
                 return Results.Forbid();
 
             long cutoffMs = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeMilliseconds();
-            var rows = await db.StockpileItemSnapshots
+            var rows = await db.StockpileItemSnapshots.AsNoTracking()
                 .Where(s => s.StockpileId == id && s.TakenAtUnixMs >= cutoffMs)
                 .OrderByDescending(s => s.TakenAtUnixMs)
                 .Take(5000) // borne la réponse (≈ 30 j × 96 points × 50 items max suivis)
@@ -514,9 +514,9 @@ public static class StockpileEndpoints
 
             // Pas d'alertes sur les stockpiles PUBLICS (dépôts partagés que tous remplissent) :
             // on ne suit que les réserves privées (les miennes + celles d'alliés partagées avec moi).
-            var own = await db.Stockpiles.Where(s => s.RegimentId == myRegId && !s.IsPublic).ToListAsync();
+            var own = await db.Stockpiles.AsNoTracking().Where(s => s.RegimentId == myRegId && !s.IsPublic).ToListAsync();
             var alliedIds = await AlliedIdsAsync(db, myRegId);
-            var allied = await db.Stockpiles
+            var allied = await db.Stockpiles.AsNoTracking()
                 .Where(s => alliedIds.Contains(s.RegimentId) && !s.IsPublic
                     && db.StockpileShares.Any(sh => sh.StockpileId == s.Id && sh.RegimentId == myRegId))
                 .ToListAsync();
@@ -525,9 +525,9 @@ public static class StockpileEndpoints
             var spIds = all.Select(s => s.Id).ToList();
 
             var regIds = all.Select(s => s.RegimentId).Distinct().ToList();
-            var names = await db.Regiments.Where(r => regIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, r => r.Name);
+            var names = await db.Regiments.AsNoTracking().Where(r => regIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, r => r.Name);
 
-            var items = await db.StockpileItems
+            var items = await db.StockpileItems.AsNoTracking()
                 .Where(i => spIds.Contains(i.StockpileId)
                     && ((i.CriticalThreshold > 0 && i.Quantity <= i.CriticalThreshold)
                      || (i.LowThreshold > 0 && i.Quantity <= i.LowThreshold)))
@@ -550,7 +550,7 @@ public static class StockpileEndpoints
     }
 
     private static async Task<List<StockpileItemDto>> ItemsAsync(AppDbContext db, string stockpileId) =>
-        await db.StockpileItems.Where(i => i.StockpileId == stockpileId)
+        await db.StockpileItems.AsNoTracking().Where(i => i.StockpileId == stockpileId)
             .OrderBy(i => i.Category).ThenBy(i => i.Name)
             .Select(i => new StockpileItemDto(i.Code, i.Name, i.Category, i.Quantity, i.LowThreshold, i.CriticalThreshold))
             .ToListAsync();
@@ -577,20 +577,20 @@ public static class StockpileEndpoints
         string myFaction = ctx.Value.reg.Faction;
         bool canManage = await HasPermAsync(db, ctx.Value.reg, ctx.Value.member, me, RegimentPermission.ManageStockpiles);
 
-        var own = await db.Stockpiles.Where(s => s.RegimentId == myRegId).ToListAsync();
+        var own = await db.Stockpiles.AsNoTracking().Where(s => s.RegimentId == myRegId).ToListAsync();
 
         var alliedIds = await AlliedIdsAsync(db, myRegId);
-        var allied = await db.Stockpiles
+        var allied = await db.Stockpiles.AsNoTracking()
             .Where(s => alliedIds.Contains(s.RegimentId)
                 && (s.IsPublic || db.StockpileShares.Any(sh => sh.StockpileId == s.Id && sh.RegimentId == myRegId)))
             .ToListAsync();
 
         var all = own.Concat(allied).ToList();
         var regIds = all.Select(s => s.RegimentId).Distinct().ToList();
-        var names = await db.Regiments.Where(r => regIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, r => r.Name);
+        var names = await db.Regiments.AsNoTracking().Where(r => regIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, r => r.Name);
 
         var ownIds = own.Select(o => o.Id).ToList();
-        var shares = await db.StockpileShares.Where(sh => ownIds.Contains(sh.StockpileId)).ToListAsync();
+        var shares = await db.StockpileShares.AsNoTracking().Where(sh => ownIds.Contains(sh.StockpileId)).ToListAsync();
 
         return all.Select(s =>
         {

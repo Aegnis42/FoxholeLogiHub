@@ -185,6 +185,7 @@ public static class ItemIcons
                 var bmp = new BitmapImage();
                 bmp.BeginInit();
                 bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.DecodePixelWidth = 48; // affichées en 22-40 px → décodage réduit (RAM + vitesse)
                 bmp.UriSource = new Uri(path);
                 bmp.EndInit();
                 bmp.Freeze();
