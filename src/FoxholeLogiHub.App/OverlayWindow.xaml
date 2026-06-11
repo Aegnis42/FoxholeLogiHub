@@ -1,0 +1,118 @@
+<Window x:Class="FoxholeLogiHub.App.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LogiHub Overlay"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False"
+        Width="330" SizeToContent="Height" MaxHeight="640" ResizeMode="NoResize">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
+
+    <Border Background="#EE13171E" CornerRadius="10" BorderBrush="#FF2A3340" BorderThickness="1">
+        <DockPanel Margin="10">
+
+            <!-- En-tête (déplaçable) -->
+            <DockPanel DockPanel.Dock="Top" Background="Transparent" MouseLeftButtonDown="OnDragWindow" Margin="0,0,0,6">
+                <Button DockPanel.Dock="Right" Content="✕" Click="OnCloseClick"
+                        Background="Transparent" Foreground="#FF9AA4B2" BorderThickness="0"
+                        Padding="6,0" FontSize="13" Cursor="Hand" ToolTip="Fermer l'overlay (F9 pour rouvrir)"/>
+                <Image Source="pack://application:,,,/Assets/logo.png" Width="18" Height="18"
+                       RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                <TextBlock Text="LogiHub" Foreground="White" FontWeight="Bold" FontSize="13"
+                           VerticalAlignment="Center" Margin="6,0,0,0"/>
+                <TextBlock Text="— glisser pour déplacer" Foreground="#FF4A515C" FontSize="10"
+                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+            </DockPanel>
+
+            <!-- Bannière de guerre (compacte) -->
+            <TextBlock DockPanel.Dock="Top" Text="{Binding Stockpiles.WarBanner}" Foreground="#FF7FA8D9"
+                       FontSize="10.5" TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <!-- Recherche rapide -->
+                    <DockPanel Margin="0,0,0,4">
+                        <Button DockPanel.Dock="Right" Content="🔍" Click="OnSearchClick"
+                                Background="#FF2A475E" Foreground="White" BorderThickness="0"
+                                Padding="8,3" Margin="4,0,0,0" Cursor="Hand"/>
+                        <TextBox Text="{Binding Stockpiles.SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                 KeyDown="OnSearchKeyDown" FontSize="12" Padding="5"
+                                 Background="#FF1B212B" Foreground="White" BorderBrush="#FF2A3340"
+                                 BorderThickness="1" CaretBrush="White"
+                                 ToolTip="Trouver un item dans tous les stockpiles (Entrée)"/>
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding Stockpiles.SearchResults}" Margin="0,0,0,4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,1">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding QtyText}" Foreground="#FF7FC97F"
+                                               FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="11.5"/>
+                                        <TextBlock Text="{Binding WhereText}" Foreground="#FF6B7280" FontSize="9.5" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Alertes de stock -->
+                    <TextBlock Text="🚨 ALERTES" Foreground="#FF9AA4B2" FontSize="10" FontWeight="Bold" Margin="0,4,0,3"/>
+                    <TextBlock Text="Aucune alerte — tout est au vert." Foreground="#FF4A8C5C" FontSize="11"
+                               Visibility="{Binding Stockpiles.NoAlerts, Converter={StaticResource BoolToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding Stockpiles.Alerts}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,1">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding QuantityText}" FontSize="12" FontWeight="Bold"
+                                               VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#FFC88A2E"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCritical}" Value="True">
+                                                        <Setter Property="Foreground" Value="#FFE05252"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="11.5"/>
+                                        <TextBlock Text="{Binding StockpileName}" Foreground="#FF6B7280" FontSize="9.5" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- File MPF -->
+                    <TextBlock Text="🏭 MPF" Foreground="#FF9AA4B2" FontSize="10" FontWeight="Bold" Margin="0,8,0,3"
+                               Visibility="{Binding Stockpiles.HasMpf, Converter={StaticResource BoolToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding Stockpiles.MpfOrders}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,1">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding RemainingText}" Foreground="{Binding RemainingBrush}"
+                                               FontSize="10.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock Foreground="White" FontSize="11.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Name, Mode=OneWay}"/>
+                                        <Run Text="{Binding CratesText, Mode=OneWay}" Foreground="#FF7FC97F" FontSize="10"/>
+                                    </TextBlock>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="F8 : importer le stockpile ouvert en jeu · F9 : afficher/masquer"
+                               Foreground="#FF3E454F" FontSize="9" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</Window>

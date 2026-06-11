@@ -14,6 +14,11 @@ public sealed class AppSettings
 
     /// <summary>Notifications Windows (toasts) : demandes d'amis, invitations, ravitaillement, stock critique.</summary>
     public bool NotificationsEnabled { get; set; } = true;
+
+    /// <summary>Overlay compact (fenêtre toujours visible) : état et position mémorisés.</summary>
+    public bool OverlayOpen { get; set; }
+    public double? OverlayLeft { get; set; }
+    public double? OverlayTop { get; set; }
 }
 
 /// <summary>Persistance des réglages dans settings.json.</summary>

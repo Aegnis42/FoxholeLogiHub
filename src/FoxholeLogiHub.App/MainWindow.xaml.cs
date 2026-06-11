@@ -7,6 +7,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using FoxholeLogiHub.App.ViewModels;
 using FoxholeLogiHub.Contracts;
+using FoxholeLogiHub.Core.Services;
 
 namespace FoxholeLogiHub.App;
 
@@ -16,6 +17,8 @@ namespace FoxholeLogiHub.App;
 public partial class MainWindow : Window
 {
     private const int HotkeyId = 0xF0C;   // identifiant arbitraire
+    private const int HotkeyIdOverlay = 0xF0D;
+    private const uint VkF9 = 0x78;
     private const int WmHotkey = 0x0312;
     private const uint VkF8 = 0x77;
 
@@ -69,6 +72,11 @@ public partial class MainWindow : Window
         _source = HwndSource.FromHwnd(_hwnd);
         _source?.AddHook(HwndHook);
         RegisterHotKey(_hwnd, HotkeyId, 0, VkF8); // F8 global → import par capture
+        RegisterHotKey(_hwnd, HotkeyIdOverlay, 0, VkF9); // F9 global → overlay compact
+
+        // Réouvre l'overlay s'il était affiché à la dernière fermeture.
+        if (new SettingsStore().Load().OverlayOpen)
+            Dispatcher.BeginInvoke(new Action(() => ToggleOverlay()), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -78,14 +86,64 @@ public partial class MainWindow : Window
             _ = _vm.Stockpiles.ImportFromCaptureAsync(0); // capture immédiate de la fenêtre au 1er plan (le jeu)
             handled = true;
         }
+        else if (msg == WmHotkey && wParam.ToInt32() == HotkeyIdOverlay)
+        {
+            ToggleOverlay();
+            handled = true;
+        }
         return IntPtr.Zero;
+    }
+
+    // ---------- Overlay compact (toujours-au-dessus) ----------
+
+    private OverlayWindow? _overlay;
+
+    private void OnToggleOverlay(object sender, RoutedEventArgs e) => ToggleOverlay();
+
+    private void ToggleOverlay()
+    {
+        var store = new SettingsStore();
+        var settings = store.Load();
+
+        if (_overlay is { IsVisible: true })
+        {
+            settings.OverlayLeft = _overlay.Left;
+            settings.OverlayTop = _overlay.Top;
+            settings.OverlayOpen = false;
+            store.Save(settings);
+            _overlay.Hide();
+            return;
+        }
+
+        if (_overlay is null)
+        {
+            _overlay = new OverlayWindow(_vm, settings.OverlayLeft, settings.OverlayTop) { Owner = this };
+            _overlay.CloseRequested += ToggleOverlay;
+        }
+        _overlay.Show();
+        settings.OverlayOpen = true;
+        store.Save(settings);
+    }
+
+    private void PersistOverlayState()
+    {
+        if (_overlay is null)
+            return;
+        var store = new SettingsStore();
+        var settings = store.Load();
+        settings.OverlayLeft = _overlay.Left;
+        settings.OverlayTop = _overlay.Top;
+        settings.OverlayOpen = _overlay.IsVisible;
+        store.Save(settings);
     }
 
     protected override void OnClosed(EventArgs e)
     {
         // Chaque étape de nettoyage est isolée : un échec ne doit pas empêcher les suivantes
-        // (surtout libérer la hotkey F8 globale et l'icône de notification).
+        // (surtout libérer les hotkeys F8/F9 globales et l'icône de notification).
+        try { PersistOverlayState(); } catch { }
         try { if (_hwnd != IntPtr.Zero) UnregisterHotKey(_hwnd, HotkeyId); } catch { }
+        try { if (_hwnd != IntPtr.Zero) UnregisterHotKey(_hwnd, HotkeyIdOverlay); } catch { }
         try { _source?.RemoveHook(HwndHook); } catch { }
         try { _vm.Companion.Dispose(); } catch { }
         try { _vm.Shutdown(); } catch { } // retire l'icône de zone de notification
