@@ -71,12 +71,53 @@ public partial class MainWindow : Window
         _hwnd = new WindowInteropHelper(this).Handle;
         _source = HwndSource.FromHwnd(_hwnd);
         _source?.AddHook(HwndHook);
-        RegisterHotKey(_hwnd, HotkeyId, 0, VkF8); // F8 global → import par capture
-        RegisterHotKey(_hwnd, HotkeyIdOverlay, 0, VkF9); // F9 global → overlay compact
+        RegisterHotkeys(); // F8 import + F9 overlay (configurables dans les Paramètres)
+        _vm.Settings.HotkeysChanged += RegisterHotkeys;
+        _vm.Settings.OverlayOpacityChanged += ApplyOverlayOpacity;
+
+        // L'icône de zone de notification restaure / quitte l'app (utile en mode « fermer = réduire »).
+        _vm.Notifier.OpenRequested += () =>
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        };
+        _vm.Notifier.ExitRequested += () =>
+        {
+            _exitRequested = true;
+            Close();
+        };
 
         // Réouvre l'overlay (hub + panneaux) s'il était affiché à la dernière fermeture.
         if (new SettingsStore().Load().OverlayPanel("hub").Open)
             Dispatcher.BeginInvoke(new Action(() => ToggleOverlay()), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    /// <summary>(Ré)enregistre les raccourcis globaux selon les Paramètres (touches F5-F12).</summary>
+    private void RegisterHotkeys()
+    {
+        if (_hwnd == IntPtr.Zero)
+            return;
+        var s = new SettingsStore().Load();
+        UnregisterHotKey(_hwnd, HotkeyId);
+        UnregisterHotKey(_hwnd, HotkeyIdOverlay);
+        RegisterHotKey(_hwnd, HotkeyId, 0, FKeyVk(s.ImportHotkey, VkF8));
+        RegisterHotKey(_hwnd, HotkeyIdOverlay, 0, FKeyVk(s.OverlayHotkey, VkF9));
+    }
+
+    private static uint FKeyVk(string name, uint fallback) => name switch
+    {
+        "F5" => 0x74, "F6" => 0x75, "F7" => 0x76, "F8" => 0x77,
+        "F9" => 0x78, "F10" => 0x79, "F11" => 0x7A, "F12" => 0x7B,
+        _ => fallback,
+    };
+
+    /// <summary>Applique l'opacité des Paramètres aux fenêtres d'overlay déjà créées.</summary>
+    private void ApplyOverlayOpacity()
+    {
+        double opacity = Math.Clamp(new SettingsStore().Load().OverlayOpacity, 0.5, 1.0);
+        foreach (var w in _overlays.Values)
+            w.Opacity = opacity;
     }
 
     private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -113,6 +154,7 @@ public partial class MainWindow : Window
             _ => new OverlayWindow(_vm, state.Left, state.Top),
         };
         w.Owner = this;
+        w.Opacity = Math.Clamp(new SettingsStore().Load().OverlayOpacity, 0.5, 1.0);
         switch (w)
         {
             case OverlayWindow hub:
@@ -205,6 +247,28 @@ public partial class MainWindow : Window
         store.Save(settings);
     }
 
+    private bool _exitRequested;
+    private bool _trayHintShown;
+
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        // Mode « fermer = réduire » : la fenêtre se cache, la surveillance (toasts, MPF,
+        // overlay) continue ; l'icône de zone de notification permet de revenir ou quitter.
+        if (!_exitRequested && new SettingsStore().Load().CloseToTray)
+        {
+            e.Cancel = true;
+            Hide();
+            if (!_trayHintShown)
+            {
+                _trayHintShown = true;
+                _vm.Notifier.Show("Toujours là",
+                    "FoxholeLogiHub continue en arrière-plan. Double-clique l'icône pour rouvrir, clic droit → Quitter.");
+            }
+            return;
+        }
+        base.OnClosing(e);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         // Chaque étape de nettoyage est isolée : un échec ne doit pas empêcher les suivantes
@@ -241,6 +305,35 @@ public partial class MainWindow : Window
 
     private void OnNavMap(object sender, RoutedEventArgs e) => _vm.ShowMap();
     private void OnNavCalculator(object sender, RoutedEventArgs e) => _vm.ShowCalculator();
+    private void OnNavSettings(object sender, RoutedEventArgs e) => _vm.ShowSettings();
+
+    // --- Paramètres ---
+
+    private async void OnCheckUpdatesNow(object sender, RoutedEventArgs e) => await _vm.CheckUpdatesNowAsync();
+    private void OnClearTileCache(object sender, RoutedEventArgs e) => _vm.Settings.ClearTileCache();
+    private void OnOpenDataFolder(object sender, RoutedEventArgs e) => _vm.Settings.OpenDataFolder();
+    private void OnSaveServerUrl(object sender, RoutedEventArgs e) => _vm.Settings.SaveServerUrl();
+    private void OnResetServerUrl(object sender, RoutedEventArgs e) => _vm.Settings.ResetServerUrl();
+
+    /// <summary>Réinitialise les positions des fenêtres d'overlay (fermées puis rouvertes aux défauts).</summary>
+    private void OnResetOverlayPositions(object sender, RoutedEventArgs e)
+    {
+        bool wasVisible = _overlays.Values.Any(w => w.IsVisible);
+        foreach (var w in _overlays.Values)
+            w.Close();
+        _overlays.Clear();
+
+        var store = new SettingsStore();
+        var settings = store.Load();
+        foreach (var st in settings.OverlayPanels.Values)
+        {
+            st.Left = null;
+            st.Top = null;
+        }
+        store.Save(settings);
+        if (wasVisible)
+            ToggleOverlay();
+    }
 
     // --- Calculatrice logistique ---
 

@@ -133,6 +133,18 @@
                             </Style>
                         </Button.Style>
                     </Button>
+                    <Button Content="⚙  Paramètres" Click="OnNavSettings">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSettingsActive}" Value="True">
+                                        <Setter Property="Background" Value="#FF2C3340"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Content="👤  Profil" Click="OnNavProfile">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource NavButtonBase}">
@@ -441,8 +453,6 @@
                                 <TextBlock Text="{Binding WarCount}" FontSize="15"/>
                             </StackPanel>
                         </UniformGrid>
-                        <CheckBox Content="🔔 Notifications Windows (demandes d'amis, ravitaillement, stock critique)"
-                                  IsChecked="{Binding NotificationsEnabled}" Margin="0,12,0,0" FontSize="12.5"/>
                     </StackPanel>
                 </Border>
 
@@ -2284,6 +2294,124 @@
                                 <Border Background="#FF20242C" CornerRadius="6" Margin="0,8,0,0" Padding="8,5">
                                     <TextBlock Text="{Binding VehiclesText, StringFormat='🚚 {0}'}" Foreground="#FFB8C4D0" FontSize="12"/>
                                 </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- ====================== PARAMÈTRES ====================== -->
+            <Grid Visibility="{Binding IsSettingsActive, Converter={StaticResource BoolToVis}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                    <TextBlock Text="Paramètres" FontSize="22" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Settings.Status}" Foreground="#FF7FC97F" FontSize="12" Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+
+                        <!-- Général -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel DataContext="{Binding Settings}">
+                                <TextBlock Text="🖥 GÉNÉRAL" Style="{StaticResource Label}" Margin="0,0,0,8"/>
+                                <CheckBox Content="Lancer FoxholeLogiHub à l'ouverture de session Windows"
+                                          IsChecked="{Binding StartWithWindows}" FontSize="12.5" Margin="0,0,0,6"/>
+                                <CheckBox Content="Fermer la fenêtre = continuer en arrière-plan (icône de zone de notification, overlay et alertes actifs)"
+                                          IsChecked="{Binding CloseToTray}" FontSize="12.5" Margin="0,0,0,6"/>
+                                <CheckBox Content="Vérifier automatiquement les mises à jour au lancement"
+                                          IsChecked="{Binding AutoCheckUpdates}" FontSize="12.5"/>
+                                <DockPanel Margin="0,8,0,0">
+                                    <Button DockPanel.Dock="Left" Content="🔄 Vérifier maintenant" Style="{StaticResource FlatButton}"
+                                            Background="#FF2A475E" Padding="10,5" Click="OnCheckUpdatesNow"/>
+                                    <TextBlock Text="{Binding DataContext.UpdateStatus, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Foreground="#FF9AA4B2" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Notifications -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="🔔 NOTIFICATIONS WINDOWS" Style="{StaticResource Label}" Margin="0,0,0,8"/>
+                                <CheckBox Content="Activer les notifications (interrupteur principal)"
+                                          IsChecked="{Binding NotificationsEnabled}" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <StackPanel DataContext="{Binding Settings}" Margin="22,0,0,0"
+                                            IsEnabled="{Binding DataContext.NotificationsEnabled, RelativeSource={RelativeSource AncestorType=Window}}">
+                                    <CheckBox Content="Demandes d'amis" IsChecked="{Binding NotifyFriendRequests}" FontSize="12" Margin="0,0,0,4"/>
+                                    <CheckBox Content="Invitations de régiment" IsChecked="{Binding NotifyRegimentInvites}" FontSize="12" Margin="0,0,0,4"/>
+                                    <CheckBox Content="Ravitaillement (nouvelles demandes, prises en charge, livraisons)" IsChecked="{Binding NotifyResupply}" FontSize="12" Margin="0,0,0,4"/>
+                                    <CheckBox Content="Stock critique (à l'import)" IsChecked="{Binding NotifyCriticalStock}" FontSize="12" Margin="0,0,0,4"/>
+                                    <CheckBox Content="Commande MPF terminée" IsChecked="{Binding NotifyMpfDone}" FontSize="12"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Overlay & raccourcis -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel DataContext="{Binding Settings}">
+                                <TextBlock Text="🗖 OVERLAY &amp; RACCOURCIS" Style="{StaticResource Label}" Margin="0,0,0,8"/>
+                                <UniformGrid Columns="2" Margin="0,0,0,8">
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Text="Import du stockpile en jeu" Foreground="#FF9AA4B2" FontSize="11" Margin="0,0,0,3"/>
+                                        <ComboBox ItemsSource="{Binding HotkeyOptions}" SelectedItem="{Binding ImportHotkey}"
+                                                  FontSize="12.5" Padding="5"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Afficher/masquer l'overlay" Foreground="#FF9AA4B2" FontSize="11" Margin="0,0,0,3"/>
+                                        <ComboBox ItemsSource="{Binding HotkeyOptions}" SelectedItem="{Binding OverlayHotkey}"
+                                                  FontSize="12.5" Padding="5"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock DockPanel.Dock="Left" Text="Opacité de l'overlay" Foreground="#FF9AA4B2"
+                                               FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding OverlayOpacityText}" Foreground="White"
+                                               FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                    <Slider Minimum="0.5" Maximum="1.0" Value="{Binding OverlayOpacity}"
+                                            TickFrequency="0.05" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <Button Content="↺ Réinitialiser les positions des fenêtres d'overlay" Style="{StaticResource FlatButton}"
+                                        Background="#FF333A45" Padding="10,5" HorizontalAlignment="Left" Click="OnResetOverlayPositions"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Carte & données -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel DataContext="{Binding Settings}">
+                                <TextBlock Text="🗺 CARTE &amp; DONNÉES" Style="{StaticResource Label}" Margin="0,0,0,8"/>
+                                <CheckBox Content="Afficher les champs et mines de ressources dès l'ouverture de la carte"
+                                          IsChecked="{Binding MapShowResourcesDefault}" FontSize="12.5" Margin="0,0,0,8"/>
+                                <DockPanel Margin="0,0,0,6">
+                                    <Button DockPanel.Dock="Right" Content="🗑 Vider" Style="{StaticResource FlatButton}"
+                                            Background="#FF5A3535" Padding="10,4" Margin="8,0,0,0" Click="OnClearTileCache"/>
+                                    <TextBlock Text="{Binding TileCacheText}" Foreground="#FF9AA4B2" FontSize="12" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <Button Content="📂 Ouvrir le dossier de données (réglages, archives, cartes)" Style="{StaticResource FlatButton}"
+                                        Background="#FF333A45" Padding="10,5" HorizontalAlignment="Left" Click="OnOpenDataFolder"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Serveur -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel DataContext="{Binding Settings}">
+                                <TextBlock Text="🌐 SERVEUR" Style="{StaticResource Label}" Margin="0,0,0,8"/>
+                                <TextBlock Text="URL de l'API (laisser le serveur officiel sauf si tu héberges le tien)."
+                                           Foreground="#FF9AA4B2" FontSize="11.5" Margin="0,0,0,4"/>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Officiel" Style="{StaticResource FlatButton}"
+                                            Background="#FF333A45" Padding="10,5" Margin="6,0,0,0" Click="OnResetServerUrl"
+                                            ToolTip="Rétablir le serveur officiel"/>
+                                    <Button DockPanel.Dock="Right" Content="Enregistrer" Style="{StaticResource FlatButton}"
+                                            Background="#FF2A475E" Padding="10,5" Margin="6,0,0,0" Click="OnSaveServerUrl"/>
+                                    <TextBox Text="{Binding ServerUrl, UpdateSourceTrigger=PropertyChanged}" FontSize="12.5" Padding="6"
+                                             Background="#FF1B1E24" Foreground="White" BorderBrush="#FF3A414C"
+                                             BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
+                                </DockPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>

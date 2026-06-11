@@ -12,6 +12,12 @@ public sealed class Notifier : IDisposable
 
     public bool Enabled { get; set; } = true;
 
+    /// <summary>Double-clic ou « Ouvrir » : restaurer la fenêtre principale.</summary>
+    public event Action? OpenRequested;
+
+    /// <summary>« Quitter » depuis le menu de l'icône (vraie fermeture, même en mode tray).</summary>
+    public event Action? ExitRequested;
+
     public Notifier()
     {
         System.Drawing.Icon icon;
@@ -25,12 +31,19 @@ public sealed class Notifier : IDisposable
             icon = System.Drawing.SystemIcons.Application;
         }
 
+        var menu = new ContextMenuStrip();
+        menu.Items.Add("Ouvrir FoxholeLogiHub", null, (_, _) => OpenRequested?.Invoke());
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Quitter", null, (_, _) => ExitRequested?.Invoke());
+
         _icon = new NotifyIcon
         {
             Icon = icon,
             Visible = true,
             Text = "FoxholeLogiHub",
+            ContextMenuStrip = menu,
         };
+        _icon.DoubleClick += (_, _) => OpenRequested?.Invoke();
     }
 
     /// <summary>Affiche un toast (meilleur effort, jamais bloquant).</summary>

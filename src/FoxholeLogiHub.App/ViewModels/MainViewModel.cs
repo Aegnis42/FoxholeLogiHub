@@ -38,8 +38,12 @@ public sealed class MainViewModel : ObservableObject
     public ResupplyViewModel Resupply { get; } = new();
     public MapViewModel Map { get; } = new();
     public CalculatorViewModel Calculator { get; } = new();
+    public SettingsViewModel Settings { get; } = new();
     public CompanionManager Companion { get; } = new();
     public ObservableCollection<Loadout> Loadouts { get; } = new();
+
+    /// <summary>Icône de zone de notification (la fenêtre s'y abonne pour restaurer/quitter).</summary>
+    public Services.Notifier Notifier => _notifier;
 
     /// <summary>Notifications Windows activées (persisté dans settings.json).</summary>
     public bool NotificationsEnabled
@@ -83,10 +87,44 @@ public sealed class MainViewModel : ObservableObject
         _notifier.Show("Mise à jour prête", $"FoxholeLogiHub v{version} est téléchargée — clique « Redémarrer » dans l'app.");
     }
 
+    private string _updateStatus = "";
+    public string UpdateStatus { get => _updateStatus; private set => Set(ref _updateStatus, value); }
+
+    /// <summary>Vérification manuelle (bouton des Paramètres), indépendante du réglage auto.</summary>
+    public async Task CheckUpdatesNowAsync()
+    {
+        UpdateStatus = "Recherche de mise à jour…";
+        try
+        {
+            string? version = await _updater.CheckAndDownloadAsync();
+            if (version is null)
+            {
+                UpdateStatus = UpdateReady
+                    ? $"v{_updateVersion} déjà téléchargée — clique « Redémarrer » (barre latérale)."
+                    : $"À jour ({AppVersion}).";
+                return;
+            }
+            _updateVersion = version;
+            Raise(nameof(UpdateReady));
+            Raise(nameof(UpdateLabel));
+            UpdateStatus = $"v{version} téléchargée — clique « Redémarrer » (barre latérale).";
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus = $"Vérification impossible : {ex.Message}";
+        }
+    }
+
     public MainViewModel()
     {
-        _notifier.Enabled = _settingsStore.Load().NotificationsEnabled;
-        _ = CheckForUpdateAsync();
+        var bootSettings = _settingsStore.Load();
+        _notifier.Enabled = bootSettings.NotificationsEnabled;
+        Map.ShowResources = bootSettings.MapShowResourcesDefault;
+        if (bootSettings.AutoCheckUpdates)
+            _ = CheckForUpdateAsync();
+
+        // Réglage carte appliqué en direct depuis l'onglet Paramètres.
+        Settings.MapShowResourcesDefaultChanged += show => Map.ShowResources = show;
 
         // Le module amis porte la connexion temps réel ; on relaie aux modules régiment/stockpiles/ravito.
         Friends.Authenticated += () => _ = RefreshSocialAsync();
@@ -136,6 +174,7 @@ public sealed class MainViewModel : ObservableObject
     public bool IsTakenActive => _activeTab == "Prises";
     public bool IsMapActive => _activeTab == "Carte";
     public bool IsCalculatorActive => _activeTab == "Calculatrice";
+    public bool IsSettingsActive => _activeTab == "Paramètres";
 
     public void ShowDashboard() => SetTab("Dashboard");
     public void ShowProfile() => SetTab("Profil");
@@ -146,6 +185,12 @@ public sealed class MainViewModel : ObservableObject
     public void ShowTaken() => SetTab("Prises");
     public void ShowMap() => SetTab("Carte");
     public void ShowCalculator() => SetTab("Calculatrice");
+
+    public void ShowSettings()
+    {
+        Settings.RefreshComputed(); // taille du cache, états registre…
+        SetTab("Paramètres");
+    }
 
     private void SetTab(string tab)
     {
@@ -161,6 +206,7 @@ public sealed class MainViewModel : ObservableObject
         Raise(nameof(IsTakenActive));
         Raise(nameof(IsMapActive));
         Raise(nameof(IsCalculatorActive));
+        Raise(nameof(IsSettingsActive));
     }
 
     // --- Profil ---
@@ -242,10 +288,27 @@ public sealed class MainViewModel : ObservableObject
                     ShowMap();
                     Map.HighlightProduction(hex, icons);
                 };
-                // Notifications Windows (toasts) — activables dans Profil.
-                Friends.ToastRequested += _notifier.Show;
-                Resupply.ToastRequested += _notifier.Show;
-                Stockpiles.ToastRequested += _notifier.Show;
+                // Notifications Windows (toasts), filtrées par catégorie (onglet Paramètres).
+                // Le routage se fait sur les titres — des constantes à nous (voir les VMs émetteurs).
+                Friends.ToastRequested += (title, msg) =>
+                {
+                    var s = _settingsStore.Load();
+                    bool isRegiment = title.Contains("régiment", StringComparison.OrdinalIgnoreCase);
+                    if (isRegiment ? s.NotifyRegimentInvites : s.NotifyFriendRequests)
+                        _notifier.Show(title, msg);
+                };
+                Resupply.ToastRequested += (title, msg) =>
+                {
+                    if (_settingsStore.Load().NotifyResupply)
+                        _notifier.Show(title, msg);
+                };
+                Stockpiles.ToastRequested += (title, msg) =>
+                {
+                    var s = _settingsStore.Load();
+                    bool isMpf = title.StartsWith("MPF", StringComparison.OrdinalIgnoreCase);
+                    if (isMpf ? s.NotifyMpfDone : s.NotifyCriticalStock)
+                        _notifier.Show(title, msg);
+                };
                 // Calculatrice → brouillon de demande de ravitaillement.
                 Calculator.SendToResupplyRequested += items =>
                 {
