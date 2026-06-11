@@ -5,8 +5,12 @@ namespace FoxholeLogiHub.Core.Services;
 /// <summary>Réglages de l'application (URL du serveur d'amis, etc.).</summary>
 public sealed class AppSettings
 {
-    /// <summary>URL de base de l'API d'amis. Localhost en dev ; URL Railway en prod.</summary>
-    public string ApiBaseUrl { get; set; } = "http://localhost:5080";
+    /// <summary>
+    /// URL de base de l'API. Par défaut : le serveur de production — indispensable pour les
+    /// utilisateurs installés (premier lancement sans settings.json). En dev, écrire
+    /// « http://localhost:5080 » dans %APPDATA%\FoxholeLogiHub\settings.json.
+    /// </summary>
+    public string ApiBaseUrl { get; set; } = "https://foxhole-app-logistique-production.up.railway.app";
 
     /// <summary>Notifications Windows (toasts) : demandes d'amis, invitations, ravitaillement, stock critique.</summary>
     public bool NotificationsEnabled { get; set; } = true;
