@@ -1,6 +1,7 @@
 <Window x:Class="FoxholeLogiHub.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:FoxholeLogiHub.App"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -541,14 +542,14 @@
                                 <Border Style="{StaticResource Card}">
                                     <StackPanel>
                                         <TextBlock Text="CRÉER UN RÉGIMENT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
-                                        <TextBox Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"
+                                        <TextBox Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Nom du régiment" Margin="0,0,0,8"
                                                  FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
                                                  BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                  ToolTip="Nom du régiment"/>
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Créer" Style="{StaticResource FlatButton}"
                                                     Background="#FF2D63D8" Padding="16,8" Margin="10,0,0,0" Click="OnCreateRegiment"/>
-                                            <TextBox Text="{Binding NewTag, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Text="{Binding NewTag, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="TAG"
                                                      FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
                                                      BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      ToolTip="Tag court, ex. FOX"/>
@@ -562,7 +563,7 @@
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Rejoindre" Style="{StaticResource FlatButton}"
                                                     Padding="16,8" Margin="10,0,0,0" Click="OnJoinRegiment"/>
-                                            <TextBox Text="{Binding JoinCode, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Text="{Binding JoinCode, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Code d’invitation"
                                                      FontSize="15" Padding="8" Background="#FF10161F" Foreground="White"
                                                      BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      VerticalContentAlignment="Center"/>
@@ -627,7 +628,7 @@
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Enregistrer" Style="{StaticResource FlatButton}"
                                                     Background="#FF2D63D8" Padding="14,6" Margin="8,0,0,0" Click="OnSaveWebhook"/>
-                                            <TextBox Text="{Binding WebhookInput, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="7"
+                                            <TextBox Text="{Binding WebhookInput, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="https://discord.com/api/webhooks/…" FontSize="13" Padding="7"
                                                      Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                                      CaretBrush="White" ToolTip="https://discord.com/api/webhooks/…"/>
                                         </DockPanel>
@@ -637,7 +638,7 @@
                                                     ToolTip="Coupe le webhook et sa mention"/>
                                             <TextBlock DockPanel.Dock="Left" Text="Rôle à mentionner :" Foreground="#FF94A1B2" FontSize="12"
                                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                            <TextBox Text="{Binding WebhookTagInput, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="7"
+                                            <TextBox Text="{Binding WebhookTagInput, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="ID du rôle, @everyone ou @here" FontSize="13" Padding="7"
                                                      Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                                      CaretBrush="White"
                                                      ToolTip="ID du rôle Discord (clic droit sur le rôle → Copier l'identifiant), ou @everyone / @here — pingué en tête de chaque alerte. Vide = aucune mention. Le rôle doit être mentionnable."/>
@@ -744,7 +745,7 @@
                                         <DockPanel Margin="0,4,0,0">
                                             <Button DockPanel.Dock="Right" Content="+ Rôle" Style="{StaticResource FlatButton}"
                                                     Padding="14,6" Margin="10,0,0,0" Click="OnCreateRole"/>
-                                            <TextBox Text="{Binding NewRoleName, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Text="{Binding NewRoleName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Nom du rôle"
                                                      FontSize="13" Padding="6" Background="#FF10161F" Foreground="White"
                                                      BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      VerticalContentAlignment="Center" ToolTip="Nom du nouveau rôle"/>
@@ -786,7 +787,7 @@
                                         <DockPanel Margin="0,4,0,0" Visibility="{Binding CanManageAlliances, Converter={StaticResource BoolToVis}}">
                                             <Button DockPanel.Dock="Right" Content="Proposer" Style="{StaticResource FlatButton}"
                                                     Background="#FF2D63D8" Padding="14,6" Margin="10,0,0,0" Click="OnProposeAlliance"/>
-                                            <TextBox Text="{Binding AllianceCode, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Text="{Binding AllianceCode, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Code du régiment allié"
                                                      FontSize="13" Padding="6" Background="#FF10161F" Foreground="White"
                                                      BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                      VerticalContentAlignment="Center" ToolTip="Code d'invitation du régiment à allier"/>
@@ -832,7 +833,7 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" Margin="0,0,8,0">
                                                 <TextBlock Text="NOM" Style="{StaticResource Label}"/>
-                                                <TextBox Text="{Binding FormName, UpdateSourceTrigger=PropertyChanged}"
+                                                <TextBox Text="{Binding FormName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Ex. : Dépôt principal"
                                                          FontSize="14" Padding="7" Background="#FF10161F" Foreground="White"
                                                          BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"/>
                                             </StackPanel>
@@ -849,12 +850,12 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" Margin="0,0,8,0">
                                                 <TextBlock Text="HEXAGONE" Style="{StaticResource Label}"/>
-                                                <ComboBox IsEditable="True" Text="{Binding FormHex, UpdateSourceTrigger=PropertyChanged}"
+                                                <ComboBox IsEditable="True" Text="{Binding FormHex, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Hexagone…"
                                                           ItemsSource="{Binding Hexes}" Padding="6" FontSize="14"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="LIEU (optionnel)" Style="{StaticResource Label}"/>
-                                                <TextBox Text="{Binding FormTown, UpdateSourceTrigger=PropertyChanged}"
+                                                <TextBox Text="{Binding FormTown, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Ville ou base (optionnel)"
                                                          FontSize="14" Padding="7" Background="#FF10161F" Foreground="White"
                                                          BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"/>
                                             </StackPanel>
@@ -862,7 +863,7 @@
                                         <StackPanel Margin="0,0,0,8"
                                                     Visibility="{Binding FormUsesCode, Converter={StaticResource BoolToVis}}">
                                             <TextBlock Text="CODE (mot de passe du Port/Dépôt)" Style="{StaticResource Label}"/>
-                                            <TextBox Text="{Binding FormCode, UpdateSourceTrigger=PropertyChanged}" MaxLength="8" Width="160"
+                                            <TextBox Text="{Binding FormCode, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Code du Port/Dépôt" MaxLength="8" Width="160"
                                                      HorizontalAlignment="Left" FontFamily="Consolas" FontSize="15" Padding="7"
                                                      Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"/>
                                         </StackPanel>
@@ -889,7 +890,7 @@
                                                     Visibility="{Binding HasSearchResults, Converter={StaticResource BoolToVis}}"/>
                                             <Button DockPanel.Dock="Right" Content="Chercher" Style="{StaticResource FlatButton}" Background="#FF2D63D8"
                                                     Padding="14,6" Margin="8,0,0,0" Click="OnStockpileSearch"/>
-                                            <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Padding="7"
+                                            <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Nom ou code d’item — ex. : 7.62mm" FontSize="14" Padding="7"
                                                      Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                                      CaretBrush="White" KeyDown="OnStockpileSearchKey"
                                                      ToolTip="Nom ou code d'item (ex. 7.92, Bmats, bandage…) — cherche dans tous les stockpiles visibles"/>
@@ -1020,22 +1021,22 @@
                                                 <Button DockPanel.Dock="Right" Content="Définir" Style="{StaticResource FlatButton}"
                                                         Background="#FF2D63D8" Padding="14,6" Margin="6,0,0,0" Click="OnSetItem"/>
                                                 <TextBox DockPanel.Dock="Right" Width="70" Margin="6,0,0,0"
-                                                         Text="{Binding NewItemCritical, UpdateSourceTrigger=PropertyChanged}"
+                                                         Text="{Binding NewItemCritical, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Seuil crit."
                                                          FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
                                                          BorderBrush="#FFD23B41" BorderThickness="1" CaretBrush="White"
                                                          VerticalContentAlignment="Center" ToolTip="Seuil critique (🔴 ≤)"/>
                                                 <TextBox DockPanel.Dock="Right" Width="70" Margin="6,0,0,0"
-                                                         Text="{Binding NewItemLow, UpdateSourceTrigger=PropertyChanged}"
+                                                         Text="{Binding NewItemLow, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Seuil bas"
                                                          FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
                                                          BorderBrush="#FFE8A33D" BorderThickness="1" CaretBrush="White"
                                                          VerticalContentAlignment="Center" ToolTip="Seuil bas (🟠 ≤)"/>
                                                 <TextBox DockPanel.Dock="Right" Width="80" Margin="6,0,0,0"
-                                                         Text="{Binding NewItemQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                                         Text="{Binding NewItemQuantity, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Qté"
                                                          FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
                                                          BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                          VerticalContentAlignment="Center" ToolTip="Quantité (0 = retirer)"/>
                                                 <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
-                                                          Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}"/>
+                                                          Text="{Binding NewItemName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Item — tape pour chercher"/>
                                             </DockPanel>
 
                                             <!-- Templates d'objectifs : applique/sauve un jeu de seuils du régiment -->
@@ -1046,7 +1047,7 @@
                                                         Background="#FF1F8A4C" Padding="10,5" Margin="6,0,0,0" Click="OnSaveTemplate"
                                                         ToolTip="Enregistre les seuils définis sur ce stockpile comme template du régiment"/>
                                                 <TextBox DockPanel.Dock="Right" Width="150" Margin="10,0,0,0"
-                                                         Text="{Binding TemplateName, UpdateSourceTrigger=PropertyChanged}"
+                                                         Text="{Binding TemplateName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Nom du template…"
                                                          FontSize="12.5" Padding="5" Background="#FF10161F" Foreground="White"
                                                          BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                          VerticalContentAlignment="Center" ToolTip="Nom du template à créer (ex. « Dépôt de front »)"/>
@@ -1056,7 +1057,7 @@
                                                 <Button DockPanel.Dock="Right" Content="Appliquer" Style="{StaticResource FlatButton}"
                                                         Background="#FF2D63D8" Padding="10,5" Margin="6,0,0,0" Click="OnApplyTemplate"
                                                         ToolTip="Applique les seuils du template à ce stockpile (items absents créés à 0)"/>
-                                                <ComboBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}"
+                                                <ComboBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}" app:Hint.Text="Choisir un template…"
                                                           FontSize="12.5" Padding="5" VerticalAlignment="Center">
                                                     <ComboBox.ItemTemplate>
                                                         <DataTemplate>
@@ -1079,11 +1080,11 @@
                                                     <Button DockPanel.Dock="Right" Content="⇄ Transférer" Style="{StaticResource FlatButton}"
                                                             Background="#FF1F8A4C" Padding="10,4" Margin="8,0,0,0" Click="OnConfirmTransfer"/>
                                                     <TextBox DockPanel.Dock="Left" Width="80" Margin="0,0,8,0"
-                                                             Text="{Binding TransferQty, UpdateSourceTrigger=PropertyChanged}"
+                                                             Text="{Binding TransferQty, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Quantité"
                                                              FontSize="13" Padding="5" Background="#FF10161F" Foreground="White"
                                                              BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                              VerticalContentAlignment="Center" ToolTip="Quantité à transférer"/>
-                                                    <ComboBox ItemsSource="{Binding TransferTargets}" SelectedItem="{Binding TransferTarget}"
+                                                    <ComboBox ItemsSource="{Binding TransferTargets}" SelectedItem="{Binding TransferTarget}" app:Hint.Text="Stockpile de destination…"
                                                               DisplayMemberPath="Name" FontSize="12.5" Padding="5" VerticalAlignment="Center"
                                                               ToolTip="Stockpile de destination"/>
                                                 </DockPanel>
@@ -1290,7 +1291,7 @@
                             <StackPanel>
                                 <TextBlock Text="NOUVELLE DEMANDE (nom · hexagone · coordonnées · priorité · visibilité, puis ajoute des items)"
                                            Style="{StaticResource Label}" Margin="0,0,0,8"/>
-                                <TextBox Margin="0,0,0,8" Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Padding="7"
+                                <TextBox Margin="0,0,0,8" Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Titre — ex. : Tenir la colline" FontSize="14" Padding="7"
                                          Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                          CaretBrush="White" VerticalContentAlignment="Center" ToolTip="Nom de la demande"/>
                                 <DockPanel Margin="0,0,0,8">
@@ -1301,24 +1302,24 @@
                                               DisplayMemberPath="Label" SelectedValue="{Binding NewPriority}"
                                               ItemsSource="{Binding Priorities}" FontSize="14" Padding="6" ToolTip="Priorité"/>
                                     <TextBox DockPanel.Dock="Right" Width="120" Margin="6,0,0,0"
-                                             Text="{Binding NewCoords, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding NewCoords, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Coord. (ex. : C5)"
                                              FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
                                              BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                              VerticalContentAlignment="Center" ToolTip="Coordonnées (ex. E5, 123x456)"/>
                                     <ComboBox IsEditable="True" ItemsSource="{Binding Hexes}"
-                                              Text="{Binding NewHex, UpdateSourceTrigger=PropertyChanged}"
+                                              Text="{Binding NewHex, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Hexagone…"
                                               FontSize="14" Padding="6" ToolTip="Hexagone"/>
                                 </DockPanel>
                                 <DockPanel Margin="0,0,0,8">
                                     <Button DockPanel.Dock="Right" Content="+ Ajouter l'item" Style="{StaticResource FlatButton}"
                                             Background="#FF202A38" Padding="12,6" Margin="6,0,0,0" Click="OnAddDraftItem"/>
                                     <TextBox DockPanel.Dock="Right" Width="80" Margin="6,0,0,0"
-                                             Text="{Binding DraftItemQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding DraftItemQuantity, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Qté"
                                              FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
                                              BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                              VerticalContentAlignment="Center" ToolTip="Quantité"/>
                                     <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
-                                              Text="{Binding DraftItemName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Item à ajouter"/>
+                                              Text="{Binding DraftItemName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Item — tape pour chercher" ToolTip="Item à ajouter"/>
                                 </DockPanel>
                                 <ItemsControl ItemsSource="{Binding DraftItems}" Margin="0,0,0,8"
                                               Visibility="{Binding HasDraft, Converter={StaticResource BoolToVis}}">
@@ -1341,7 +1342,7 @@
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Content="Créer la demande" Style="{StaticResource FlatButton}"
                                             Background="#FF2D63D8" Padding="14,6" Margin="6,0,0,0" Click="OnCreateResupply"/>
-                                    <TextBox Text="{Binding NewNote, UpdateSourceTrigger=PropertyChanged}" FontSize="13" Padding="6"
+                                    <TextBox Text="{Binding NewNote, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Note pour les logisticiens (optionnel)" FontSize="13" Padding="6"
                                              Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A" BorderThickness="1"
                                              CaretBrush="White" VerticalContentAlignment="Center" ToolTip="Note (optionnel)"/>
                                 </DockPanel>
@@ -1390,23 +1391,23 @@
                                     <Button DockPanel.Dock="Right" Content="➕ Noter" Style="{StaticResource FlatButton}"
                                             Background="#FF2D63D8" Padding="12,6" Margin="6,0,0,0" Click="OnCreateMpf"/>
                                     <TextBox DockPanel.Dock="Right" Width="46" Margin="2,0,0,0" ToolTip="Minutes restantes"
-                                             Text="{Binding MpfMinutes, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding MpfMinutes, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="min"
                                              FontSize="13" Padding="5" Background="#FF10161F" Foreground="White"
                                              BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
                                     <TextBlock DockPanel.Dock="Right" Text="h" Foreground="#FF5E6B7E" VerticalAlignment="Center" Margin="3,0"/>
                                     <TextBox DockPanel.Dock="Right" Width="40" Margin="6,0,0,0" ToolTip="Heures restantes"
-                                             Text="{Binding MpfHours, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding MpfHours, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="h"
                                              FontSize="13" Padding="5" Background="#FF10161F" Foreground="White"
                                              BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
                                     <ComboBox DockPanel.Dock="Right" Width="150" Margin="6,0,0,0" IsEditable="True" ToolTip="Hexagone du MPF (optionnel)"
-                                              ItemsSource="{Binding Hexes}" Text="{Binding MpfHex, UpdateSourceTrigger=PropertyChanged}"
+                                              ItemsSource="{Binding Hexes}" Text="{Binding MpfHex, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Hexagone"
                                               FontSize="12.5" Padding="5"/>
                                     <TextBox DockPanel.Dock="Right" Width="60" Margin="6,0,0,0" ToolTip="Nombre de caisses"
-                                             Text="{Binding MpfCrates, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding MpfCrates, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Caisses"
                                              FontSize="13" Padding="5" Background="#FF10161F" Foreground="White"
                                              BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White" VerticalContentAlignment="Center"/>
                                     <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="12.5" Padding="5"
-                                              Text="{Binding MpfItemName, UpdateSourceTrigger=PropertyChanged}" ToolTip="Item produit"/>
+                                              Text="{Binding MpfItemName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Item produit au MPF" ToolTip="Item produit"/>
                                 </DockPanel>
                                 <ItemsControl ItemsSource="{Binding MpfOrders}" Margin="0,8,0,0">
                                     <ItemsControl.ItemTemplate>
@@ -1926,12 +1927,12 @@
                                         <TextBlock Text="{Binding Map.PlacementInfo}" Foreground="#FF94A1B2" FontSize="11"
                                                    TextWrapping="Wrap" Margin="0,3,0,8"/>
                                         <TextBlock Text="NOM" Style="{StaticResource Label}"/>
-                                        <TextBox Text="{Binding Map.PlacementName, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox Text="{Binding Map.PlacementName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Nom du stockpile"
                                                  FontSize="13" Padding="6" Background="#FF10161F" Foreground="White"
                                                  BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"/>
                                         <TextBlock Text="CODE (optionnel)" Style="{StaticResource Label}" Margin="0,8,0,0"
                                                    Visibility="{Binding Map.PlacementUsesCode, Converter={StaticResource BoolToVis}}"/>
-                                        <TextBox Text="{Binding Map.PlacementCode, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox Text="{Binding Map.PlacementCode, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Code (optionnel)"
                                                  FontSize="13" Padding="6" Background="#FF10161F" Foreground="White"
                                                  BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                                  Visibility="{Binding Map.PlacementUsesCode, Converter={StaticResource BoolToVis}}"/>
@@ -2039,12 +2040,12 @@
                                     <Button DockPanel.Dock="Right" Content="➕ Ajouter" Style="{StaticResource FlatButton}"
                                             Background="#FF2D63D8" Padding="14,6" Margin="6,0,0,0" Click="OnCalcAddItem"/>
                                     <TextBox DockPanel.Dock="Right" Width="90" Margin="6,0,0,0"
-                                             Text="{Binding ItemQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                             Text="{Binding ItemQuantity, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Qté"
                                              FontSize="14" Padding="6" Background="#FF10161F" Foreground="White"
                                              BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                              VerticalContentAlignment="Center"/>
                                     <ComboBox IsEditable="True" ItemsSource="{Binding ItemNames}" FontSize="14" Padding="6"
-                                              Text="{Binding ItemName, UpdateSourceTrigger=PropertyChanged}"/>
+                                              Text="{Binding ItemName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Item — tape pour chercher"/>
                                 </DockPanel>
                                 <ItemsControl ItemsSource="{Binding Items}" Margin="0,10,0,0">
                                     <ItemsControl.ItemsPanel>
@@ -2267,7 +2268,7 @@
                             Background="#FF2D63D8" Padding="10,6" Margin="6,0,0,0"
                             Click="OnSendRequestClick" IsEnabled="{Binding Connected}"
                             ToolTip="Envoyer une demande d'ami"/>
-                    <TextBox Text="{Binding AddCodeInput, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox Text="{Binding AddCodeInput, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Code ami"
                              FontSize="12.5" CharacterCasing="Upper"
                              VerticalContentAlignment="Center" ToolTip="Code d'ami (6 caractères)"/>
                 </DockPanel>

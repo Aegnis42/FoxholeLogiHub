@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:app="clr-namespace:FoxholeLogiHub.App">
 
     <!-- ============================================================================
          FoxholeLogiHub — Design system v1.1 (dark-first)
@@ -217,10 +218,23 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{StaticResource R.Control}">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
-                                      VerticalAlignment="Center"/>
+                        <Grid>
+                            <TextBlock x:Name="HintText"
+                                       Text="{Binding Path=(app:Hint.Text), RelativeSource={RelativeSource TemplatedParent}}"
+                                       Foreground="{StaticResource B.TextMuted}" Margin="{TemplateBinding Padding}"
+                                       VerticalAlignment="Center" Visibility="Collapsed"
+                                       IsHitTestVisible="False" TextTrimming="CharacterEllipsis"/>
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="HintText" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="Text" Value="{x:Null}">
+                            <Setter TargetName="HintText" Property="Visibility" Value="Visible"/>
+                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="BorderBrush" Value="#33425A"/>
                         </Trigger>
@@ -293,6 +307,11 @@
                                 CornerRadius="{StaticResource R.Control}"/>
                         <ToggleButton Style="{StaticResource ComboToggle}"
                                       IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"/>
+                        <TextBlock x:Name="HintText"
+                                   Text="{Binding Path=(app:Hint.Text), RelativeSource={RelativeSource TemplatedParent}}"
+                                   Foreground="{StaticResource B.TextMuted}" Margin="10,0,26,0"
+                                   VerticalAlignment="Center" Visibility="Collapsed"
+                                   IsHitTestVisible="False" TextTrimming="CharacterEllipsis"/>
                         <ContentPresenter x:Name="Selected" Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
@@ -325,6 +344,21 @@
                             <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="Selected" Property="Visibility" Value="Collapsed"/>
                         </Trigger>
+                        <!-- Placeholder : combo éditable vide, ou combo à sélection sans choix. -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsEditable" Value="True"/>
+                                <Condition Property="Text" Value=""/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="HintText" Property="Visibility" Value="Visible"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsEditable" Value="False"/>
+                                <Condition Property="SelectedItem" Value="{x:Null}"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="HintText" Property="Visibility" Value="Visible"/>
+                        </MultiTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="BorderBrush" Value="#33425A"/>
                         </Trigger>

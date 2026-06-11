@@ -1,6 +1,7 @@
 <Window x:Class="FoxholeLogiHub.App.OverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:FoxholeLogiHub.App"
         Title="LogiHub Overlay"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False"
@@ -50,7 +51,7 @@
                         <Button DockPanel.Dock="Right" Content="🔍" Click="OnSearchClick"
                                 Background="#FF2D63D8" Foreground="White" BorderThickness="0"
                                 Padding="8,3" Margin="4,0,0,0" Cursor="Hand"/>
-                        <TextBox Text="{Binding Stockpiles.SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox Text="{Binding Stockpiles.SearchQuery, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Trouver un item…"
                                  KeyDown="OnSearchKeyDown" FontSize="12" Padding="5"
                                  Background="#FF10161F" Foreground="White" BorderBrush="#FF232C3A"
                                  BorderThickness="1" CaretBrush="White"

@@ -1,6 +1,7 @@
 <Window x:Class="FoxholeLogiHub.App.OverlayResupplyWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:FoxholeLogiHub.App"
         Title="LogiHub Overlay — Demandes"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False"
@@ -26,23 +27,23 @@
                     <Border Background="#FF161D28" CornerRadius="6" Padding="7" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="NOUVELLE DEMANDE" Foreground="#FF5E6B7E" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
-                            <TextBox Text="{Binding Resupply.NewTitle, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBox Text="{Binding Resupply.NewTitle, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Titre de la demande"
                                      FontSize="11.5" Padding="4" Background="#FF10161F" Foreground="White"
                                      BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White"
                                      ToolTip="Titre (ex. : Tenir Callahan's Gate)"/>
                             <ComboBox IsEditable="True" ItemsSource="{Binding Resupply.Hexes}"
-                                      Text="{Binding Resupply.NewHex, UpdateSourceTrigger=PropertyChanged}"
+                                      Text="{Binding Resupply.NewHex, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Hexagone"
                                       FontSize="11.5" Padding="4" Margin="0,4,0,0" ToolTip="Hexagone"/>
                             <DockPanel Margin="0,4,0,0">
                                 <Button DockPanel.Dock="Right" Content="➕" Click="OnAddDraftItem"
                                         Background="#FF2D63D8" Foreground="White" BorderThickness="0"
                                         Padding="8,2" Margin="4,0,0,0" Cursor="Hand" ToolTip="Ajouter l'item à la demande"/>
                                 <TextBox DockPanel.Dock="Right" Width="52" Margin="4,0,0,0"
-                                         Text="{Binding Resupply.DraftItemQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                         Text="{Binding Resupply.DraftItemQuantity, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Qté"
                                          FontSize="11.5" Padding="4" Background="#FF10161F" Foreground="White"
                                          BorderBrush="#FF232C3A" BorderThickness="1" CaretBrush="White" ToolTip="Quantité"/>
                                 <ComboBox IsEditable="True" ItemsSource="{Binding Resupply.ItemNames}"
-                                          Text="{Binding Resupply.DraftItemName, UpdateSourceTrigger=PropertyChanged}"
+                                          Text="{Binding Resupply.DraftItemName, UpdateSourceTrigger=PropertyChanged}" app:Hint.Text="Item"
                                           FontSize="11.5" Padding="4" ToolTip="Item"/>
                             </DockPanel>
                             <ItemsControl ItemsSource="{Binding Resupply.DraftItems}" Margin="0,4,0,0">
