@@ -48,6 +48,7 @@
     <CornerRadius x:Key="R.Chip">5</CornerRadius>
 
     <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    <app:HorizontalPaddingConverter x:Key="PadH"/>
 
     <!-- ============ Texte ============ -->
     <Style TargetType="TextBlock">
@@ -222,13 +223,17 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{StaticResource R.Control}">
+                        <!-- Seul l'horizontal du Padding est appliqué : la hauteur est fixe (36),
+                             un padding vertical rognerait le texte au lieu de le centrer. -->
                         <Grid>
                             <TextBlock x:Name="HintText"
                                        Text="{Binding Path=(app:Hint.Text), RelativeSource={RelativeSource TemplatedParent}}"
-                                       Foreground="{StaticResource B.TextMuted}" Margin="{TemplateBinding Padding}"
+                                       Foreground="{StaticResource B.TextMuted}"
+                                       Margin="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource PadH}}"
                                        VerticalAlignment="Center" Visibility="Collapsed"
                                        IsHitTestVisible="False" TextTrimming="CharacterEllipsis"/>
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Margin="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource PadH}}"
                                           VerticalAlignment="Center"/>
                         </Grid>
                     </Border>
@@ -316,8 +321,8 @@
                         <ToggleButton Style="{StaticResource ComboToggle}"
                                       IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"/>
 
-                        <!-- Le Padding du contrôle dimensionne le contenu — même hauteur qu'un TextBox à padding égal. -->
-                        <Grid Margin="{TemplateBinding Padding}">
+                        <!-- Horizontal du Padding uniquement (hauteur fixe 36, contenu centré). -->
+                        <Grid Margin="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource PadH}}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="18"/>
