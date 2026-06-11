@@ -205,6 +205,14 @@
                     </Button>
                 </StackPanel>
 
+                <!-- Mise à jour prête + version (Velopack) -->
+                <Button DockPanel.Dock="Bottom" Content="{Binding UpdateLabel}" Style="{StaticResource FlatButton}"
+                        Background="#FF2F6B3A" Padding="8,6" Margin="0,0,0,8" Click="OnApplyUpdate"
+                        Visibility="{Binding UpdateReady, Converter={StaticResource BoolToVis}}"
+                        ToolTip="La nouvelle version est téléchargée — redémarre pour l'appliquer"/>
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding AppVersion}" Foreground="#FF4A515C"
+                           FontSize="10.5" Margin="4,0,0,6"/>
+
                 <!-- Présence en bas -->
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="4,0,0,2">
                     <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,6,0">

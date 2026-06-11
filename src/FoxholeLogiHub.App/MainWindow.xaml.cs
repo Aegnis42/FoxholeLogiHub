@@ -128,6 +128,7 @@ public partial class MainWindow : Window
     }
 
     private async void OnSaveWebhook(object sender, RoutedEventArgs e) => await _vm.Regiment.SaveWebhookAsync();
+    private void OnApplyUpdate(object sender, RoutedEventArgs e) => _vm.ApplyUpdate();
 
     // --- Templates d'objectifs ---
 

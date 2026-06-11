@@ -1,0 +1,58 @@
+name: release
+
+# Publie une release installable (Velopack) quand un tag v* est poussé :
+#   git tag v1.0.1 && git push origin v1.0.1
+# → Setup .exe + paquets de mise à jour (delta) attachés à la GitHub Release.
+# L'app installée vérifie ces releases au démarrage et propose le redémarrage.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Version depuis le tag
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart("v")
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Publish (self-contained win-x64)
+        shell: pwsh
+        run: >
+          dotnet publish src/FoxholeLogiHub.App/FoxholeLogiHub.App.csproj
+          -c Release -r win-x64 --self-contained true
+          -o publish "/p:Version=$env:VERSION"
+
+      - name: Installer vpk (Velopack CLI)
+        run: dotnet tool install -g vpk
+
+      - name: Télécharger les releases précédentes (deltas)
+        shell: pwsh
+        continue-on-error: true # première release : rien à télécharger
+        run: vpk download github --repoUrl https://github.com/${{ github.repository }}
+
+      - name: Pack Velopack
+        shell: pwsh
+        run: >
+          vpk pack --packId FoxholeLogiHub --packVersion $env:VERSION
+          --packDir publish --mainExe FoxholeLogiHub.App.exe
+          --packTitle "FoxholeLogiHub" --packAuthors "Aegnis42"
+
+      - name: Publier la GitHub Release
+        shell: pwsh
+        run: >
+          vpk upload github --repoUrl https://github.com/${{ github.repository }}
+          --publish --releaseName "FoxholeLogiHub v$env:VERSION"
+          --tag ${{ github.ref_name }} --token ${{ secrets.GITHUB_TOKEN }}

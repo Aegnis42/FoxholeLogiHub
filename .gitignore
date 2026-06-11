@@ -39,3 +39,7 @@ app-err.txt
 
 # Données joueur (ne jamais committer un .sav réel : contient Steam ID & device IDs)
 *.sav
+
+# Sorties de packaging local (Velopack)
+publish-test/
+releases-test/

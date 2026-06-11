@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.11" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
+    <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +33,10 @@
     <UseWPF>true</UseWPF>
     <!-- NotifyIcon pour les toasts Windows -->
     <UseWindowsForms>true</UseWindowsForms>
+    <!-- Version de l'app (les releases CI la remplacent par le tag v*) -->
+    <Version>1.0.0</Version>
+    <!-- Main custom : Velopack doit s'exécuter avant WPF (hooks install/update) -->
+    <StartupObject>FoxholeLogiHub.App.Program</StartupObject>
   </PropertyGroup>
 
 </Project>

@@ -105,3 +105,14 @@ Les composants tiers (companion FIR `fic.exe`, icônes et données du jeu, fonds
 officiels, positions d'hexagones) appartiennent à leurs auteurs — détails et crédits dans
 **[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**. FoxholeLogiHub est un projet
 communautaire **non affilié à Siege Camp** ; Foxhole et ses assets sont © Siege Camp.
+
+## Installation et mises à jour
+
+- **Installer** : télécharge `FoxholeLogiHub-win-Setup.exe` depuis la dernière
+  [release GitHub](https://github.com/Aegnis42/foxhole-app--logistique/releases) et lance-le
+  (installation par utilisateur, aucun prérequis — le runtime .NET est embarqué).
+- **Mises à jour automatiques** : l'app vérifie les releases au démarrage ; quand une nouvelle
+  version est téléchargée, un bouton « 🔄 Mise à jour » apparaît dans la barre latérale —
+  un clic redémarre sur la nouvelle version.
+- **Publier une release** (mainteneur) : `git tag v1.2.3 && git push origin v1.2.3` — le
+  workflow `release.yml` publie automatiquement Setup.exe + paquets de mise à jour (Velopack).

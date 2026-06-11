@@ -15,6 +15,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly AccountService _accountService = new();
     private readonly SettingsStore _settingsStore = new();
     private readonly Notifier _notifier = new();
+    private readonly UpdateService _updater = new();
     private Account? _account;
     private bool _mapPickWired;
 
@@ -58,9 +59,33 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>À appeler à la fermeture de la fenêtre (retire l'icône de zone de notification).</summary>
     public void Shutdown() => _notifier.Dispose();
 
+    // ---------- Mises à jour (Velopack / GitHub Releases) ----------
+
+    private string? _updateVersion;
+
+    public string AppVersion => $"v{_updater.CurrentVersion}";
+    public bool UpdateReady => _updateVersion is not null;
+    public string UpdateLabel => _updateVersion is null ? "" : $"🔄 Mise à jour v{_updateVersion} — Redémarrer";
+
+    /// <summary>Applique la mise à jour téléchargée et relance l'app.</summary>
+    public void ApplyUpdate() => _updater.ApplyAndRestart();
+
+    private async Task CheckForUpdateAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(10)); // laisse l'app démarrer tranquillement
+        string? version = await _updater.CheckAndDownloadAsync();
+        if (version is null)
+            return;
+        _updateVersion = version;
+        Raise(nameof(UpdateReady));
+        Raise(nameof(UpdateLabel));
+        _notifier.Show("Mise à jour prête", $"FoxholeLogiHub v{version} est téléchargée — clique « Redémarrer » dans l'app.");
+    }
+
     public MainViewModel()
     {
         _notifier.Enabled = _settingsStore.Load().NotificationsEnabled;
+        _ = CheckForUpdateAsync();
 
         // Le module amis porte la connexion temps réel ; on relaie aux modules régiment/stockpiles/ravito.
         Friends.Authenticated += () => _ = RefreshSocialAsync();
