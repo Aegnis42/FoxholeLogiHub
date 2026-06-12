@@ -542,7 +542,19 @@ public partial class MainWindow : Window
         MapTranslate.Y = m.Y - factor * (m.Y - MapTranslate.Y);
         MapScale.ScaleX = MapScale.ScaleY = newScale;
         UpdateOverlayScales(newScale);
+        EnsureCenterHiRes();
         e.Handled = true;
+    }
+
+    /// <summary>En zoom profond, l'hexagone au centre de l'écran reçoit son fond pleine résolution.</summary>
+    private void EnsureCenterHiRes()
+    {
+        if (MapViewport.ActualWidth <= 0 || MapScale.ScaleX <= 0)
+            return;
+        var center = new Point(
+            (MapViewport.ActualWidth / 2 - MapTranslate.X) / MapScale.ScaleX,
+            (MapViewport.ActualHeight / 2 - MapTranslate.Y) / MapScale.ScaleY);
+        _vm.Map.EnsureHiResAt(center);
     }
 
     private MapPinViewModel? _dragPin;
@@ -603,6 +615,7 @@ public partial class MainWindow : Window
             _mapUserInteracted = true;
             MapTranslate.X = _mapStartTx + d.X;
             MapTranslate.Y = _mapStartTy + d.Y;
+            EnsureCenterHiRes();
         }
     }
 

@@ -1,4 +1,5 @@
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
 using System.Windows.Media;
@@ -8,17 +9,25 @@ using FoxholeLogiHub.Core.Services;
 namespace FoxholeLogiHub.App.Services;
 
 /// <summary>
-/// Fonds de carte officiels : télécharge les tuiles TGA du dépôt clapfoot/warapi
-/// (Images/Maps/Map*.TGA, 1024×888, 32 bits non compressé), les convertit en PNG et les met en
-/// cache disque (%APPDATA%\FoxholeLogiHub\maptiles). Téléchargement unique (~190 Mo), ensuite
-/// tout vient du cache.
+/// Fonds de carte, en cache disque (%APPDATA%\FoxholeLogiHub\maptiles). Deux sources :
+/// 1. Pack HD (2048×1776, JPEG) extrait du mod « Improved Map Mod » de RDZ, hébergé en
+///    release d'assets GitHub — un seul téléchargement (~20 Mo) pour les 53 hexagones.
+/// 2. Repli : tuiles TGA officielles du dépôt clapfoot/warapi (1024×888), converties en PNG
+///    une par une (~190 Mo) — utilisé si le pack HD est indisponible.
 /// </summary>
 public sealed class MapTileService
 {
+    // Release dédiée aux assets, marquée « prerelease » : invisible des mises à jour Velopack
+    // (GithubSource ignore les préversions) et du badge « latest » du README.
+    private const string HdPackUrl =
+        "https://github.com/Aegnis42/foxhole-app--logistique/releases/download/assets-maptiles-hd-v1/maptiles-hd.zip";
+
     private static readonly HttpClient Http = CreateHttp();
     private readonly string _dir = Path.Combine(AppPaths.DataDirectory, "maptiles");
     private readonly SemaphoreSlim _gate = new(3); // téléchargements simultanés
+    private readonly object _hdLock = new();
     private Dictionary<string, string>? _urls;     // nom de carte normalisé → download_url
+    private Task<bool>? _hdPack;                   // téléchargement du pack HD, partagé par toutes les tuiles
 
     private static HttpClient CreateHttp()
     {
@@ -28,10 +37,22 @@ public sealed class MapTileService
     }
 
     private string PngPath(string map) => Path.Combine(_dir, map + ".png");
+    private string HdPath(string map) => Path.Combine(_dir, "hd", Norm(map) + ".jpg");
 
-    /// <summary>Garantit la tuile en cache (télécharge + convertit si besoin). Renvoie le chemin PNG ou null.</summary>
+    /// <summary>Garantit la tuile en cache (télécharge si besoin). Renvoie le chemin image ou null.</summary>
     public async Task<string?> EnsureAsync(string map)
     {
+        string hd = HdPath(map);
+        if (File.Exists(hd))
+            return hd;
+
+        Task<bool> hdTask;
+        lock (_hdLock)
+            hdTask = _hdPack ??= DownloadHdPackAsync();
+        if (await hdTask && File.Exists(hd))
+            return hd;
+
+        // Repli officiel warapi, tuile par tuile.
         string png = PngPath(map);
         if (File.Exists(png))
             return png;
@@ -61,6 +82,36 @@ public sealed class MapTileService
         finally
         {
             _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Télécharge et extrait le pack de fonds HD (~20 Mo) dans maptiles\hd. Extraction dans un
+    /// dossier temporaire puis renommage : un pack à moitié extrait n'est jamais pris pour valide.
+    /// </summary>
+    private async Task<bool> DownloadHdPackAsync()
+    {
+        string hdDir = Path.Combine(_dir, "hd");
+        try
+        {
+            if (Directory.Exists(hdDir) && Directory.EnumerateFiles(hdDir, "*.jpg").Any())
+                return true;
+
+            byte[] zip = await Http.GetByteArrayAsync(HdPackUrl);
+            string tmp = hdDir + ".tmp";
+            if (Directory.Exists(tmp))
+                Directory.Delete(tmp, true);
+            Directory.CreateDirectory(tmp);
+            using (var ms = new MemoryStream(zip))
+            using (var archive = new ZipArchive(ms, ZipArchiveMode.Read))
+                archive.ExtractToDirectory(tmp);
+            Directory.Move(tmp, hdDir);
+            return true;
+        }
+        catch
+        {
+            // Hors ligne ou GitHub indisponible : repli warapi, nouvelle tentative à la prochaine session.
+            return Directory.Exists(hdDir) && Directory.EnumerateFiles(hdDir, "*.jpg").Any();
         }
     }
 

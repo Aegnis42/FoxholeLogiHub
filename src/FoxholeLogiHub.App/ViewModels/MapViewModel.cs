@@ -39,14 +39,32 @@ public sealed class MapHexViewModel : ObservableObject
     }
 
     private ImageSource? _tile;
+    private ImageSource? _thumb; // vignette 512 de base, conservée pour borner la mémoire
 
-    /// <summary>Fond de carte officiel (terrain) — null tant que la tuile n'est pas en cache.</summary>
+    /// <summary>Fond de carte (terrain) — null tant que la tuile n'est pas en cache.</summary>
     public ImageSource? Tile => _tile;
     public Geometry HexClip { get; }
 
     public void SetTile(ImageSource? tile)
     {
+        _thumb = tile;
         _tile = tile;
+        Raise(nameof(Tile));
+    }
+
+    /// <summary>Affiche la version pleine résolution sans perdre la vignette de base.</summary>
+    public void SetHiResTile(ImageSource tile)
+    {
+        _tile = tile;
+        Raise(nameof(Tile));
+    }
+
+    /// <summary>Revient à la vignette : un seul hexagone garde sa tuile pleine résolution en mémoire.</summary>
+    public void RestoreThumb()
+    {
+        if (ReferenceEquals(_tile, _thumb))
+            return;
+        _tile = _thumb;
         Raise(nameof(Tile));
     }
 
@@ -619,8 +637,8 @@ public sealed class MapViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Télécharge les fonds de carte officiels en arrière-plan (une fois ; ~190 Mo au premier
-    /// lancement, puis tout vient du cache disque) et les applique en vignettes 512 px.
+    /// Télécharge les fonds de carte en arrière-plan (pack HD ~20 Mo une fois, puis tout vient
+    /// du cache disque) et les applique en vignettes 512 px.
     /// </summary>
     private void StartTileDownload()
     {
@@ -651,15 +669,39 @@ public sealed class MapViewModel : ObservableObject
         });
     }
 
+    private MapHexViewModel? _hiResHex;
+
+    /// <summary>Bascule cet hexagone en pleine résolution ; le précédent retourne en vignette.</summary>
+    private void SwitchHiRes(MapHexViewModel hex)
+    {
+        if (hex == _hiResHex)
+            return;
+        _hiResHex?.RestoreThumb();
+        _hiResHex = hex;
+        _ = LoadHiResTileAsync(hex);
+    }
+
+    /// <summary>En zoom profond, charge le fond net de l'hexagone sous le centre de l'écran.</summary>
+    public void EnsureHiResAt(Point canvasCenter)
+    {
+        if (!_deepZoom)
+            return;
+        var hex = HexAt(canvasCenter);
+        if (hex is not null)
+            SwitchHiRes(hex);
+    }
+
     /// <summary>Charge la tuile pleine résolution pour l'hexagone zoomé.</summary>
     private async Task LoadHiResTileAsync(MapHexViewModel hex)
     {
         string? path = await _tiles.EnsureAsync(hex.Map);
         if (path is null)
             return;
-        var full = await Task.Run(() => MapTileService.LoadImage(path, 1024));
-        if (full is not null)
-            hex.SetTile(full);
+        // 2048 = résolution native du pack HD ; les tuiles warapi de repli plafonnent à 1024.
+        int decode = path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ? 2048 : 1024;
+        var full = await Task.Run(() => MapTileService.LoadImage(path, decode));
+        if (full is not null && hex == _hiResHex)
+            hex.SetHiResTile(full);
     }
 
     // ---------- Construction ----------
@@ -1083,7 +1125,7 @@ public sealed class MapViewModel : ObservableObject
         if (_selected is not null)
         {
             _selected.IsSelected = true;
-            _ = LoadHiResTileAsync(_selected); // fond net au zoom
+            SwitchHiRes(_selected); // fond net au zoom
         }
         RefreshSelection();
     }

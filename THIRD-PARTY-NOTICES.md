@@ -17,9 +17,14 @@ conditions.
 
 ## Données et assets chargés à l'exécution (non embarqués)
 
-- **Fonds de carte** — tuiles officielles du dépôt **clapfoot/warapi**
+- **Fonds de carte HD** — textures haute résolution issues du mod
+  **Improved Map Mod (IMM)** de **RDZ** (mod client approuvé pour Foxhole), assets du jeu
+  © Siege Camp. Pack téléchargé au premier affichage de la carte et mis en cache localement.
+- **Fonds de carte (repli)** — tuiles officielles du dépôt **clapfoot/warapi**
   (<https://github.com/clapfoot/warapi>), assets du jeu © Siege Camp, téléchargées au
   premier affichage de la carte et mises en cache localement.
+- **Icônes de carte** (`Data/mapicons/`) — icônes officielles du dépôt **clapfoot/warapi**,
+  assets du jeu © Siege Camp.
 - **Données de guerre en direct** (contrôle des villes, structures, points de victoire) —
   **War API** publique de Foxhole (`war-service-live.foxholeservices.com`).
 
