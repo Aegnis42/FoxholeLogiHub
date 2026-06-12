@@ -364,8 +364,9 @@
 
                 <DockPanel Grid.Row="0" Margin="0,0,0,16">
                     <TextBlock Text="Profil" FontSize="22" FontWeight="Bold" DockPanel.Dock="Left"/>
-                    <Button Content="Rafraîchir" DockPanel.Dock="Right" HorizontalAlignment="Right"
-                            Style="{StaticResource FlatButton}" Click="OnRefreshClick"/>
+                    <Button Content="↻ Actualiser depuis le jeu" DockPanel.Dock="Right" HorizontalAlignment="Right"
+                            Style="{StaticResource FlatButton}" Click="OnRefreshClick"
+                            ToolTip="Relit ta sauvegarde Foxhole (faction, serveur, loadouts) et synchronise ton profil — fait automatiquement quand le jeu sauvegarde"/>
                 </DockPanel>
 
                 <Border Grid.Row="1" Style="{StaticResource Card}">

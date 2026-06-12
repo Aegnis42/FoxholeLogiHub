@@ -120,6 +120,25 @@ public sealed class FriendsViewModel : ObservableObject
         await ConnectAsync();
     }
 
+    /// <summary>
+    /// Pousse pseudo + faction au serveur sans reconnexion — appelé après « Enregistrer » sur le
+    /// profil ou quand la sauvegarde du jeu change. Silencieux hors ligne : le profil repartira
+    /// de toute façon à la prochaine connexion.
+    /// </summary>
+    public async Task PushProfileAsync()
+    {
+        if (_client is null || _account is null)
+            return;
+        try
+        {
+            await _client.UpsertUserAsync(_account.DisplayName, _account.Faction.ToString());
+        }
+        catch
+        {
+            // hors ligne ou serveur indisponible : rien à faire, ConnectAsync resynchronisera
+        }
+    }
+
     public async Task LogoutAsync()
     {
         if (_client is not null)

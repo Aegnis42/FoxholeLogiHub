@@ -318,6 +318,7 @@ public sealed class MainViewModel : ObservableObject
             }
 
             Companion.EnsureStarted();
+            StartSaveWatcher();
             _ = Friends.InitializeAsync(_account);
         }
         catch (Exception ex)
@@ -334,7 +335,64 @@ public sealed class MainViewModel : ObservableObject
 
         _accountService.UpdateDisplayName(_account, DisplayName);
         DisplayName = _account.DisplayName;
-        Status = "Profil enregistré.";
+        // Synchronisation immédiate : les amis et le régiment voient le nouveau pseudo sans
+        // attendre une reconnexion.
+        _ = Friends.PushProfileAsync();
+        Status = "Profil enregistré et synchronisé.";
+    }
+
+    // ---------- Suivi de la sauvegarde du jeu ----------
+    // Changer de faction (ou de serveur) se fait EN JEU : on surveille le dossier des .sav et
+    // on recharge le profil tout seul — plus besoin de se déconnecter/reconnecter.
+
+    private FileSystemWatcher? _saveWatcher;
+    private System.Windows.Threading.DispatcherTimer? _saveDebounce;
+
+    private void StartSaveWatcher()
+    {
+        if (_saveWatcher is not null)
+            return;
+        string? dir = SaveGameLocator.GetSaveDirectory();
+        if (dir is null)
+            return;
+
+        // Les événements arrivent par rafales (le jeu réécrit plusieurs fichiers) et sur un
+        // thread de pool : débounce de 2 s, traitement sur le thread UI.
+        var ui = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+        _saveDebounce = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _saveDebounce.Tick += (_, _) => { _saveDebounce!.Stop(); OnGameSaveChanged(); };
+        try
+        {
+            _saveWatcher = new FileSystemWatcher(dir, "*.sav") { EnableRaisingEvents = true };
+            FileSystemEventHandler bump = (_, _) => ui.BeginInvoke(() => { _saveDebounce!.Stop(); _saveDebounce.Start(); });
+            _saveWatcher.Changed += bump;
+            _saveWatcher.Created += bump;
+            _saveWatcher.Renamed += (_, _) => ui.BeginInvoke(() => { _saveDebounce!.Stop(); _saveDebounce.Start(); });
+        }
+        catch
+        {
+            _saveWatcher = null; // dossier inaccessible : le bouton « Actualiser » reste là
+        }
+    }
+
+    /// <summary>Recharge le profil seulement si la sauvegarde apporte un vrai changement.</summary>
+    private void OnGameSaveChanged()
+    {
+        if (_account is null)
+        {
+            Load();
+            return;
+        }
+        AccountResult result = _accountService.LoadOrCreate();
+        if (result.Account is null)
+            return;
+        bool changed = result.Account.Faction != _account.Faction
+            || (result.Save?.LastServer ?? "—") != Server
+            || (result.Save?.WarsJoined.Count ?? 0) != WarCount;
+        if (!changed)
+            return;
+        Load(); // re-propage partout (la reconnexion pousse aussi le profil au serveur)
+        Status = $"Profil actualisé depuis le jeu — {Faction}.";
     }
 
     private static ImageSource? LoadImage(string? path)
