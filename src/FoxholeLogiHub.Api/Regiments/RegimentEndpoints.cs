@@ -55,7 +55,12 @@ public static class RegimentEndpoints
         {
             string me = Me(p);
             var ctx = await MyRegimentAsync(db, me);
-            return ctx is null ? Results.Ok((RegimentDto?)null) : Results.Ok(await BuildDtoAsync(db, tracker, ctx.Value.reg, me));
+            // « null » JSON explicite : Results.Ok(null) et Results.Json(null) répondent 200 SANS
+            // corps, que les clients ne savent pas désérialiser (l'écran régiment restait figé
+            // après une suppression).
+            return ctx is null
+                ? Results.Text("null", "application/json")
+                : Results.Ok(await BuildDtoAsync(db, tracker, ctx.Value.reg, me));
         }).RequireAuthorization();
 
         app.MapPost("/api/regiments/join", async (JoinRegimentRequest req, ClaimsPrincipal p, AppDbContext db, ConnectionTracker tracker, IHubContext<PresenceHub> hub) =>

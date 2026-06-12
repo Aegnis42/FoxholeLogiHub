@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FoxholeLogiHub.Contracts;
 
 namespace FoxholeLogiHub.App.Services;
@@ -21,11 +22,18 @@ public sealed class RegimentClient : IDisposable
 
     public string AvatarUrl(string steamId) => $"{_baseUrl}/api/users/{steamId}/avatar";
 
+    private static readonly JsonSerializerOptions JsonWeb = new(JsonSerializerDefaults.Web);
+
     public async Task<RegimentDto?> GetMineAsync()
     {
         HttpResponseMessage resp = await _http.GetAsync("/api/regiments/mine");
         await EnsureAsync(resp);
-        return await resp.Content.ReadFromJsonAsync<RegimentDto>();
+        // « Pas de régiment » : certains serveurs répondent 200 SANS corps — parser du vide
+        // lève une JsonException qui laissait l'écran figé sur l'ancien régiment.
+        byte[] body = await resp.Content.ReadAsByteArrayAsync();
+        if (body.Length == 0)
+            return null;
+        return JsonSerializer.Deserialize<RegimentDto>(body, JsonWeb);
     }
 
     public async Task<List<RegimentInviteDto>> GetInvitesAsync()
