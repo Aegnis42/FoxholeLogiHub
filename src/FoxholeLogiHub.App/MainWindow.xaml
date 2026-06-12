@@ -1811,10 +1811,33 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <!-- Ancre 0×0 au point monde : la contre-échelle garde le point à taille écran constante -->
+                                        <!-- Ancre 0×0 au point monde : la contre-échelle garde le point à taille écran constante.
+                                             Icône officielle de base de ville (tier 1-3), teintée par faction. -->
                                         <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}">
-                                            <Ellipse Canvas.Left="-4" Canvas.Top="-4" Width="8" Height="8" Fill="{Binding Fill}"
-                                                     Stroke="#FF10131A" StrokeThickness="1" ToolTip="{Binding Tooltip}"/>
+                                            <Grid Canvas.Left="-8" Canvas.Top="-8" ToolTip="{Binding Tooltip}" Background="Transparent">
+                                                <Rectangle Width="16" Height="16" Fill="{Binding TintBrush}"
+                                                           Visibility="{Binding HasIconImage, Converter={StaticResource BoolToVis}}">
+                                                    <Rectangle.OpacityMask>
+                                                        <ImageBrush ImageSource="{Binding IconImage}" Stretch="Uniform"/>
+                                                    </Rectangle.OpacityMask>
+                                                    <Rectangle.Effect>
+                                                        <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000" Opacity="0.9"/>
+                                                    </Rectangle.Effect>
+                                                </Rectangle>
+                                                <Ellipse Width="8" Height="8" Fill="{Binding Fill}"
+                                                         Stroke="#FF10131A" StrokeThickness="1">
+                                                    <Ellipse.Style>
+                                                        <Style TargetType="Ellipse">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasIconImage}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                            </Grid>
                                         </Canvas>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -1839,11 +1862,33 @@
                                                      Stroke="#FFE7B73C" StrokeThickness="2" Fill="#2EE7B73C"
                                                      IsHitTestVisible="False"
                                                      Visibility="{Binding IsHighlighted, Converter={StaticResource BoolToVis}}"/>
-                                            <Grid Canvas.Left="-9" Canvas.Top="-9" ToolTip="{Binding Tooltip}">
-                                                <Ellipse Width="18" Height="18" Fill="#D912151B"
-                                                         Stroke="{Binding TeamBrush}" StrokeThickness="1.5"/>
-                                                <TextBlock Text="{Binding Glyph}" FontSize="9"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <!-- Icône officielle du jeu, teintée (faction / ressource) ; repli pastille+emoji si inconnue -->
+                                            <Grid Canvas.Left="-8" Canvas.Top="-8" ToolTip="{Binding Tooltip}" Background="Transparent">
+                                                <Rectangle Width="16" Height="16" Fill="{Binding TintBrush}"
+                                                           Visibility="{Binding HasIconImage, Converter={StaticResource BoolToVis}}">
+                                                    <Rectangle.OpacityMask>
+                                                        <ImageBrush ImageSource="{Binding IconImage}" Stretch="Uniform"/>
+                                                    </Rectangle.OpacityMask>
+                                                    <Rectangle.Effect>
+                                                        <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000" Opacity="0.9"/>
+                                                    </Rectangle.Effect>
+                                                </Rectangle>
+                                                <Grid>
+                                                    <Grid.Style>
+                                                        <Style TargetType="Grid">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasIconImage}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Grid.Style>
+                                                    <Ellipse Width="16" Height="16" Fill="#D912151B"
+                                                             Stroke="{Binding TeamBrush}" StrokeThickness="1.5"/>
+                                                    <TextBlock Text="{Binding Glyph}" FontSize="8"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
                                             </Grid>
                                         </Canvas>
                                     </DataTemplate>

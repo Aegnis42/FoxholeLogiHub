@@ -30,6 +30,13 @@ public static class Palette
     public static readonly Brush MapContested = MakeA(0x58, 0xC8, 0x8A, 0x2E);
     public static readonly Brush MapNeutral = MakeA(0x2E, 0x6B, 0x72, 0x80);
     public static readonly Brush MapStroke = Make(0x10, 0x13, 0x18);
+
+    // Teintes des icônes officielles de la carte (icônes blanches → teintées par faction).
+    // Plus claires que les couleurs de zone pour rester lisibles sur le terrain.
+    public static readonly Brush IconWarden = Make(0x6F, 0xB1, 0xE8);
+    public static readonly Brush IconColonial = Make(0xA8, 0xC8, 0x7A);
+    public static readonly Brush IconNeutral = Make(0xC9, 0xD1, 0xDC);
+    public static readonly Brush MapResourceTint = Make(0xE3, 0xD9, 0xC2);
     public static readonly Brush MapTownNeutral = Make(0x9A, 0xA4, 0xB2);
 
     // Sous-régions (zones d'influence des villes) — plus saturées, façon FoxholeStats.

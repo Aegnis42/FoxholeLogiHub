@@ -16,6 +16,8 @@
     <None Include="fic.exe" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Data\items.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Data\icons\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Icônes officielles de la carte (warapi, converties TGA→PNG) : une par type de structure/ressource -->
+    <None Include="Data\mapicons\**\*.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,7 +41,7 @@
     <!-- NotifyIcon pour les toasts Windows -->
     <UseWindowsForms>true</UseWindowsForms>
     <!-- Version de l'app (les releases CI la remplacent par le tag v*) -->
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <!-- Main custom : Velopack doit s'exécuter avant WPF (hooks install/update) -->
     <StartupObject>FoxholeLogiHub.App.Program</StartupObject>

@@ -153,6 +153,7 @@ public sealed class MapStructViewModel
         var (glyph, label) = Types.TryGetValue(s.Icon, out var t) ? t : ("•", $"Structure {s.Icon}");
         Glyph = glyph;
         Label = label;
+        IconImage = Services.MapIcons.ForStruct(s.Icon);
         // Point d'ancrage monde exact — le visuel se centre lui-même dans le template
         // (contre-échelle : les marqueurs gardent une taille écran constante).
         X = hex.X + s.X * hex.W;
@@ -160,6 +161,11 @@ public sealed class MapStructViewModel
         TeamBrush = s.Team == "WARDENS" ? Palette.Wardens
             : s.Team == "COLONIALS" ? Palette.Colonials
             : Palette.MapTownNeutral;
+        // Teinte de l'icône : structures = couleur de faction ; ressources = blanc cassé neutre.
+        TintBrush = IsResource ? Palette.MapResourceTint
+            : s.Team == "WARDENS" ? Palette.IconWarden
+            : s.Team == "COLONIALS" ? Palette.IconColonial
+            : Palette.IconNeutral;
         Tooltip = $"{label} — " + (s.Team == "WARDENS" ? "Wardens" : s.Team == "COLONIALS" ? "Colonials" : "neutre");
     }
 
@@ -169,9 +175,12 @@ public sealed class MapStructViewModel
     public double RelY { get; }
     public string Glyph { get; }
     public string Label { get; }
+    public ImageSource? IconImage { get; }
+    public bool HasIconImage => IconImage is not null;
     public double X { get; }
     public double Y { get; }
     public Brush TeamBrush { get; }
+    public Brush TintBrush { get; }
     public string Tooltip { get; }
 
     /// <summary>Port ou dépôt de stockage : on peut y rattacher un stockpile d'un clic.</summary>
@@ -205,6 +214,14 @@ public sealed class MapTownViewModel
     public double X { get; }
     public double Y { get; }
     public Brush Fill { get; }
+
+    /// <summary>Icône officielle de base de ville (tier 1-3), teintée par faction dans le template.</summary>
+    public ImageSource? IconImage => Services.MapIcons.ForTown(Tier);
+    public bool HasIconImage => IconImage is not null;
+    public Brush TintBrush => Scorched ? Palette.Critical
+        : Team == "WARDENS" ? Palette.IconWarden
+        : Team == "COLONIALS" ? Palette.IconColonial
+        : Palette.IconNeutral;
 
     public string TierStars => Tier > 0 ? new string('★', Tier) : "";
 
