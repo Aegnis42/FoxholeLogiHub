@@ -4,6 +4,15 @@ name: release
 #   git tag v1.0.1 && git push origin v1.0.1
 # → Setup .exe + paquets de mise à jour (delta) attachés à la GitHub Release.
 # L'app installée vérifie ces releases au démarrage et propose le redémarrage.
+#
+# Signature de code (SignPath Foundation) : les étapes de signature s'activent toutes
+# seules quand la configuration existe. À l'acceptation de la candidature, définir :
+#   - secret  SIGNPATH_API_TOKEN        (jeton API du robot SignPath)
+#   - var     SIGNPATH_ORGANIZATION_ID  (id d'organisation SignPath)
+#   - var     SIGNPATH_PROJECT_SLUG     (slug du projet SignPath)
+#   - var     SIGNPATH_POLICY_SLUG      (slug de la politique, ex. release-signing)
+# Chaque release demande alors DEUX approbations manuelles sur signpath.io pendant le
+# run (binaires de l'application, puis installeur) — le job attend jusqu'à 30 min.
 
 on:
   push:
@@ -20,6 +29,7 @@ jobs:
       # ce qui éviterait une injection de commande via un nom de tag piégé).
       TAG_NAME: ${{ github.ref_name }}
       REPO_URL: https://github.com/${{ github.repository }}
+      SIGNPATH_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,6 +53,38 @@ jobs:
           -c Release -r win-x64 --self-contained true
           -o publish "/p:Version=$env:VERSION" /p:PublishReadyToRun=true
 
+      # ---------- Signature des binaires AVANT l'empaquetage (manifeste Velopack intact) ----------
+      - name: Zipper les binaires pour signature
+        if: env.SIGNPATH_ENABLED == 'true'
+        shell: pwsh
+        run: Compress-Archive -Path publish\* -DestinationPath unsigned-binaries.zip
+
+      - name: Uploader les binaires non signés
+        if: env.SIGNPATH_ENABLED == 'true'
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-binaries
+          path: unsigned-binaries.zip
+
+      - name: Demande de signature SignPath (binaires)
+        if: env.SIGNPATH_ENABLED == 'true'
+        uses: signpath/github-action-submit-signing-request@v1.1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 1800
+          output-artifact-directory: signed-binaries
+
+      - name: Remplacer par les binaires signés
+        if: env.SIGNPATH_ENABLED == 'true'
+        shell: pwsh
+        run: Expand-Archive -Path signed-binaries\unsigned-binaries.zip -DestinationPath publish -Force
+
       - name: Installer vpk (Velopack CLI)
         run: dotnet tool install -g vpk
 
@@ -61,6 +103,39 @@ jobs:
           --splashImage src/FoxholeLogiHub.App/Assets/splash.png
           --splashProgressColor "#3D7BFD"
           --shortcuts StartMenuRoot
+
+      # ---------- Signature de l'installeur APRÈS l'empaquetage (le Setup est un bootstrap :
+      # les mises à jour vérifient les .nupkg, pas lui — le re-signer est sans effet dessus) ----------
+      - name: Zipper l'installeur pour signature
+        if: env.SIGNPATH_ENABLED == 'true'
+        shell: pwsh
+        run: Compress-Archive -Path Releases\FoxholeLogiHub-win-Setup.exe -DestinationPath unsigned-setup.zip
+
+      - name: Uploader l'installeur non signé
+        if: env.SIGNPATH_ENABLED == 'true'
+        id: upload-setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-setup
+          path: unsigned-setup.zip
+
+      - name: Demande de signature SignPath (installeur)
+        if: env.SIGNPATH_ENABLED == 'true'
+        uses: signpath/github-action-submit-signing-request@v1.1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 1800
+          output-artifact-directory: signed-setup
+
+      - name: Remplacer par l'installeur signé
+        if: env.SIGNPATH_ENABLED == 'true'
+        shell: pwsh
+        run: Expand-Archive -Path signed-setup\unsigned-setup.zip -DestinationPath Releases -Force
 
       - name: Publier la GitHub Release
         shell: pwsh
