@@ -1,5 +1,5 @@
-# Config locale Claude Code
-.claude/settings.local.json
+# Configuration locale d'outils de développement
+.claude/
 
 # Build
 bin/

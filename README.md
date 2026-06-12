@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Le QG logistique de votre régiment Foxhole.</b><br/>
-  Stocks partagés en temps réel · Carte de guerre vivante · Plans de production automatiques
+  Stocks partagés en temps réel · Carte de guerre interactive · Plans de production
 </p>
 
 <p align="center">
@@ -29,74 +29,88 @@
 
 ---
 
-La logistique, c'est ce qui gagne les guerres dans **Foxhole** — et pourtant elle se gère trop
-souvent à coups de tableurs et de captures d'écran perdues dans Discord. **FoxholeLogiHub**
-centralise tout : les stocks de votre régiment se synchronisent en temps réel, la carte de guerre
-s'actualise toute seule, et chaque demande de ravitaillement arrive avec son plan de production
-prêt à exécuter.
+La logistique gagne les guerres dans **Foxhole**, mais elle se gère trop souvent à coups de
+tableurs et de captures d'écran perdues dans Discord. FoxholeLogiHub centralise tout : les
+stocks du régiment se synchronisent en temps réel, la carte de guerre s'actualise toute seule,
+et chaque demande de ravitaillement arrive avec son plan de production.
 
 <p align="center">
   <img src="docs/screenshots/carte-region.png" alt="Carte interactive — zoom sur une région" width="900"/>
 </p>
 
-## ✨ Ce que fait l'application
+## Ce que fait l'application
 
 ### 📦 Des stockpiles partagés, remplis en une touche
 
-Fini la saisie manuelle : en jeu, ouvrez votre stockpile et appuyez sur **F8** — le contenu est
-reconnu par capture d'écran (technologie [FIR](https://github.com/GICodeWarrior/fir)) et
-synchronisé pour tout le régiment en quelques secondes.
+En jeu, ouvrez votre stockpile et appuyez sur **F8** : le contenu est reconnu par capture
+d'écran (technologie [FIR](https://github.com/GICodeWarrior/fir)) et synchronisé pour tout le
+régiment en quelques secondes. Aucune saisie manuelle.
 
-- **Seuils d'alerte** par item (bas 🟠 / critique 🔴) avec tableau de bord récapitulatif
+- **Seuils d'alerte** par item (bas / critique) avec tableau de bord récapitulatif
 - **Templates de seuils** : définissez une fois vos objectifs « dépôt de front », appliquez-les partout
 - **Historique et tendances** : consommation par heure et estimation « vide dans ≈ X h »
-- **Recherche globale** : « où ai-je des 150mm ? » → tous les stockpiles qui en ont, triés par quantité
-- **Partage** : privé, partagé allié par allié, ou public ; codes de réservation des Ports/Dépôts notés
+- **Recherche globale** : « où ai-je des 150 mm ? » → tous les stockpiles qui en ont, triés par quantité
+- **Transferts** entre stockpiles, avec journal des mouvements
+- **Partage** : privé, partagé allié par allié, ou public ; codes de réservation notés
 
 <p align="center">
   <img src="docs/screenshots/stockpiles.png" alt="Contenu d'un stockpile avec alertes de seuils" width="900"/>
 </p>
 
-### 🗺️ Une carte de guerre vivante
+### 🗺️ La carte de guerre
 
-Des **fonds de carte haute résolution** (textures du mod IMM : reliefs, forêts, routes par type),
-le **contrôle des villes en temps réel** (zones colorées par faction, mises à jour toutes les
-5 minutes via l'API officielle), et tout ce qui compte pour la logi : dépôts, ports, usines,
-raffineries, MPF, **champs et mines de ressources**.
+Fonds de carte **haute résolution** (téléchargés automatiquement au premier affichage), contrôle
+des villes **en temps réel** (zones colorées par faction, mise à jour toutes les 5 minutes via
+l'API officielle), et des **icônes détaillées et colorées par type** : chaque mine, usine, port
+ou dépôt se repère d'un coup d'œil.
 
-- **Vos stockpiles épinglés** sur la carte, avec halo d'alerte si la ville est menacée
-- **Posez un stockpile d'un clic droit** (bunker, base de production) à l'endroit exact
-- Cliquez une région pour **zoomer** : villes, structures et tiers (★★★) se révèlent
+- **Filtres par type** : affichez ou masquez chaque famille d'icônes (usines, mines, fortins,
+  bases reliques…) — vos choix sont mémorisés
+- **Vos stockpiles épinglés**, déplaçables à la souris, avec halo d'alerte si la ville est menacée
+- **Pose d'un stockpile au clic droit** (bunker, base de production) à l'endroit exact
+- **Mesure de distance** : point A, point B, distance et temps de trajet estimé
 - **« Où produire ? »** : depuis une demande de ravitaillement, les usines et champs utiles
   s'illuminent sur la carte
+- Zoom et déplacement fluides, du monde entier au détail d'un hexagone
 
 <p align="center">
   <img src="docs/screenshots/carte-monde.png" alt="Carte du monde avec contrôle des factions" width="900"/>
 </p>
 
-### 🚚 Du ravitaillement qui s'organise tout seul
+### 🚚 Du ravitaillement organisé
 
 Créez une demande (« Tenir Callahan's Gate : 800 × 7.62, 200 bandages, 100 obus de 150 ») et
-l'application calcule le **plan de production complet** : quoi crafter, dans quel bâtiment, quelles
-ressources récolter, et **combien de camions** prévoir pour livrer.
+l'application calcule le **plan de production complet** : quoi fabriquer, dans quel bâtiment,
+quelles ressources récolter, et combien de camions prévoir.
 
 - Demandes **multi-items** avec priorité, coordonnées et note
 - Visibilité **régiment / alliance / publique** — la collaboration inter-régiments est native
 - Cycle complet : ouverte → prise en charge → livrée, visible par tous en temps réel
+- **Calculatrice logistique** indépendante pour préparer un craft sans créer de demande
+- **Suivi des files MPF** avec notification quand la production est terminée
 
 <p align="center">
   <img src="docs/screenshots/ravitaillement.png" alt="Demande de ravitaillement avec plan de production" width="900"/>
 </p>
 
+### 🎮 Pendant que vous jouez
+
+- **Overlay en jeu** (F9) : de petites fenêtres déplaçables par-dessus le jeu en mode fenêtré —
+  stockpile au choix, demandes de ravitaillement (avec création rapide), prises en charge
+- **Raccourcis configurables** (F5 à F12) pour l'import F8 et l'overlay
+- **Notifications Windows** : stock critique, stockpile menacé, MPF terminée, demandes
+
 ### 🛡️ Pensé pour les régiments
 
-- **Régiment** avec code d'invitation, **rôles à permissions** configurables, **alliances**
+- **Régiment** avec code d'invitation et **alliances** entre régiments
+- **Rôles à permissions fines** : gestion des membres, des stockpiles (création, partage,
+  édition, suppression), des demandes de ravitaillement (régiment / alliance), du MPF
 - **Amis** et présence en ligne en temps réel
-- **Webhook Discord** : stock critique, stockpile menacé, demandes créées/prises/livrées —
-  directement dans votre salon
-- **Notifications Windows** pour ne rien rater pendant que vous jouez
+- **Webhook Discord** avec mention de rôle : les alertes arrivent dans votre salon
 - **Fin de guerre** : archivez puis repartez à zéro en un clic
 - **Tableau de bord** : état de la guerre, points de victoire, toutes vos alertes au même endroit
+- **Paramètres complets** : notifications, démarrage avec Windows, fermeture en zone de
+  notification, opacité de l'overlay, raccourcis, affichage de la carte
 
 <p align="center">
   <img src="docs/screenshots/dashboard.png" alt="Tableau de bord avec alertes" width="900"/>
@@ -105,37 +119,39 @@ ressources récolter, et **combien de camions** prévoir pour livrer.
 ## ⬇️ Installation
 
 1. Téléchargez **[FoxholeLogiHub-win-Setup.exe](https://github.com/Aegnis42/foxhole-app--logistique/releases/latest/download/FoxholeLogiHub-win-Setup.exe)**
-   (dernière version, ~95 Mo — le runtime .NET est inclus, **aucun prérequis**).
-2. Lancez-le. Windows SmartScreen affichera « éditeur inconnu » (l'exe n'est pas signé — projet
-   communautaire) : cliquez **« Informations complémentaires » → « Exécuter quand même »**.
-   C'est la seule fois.
-3. C'est tout. L'application **se met à jour toute seule** : quand une nouvelle version sort, un
-   bouton « 🔄 Mise à jour » apparaît — un clic, elle redémarre à jour (mises à jour
-   incrémentales de ~1 Mo).
+   (~95 Mo, runtime .NET inclus — aucun prérequis).
+2. Lancez-le. Windows SmartScreen peut afficher « éditeur inconnu » : cliquez
+   **« Informations complémentaires » → « Exécuter quand même »**. C'est la seule fois — la
+   signature des binaires est en préparation (voir la
+   [politique de signature](docs/code-signing-policy.md)).
+3. C'est tout. L'application **se met à jour toute seule** : quand une nouvelle version sort,
+   un bouton « Mise à jour » apparaît — un clic, elle redémarre à jour (mises à jour
+   incrémentales d'environ 1 Mo).
 
-> 💼 Une version **portable** (zip, sans installation) est aussi disponible sur la
+> 💼 Une version **portable** (zip, sans installation) est disponible sur la
 > [page des releases](https://github.com/Aegnis42/foxhole-app--logistique/releases/latest).
 
 ## 🚀 Bien démarrer (en 5 minutes)
 
 1. **Connectez-vous avec Steam** au lancement (OpenID officiel — aucun mot de passe ne transite
    par l'application, votre faction est détectée automatiquement).
-2. **Créez votre régiment** (onglet Régiment) et partagez le code d'invitation à vos camarades.
+2. **Créez votre régiment** (onglet Régiment) et partagez le code d'invitation.
 3. **Créez votre premier stockpile** (onglet Stockpiles) : nom, hexagone, type — ou directement
    sur la carte d'un clic droit.
-4. **En jeu** : ouvrez le stockpile (vue carte) et appuyez sur **F8** → le contenu apparaît dans
-   l'app pour tout le régiment.
+4. **En jeu** : ouvrez le stockpile (vue carte) et appuyez sur **F8** → le contenu apparaît
+   dans l'application pour tout le régiment.
 5. **Posez vos seuils d'alerte** sur les items critiques (7.62, bandages, bmats…) — le tableau
    de bord et Discord vous préviendront avant la pénurie.
 
 ## 🔒 Respect du jeu et de vos données
 
 - **Aucune lecture mémoire, aucune interception réseau** : le contenu des stockpiles est lu
-  exclusivement par **capture d'écran** (reconnaissance d'images) — aucun risque pour votre compte.
-- Votre sauvegarde Foxhole (`.sav`) est lue **localement et en lecture seule** (faction, serveur,
-  loadouts) ; elle ne quitte jamais votre machine.
+  exclusivement par capture d'écran — aucun risque pour votre compte.
+- Votre sauvegarde Foxhole (`.sav`) est lue **localement et en lecture seule** ; elle ne quitte
+  jamais votre machine.
 - Le jeton de session est chiffré sur votre machine (DPAPI Windows).
 - Le code est **open source (MIT)** : tout est vérifiable dans ce dépôt.
+- Détail des données stockées côté serveur : **[PRIVACY.md](PRIVACY.md)**.
 
 ## 🛠️ Pour les développeurs
 
@@ -145,7 +161,7 @@ ressources récolter, et **combien de camions** prévoir pour livrer.
 | Backend | **ASP.NET Core** Minimal API + SignalR (temps réel) |
 | Base de données | PostgreSQL (prod, Railway) / SQLite (dev) |
 | Reconnaissance | Companion [FIR](https://github.com/GICodeWarrior/fir) (`fic.exe`, local) |
-| Données de guerre | [War API officielle](https://github.com/clapfoot/warapi) + fonds de carte officiels |
+| Données de guerre | [War API officielle](https://github.com/clapfoot/warapi) |
 | Installeur / MAJ | [Velopack](https://velopack.io) + GitHub Releases (deltas) |
 
 ```bash
@@ -162,18 +178,18 @@ dotnet run --project src/FoxholeLogiHub.App   # pointer settings.json sur http:/
 dotnet test
 ```
 
-**Publier une release** (mainteneur) : `git tag v1.2.3 && git push origin v1.2.3` — le workflow
-construit, empaquette (Setup + deltas Velopack) et publie automatiquement.
-
-Notes techniques détaillées (format GVAS, schéma, pièges) : voir les commentaires du code et
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+**Publier une release** (mainteneur) : `git tag vX.Y.Z && git push origin vX.Y.Z` — le workflow
+GitHub Actions construit, teste, empaquette (Setup + deltas Velopack) et publie. Le processus
+complet est décrit dans la [politique de signature de code](docs/code-signing-policy.md).
 
 ## ❤️ Crédits et licence
 
-Le code est sous licence **[MIT](LICENSE)**. Merci aux projets qui rendent l'app possible :
-**[FIR](https://github.com/GICodeWarrior/fir)** (reconnaissance des stockpiles),
-**[warapi](https://github.com/clapfoot/warapi)** (données et cartes officielles),
-**[foxhole-hexes](https://github.com/notbadjon/foxhole-hexes)** (géométrie des hexagones).
+Le code est sous licence **[MIT](LICENSE)**. Merci aux projets qui rendent l'application
+possible : **[FIR](https://github.com/GICodeWarrior/fir)** (reconnaissance des stockpiles),
+**[warapi](https://github.com/clapfoot/warapi)** (données officielles),
+**[foxhole-hexes](https://github.com/notbadjon/foxhole-hexes)** (géométrie des hexagones),
+les mods communautaires **IMM** et **UI Label** (fonds de carte HD et icônes colorées) et
+**[FoxholeStats](https://foxholestats.com)** (icônes détaillées).
 Détails : [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 > FoxholeLogiHub est un projet communautaire **non affilié à Siege Camp**.
