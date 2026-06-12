@@ -42,6 +42,12 @@ public sealed class AppSettings
     public bool MapShowResourcesDefault { get; set; }
 
     /// <summary>
+    /// Types d'icônes masqués sur la carte (iconType War API ; -1 = « autres structures »).
+    /// Null = jamais touché → dérivé de <see cref="MapShowResourcesDefault"/>.
+    /// </summary>
+    public List<int>? MapHiddenIconTypes { get; set; }
+
+    /// <summary>
     /// Panneaux de l'overlay (fenêtres toujours visibles) : état ouvert + position, par panneau
     /// ("hub", "stock", "resupply", "taken"). Le panneau « hub » sert aussi d'interrupteur global.
     /// </summary>

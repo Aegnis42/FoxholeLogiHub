@@ -119,12 +119,12 @@ public sealed class MainViewModel : ObservableObject
     {
         var bootSettings = _settingsStore.Load();
         _notifier.Enabled = bootSettings.NotificationsEnabled;
-        Map.ShowResources = bootSettings.MapShowResourcesDefault;
         if (bootSettings.AutoCheckUpdates)
             _ = CheckForUpdateAsync();
 
-        // Réglage carte appliqué en direct depuis l'onglet Paramètres.
-        Settings.MapShowResourcesDefaultChanged += show => Map.ShowResources = show;
+        // Réglage carte appliqué en direct depuis l'onglet Paramètres (la carte charge elle-même
+        // ses filtres par type au démarrage).
+        Settings.MapShowResourcesDefaultChanged += show => Map.SetResourceFiltersChecked(show);
 
         // Le module amis porte la connexion temps réel ; on relaie aux modules régiment/stockpiles/ravito.
         Friends.Authenticated += () => _ = RefreshSocialAsync();

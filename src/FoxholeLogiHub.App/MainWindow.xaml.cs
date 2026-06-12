@@ -376,6 +376,18 @@ public partial class MainWindow : Window
         ResetMapView(animate: true);
     }
 
+    private void OnMapFilterAllProduction(object sender, RoutedEventArgs e)
+        => _vm.Map.SetFilterGroup(production: true, resources: false, value: true);
+
+    private void OnMapFilterNoProduction(object sender, RoutedEventArgs e)
+        => _vm.Map.SetFilterGroup(production: true, resources: false, value: false);
+
+    private void OnMapFilterAllResources(object sender, RoutedEventArgs e)
+        => _vm.Map.SetFilterGroup(production: false, resources: true, value: true);
+
+    private void OnMapFilterNoResources(object sender, RoutedEventArgs e)
+        => _vm.Map.SetFilterGroup(production: false, resources: true, value: false);
+
     private void OnResupplyProduceMap(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is ResupplyRequestViewModel r)

@@ -1708,9 +1708,73 @@
                     <Button DockPanel.Dock="Right" Content="🌍 Vue monde" Style="{StaticResource FlatButton}"
                             Background="#FF202A38" Padding="12,6" VerticalAlignment="Top" Click="OnMapReset"
                             ToolTip="Dézoomer pour voir le monde entier"/>
-                    <CheckBox DockPanel.Dock="Right" Content="⛏ Ressources" IsChecked="{Binding Map.ShowResources}"
-                              VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#FFB6C2D1"
-                              ToolTip="Afficher les champs et mines de ressources (ferraille, composants, soufre, charbon, pétrole…)"/>
+                    <Grid DockPanel.Dock="Right" Margin="0,0,12,0" VerticalAlignment="Top">
+                        <ToggleButton x:Name="BtnMapFilters" Content="🔍 Filtres"
+                                      Padding="10,5" Background="#FF202A38" Foreground="White" BorderThickness="0"
+                                      ToolTip="Choisir les types d'icônes affichés sur la carte (usines, mines, ports…)"/>
+                        <Popup PlacementTarget="{Binding ElementName=BtnMapFilters}" Placement="Bottom"
+                               IsOpen="{Binding IsChecked, ElementName=BtnMapFilters, Mode=TwoWay}"
+                               StaysOpen="False" AllowsTransparency="True" HorizontalOffset="-60" VerticalOffset="6">
+                            <Border Background="#FF141B24" BorderBrush="#FF232C3A" BorderThickness="1"
+                                    CornerRadius="10" Padding="14" Margin="8">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="18" ShadowDepth="2" Color="#FF000000" Opacity="0.55"/>
+                                </Border.Effect>
+                                <StackPanel Width="230">
+                                    <DockPanel Margin="0,0,0,4">
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <Button Content="tout" Style="{StaticResource FlatButton}" Padding="5,1" FontSize="11"
+                                                    Foreground="#FF8FB3F2" Click="OnMapFilterAllProduction"/>
+                                            <Button Content="rien" Style="{StaticResource FlatButton}" Padding="5,1" FontSize="11"
+                                                    Foreground="#FF8FB3F2" Click="OnMapFilterNoProduction"/>
+                                        </StackPanel>
+                                        <TextBlock Text="PRODUCTION &amp; LOGISTIQUE" Style="{StaticResource Label}" Margin="0"/>
+                                    </DockPanel>
+                                    <ItemsControl ItemsSource="{Binding Map.ProductionFilters}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsChecked}" Margin="0,1">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Image Source="{Binding Icon}" Width="15" Height="15" Margin="0,0,6,0"
+                                                               RenderOptions.BitmapScalingMode="Linear"
+                                                               Visibility="{Binding HasIcon, Converter={StaticResource BoolToVis}}"/>
+                                                        <TextBlock Text="{Binding Label}" Foreground="#FFE9EDF3" FontSize="12"/>
+                                                    </StackPanel>
+                                                </CheckBox>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <DockPanel Margin="0,10,0,4">
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <Button Content="tout" Style="{StaticResource FlatButton}" Padding="5,1" FontSize="11"
+                                                    Foreground="#FF8FB3F2" Click="OnMapFilterAllResources"/>
+                                            <Button Content="rien" Style="{StaticResource FlatButton}" Padding="5,1" FontSize="11"
+                                                    Foreground="#FF8FB3F2" Click="OnMapFilterNoResources"/>
+                                        </StackPanel>
+                                        <TextBlock Text="RESSOURCES" Style="{StaticResource Label}" Margin="0"/>
+                                    </DockPanel>
+                                    <ItemsControl ItemsSource="{Binding Map.ResourceFilters}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsChecked}" Margin="0,1">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Image Source="{Binding Icon}" Width="15" Height="15" Margin="0,0,6,0"
+                                                               RenderOptions.BitmapScalingMode="Linear"
+                                                               Visibility="{Binding HasIcon, Converter={StaticResource BoolToVis}}"/>
+                                                        <TextBlock Text="{Binding Label}" Foreground="#FFE9EDF3" FontSize="12"/>
+                                                    </StackPanel>
+                                                </CheckBox>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Separator Background="#FF232C3A" Margin="0,8,0,6"/>
+                                    <CheckBox IsChecked="{Binding Map.OtherFilter.IsChecked}" Margin="0,1">
+                                        <TextBlock Text="• Autres structures (bases, tours…)" Foreground="#FF94A1B2" FontSize="12"/>
+                                    </CheckBox>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
                     <ToggleButton DockPanel.Dock="Right" Content="📏 Mesurer" IsChecked="{Binding Map.MeasureActive}"
                                   Padding="10,5" Margin="0,0,12,0" VerticalAlignment="Top"
                                   Background="#FF202A38" Foreground="White" BorderThickness="0"

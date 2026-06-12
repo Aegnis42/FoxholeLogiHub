@@ -216,6 +216,10 @@ public sealed class MapStructViewModel : ObservableObject
 
     internal static Color BrushColor(Brush b) => ((SolidColorBrush)b).Color;
 
+    /// <summary>Couleur signature du type (repli neutre si type inconnu).</summary>
+    internal static Color TypeColorOf(int icon) =>
+        TypeColors.TryGetValue(icon, out var c) ? c : BrushColor(Palette.IconNeutral);
+
     private bool _isVisible;
     private bool _isHighlighted;
 
@@ -241,8 +245,7 @@ public sealed class MapStructViewModel : ObservableObject
         _team = s.Team;
         TeamBrush = TeamBrushOf(s.Team);
         // Marqueur pré-composé (mod tel quel, sinon icône officielle × couleur signature du type).
-        Color tint = TypeColors.TryGetValue(s.Icon, out var c) ? c : BrushColor(Palette.IconNeutral);
-        MarkerIcon = Services.MapIcons.ComposedStruct(s.Icon, tint);
+        MarkerIcon = Services.MapIcons.ComposedStruct(s.Icon, TypeColorOf(s.Icon));
         Tooltip = TooltipOf(label, s.Team);
     }
 
@@ -409,6 +412,53 @@ public sealed class MapPinViewModel : ObservableObject
 public sealed record PendingMapPick(string Name, string Hex, string Town, string Type, string Code, bool IsPublic);
 
 /// <summary>
+/// Un filtre d'affichage de la carte : une famille de types d'icônes (ex. « Soufre » = champ +
+/// mine) que l'on peut cocher/décocher. <see cref="Icons"/> vide = « autres structures »
+/// (tous les types hors familles connues).
+/// </summary>
+public sealed class MapFilterItemViewModel : ObservableObject
+{
+    private readonly Action _changed;
+    private bool _isChecked = true;
+
+    public MapFilterItemViewModel(string label, int[] icons, Action changed)
+    {
+        Label = label;
+        Icons = icons;
+        _changed = changed;
+        // Vignette du filtre : le marqueur réellement affiché sur la carte.
+        Icon = icons.Length > 0 ? Services.MapIcons.ComposedStruct(icons[0],
+            MapStructViewModel.TypeColorOf(icons[0])) : null;
+    }
+
+    public string Label { get; }
+    public int[] Icons { get; }
+    public System.Windows.Media.ImageSource? Icon { get; }
+    public bool HasIcon => Icon is not null;
+
+    public bool IsChecked
+    {
+        get => _isChecked;
+        set
+        {
+            if (_isChecked == value)
+                return;
+            Set(ref _isChecked, value);
+            _changed();
+        }
+    }
+
+    /// <summary>Coche/décoche sans déclencher le recalcul (initialisation, boutons tout/rien).</summary>
+    public void SetSilently(bool value)
+    {
+        if (_isChecked == value)
+            return;
+        _isChecked = value;
+        Raise(nameof(IsChecked));
+    }
+}
+
+/// <summary>
 /// Carte interactive du monde : 53 hexagones (HexLayout) colorés par le contrôle réel des villes
 /// (API War, cache serveur), points de villes, pins des stockpiles visibles, panneau de détail.
 /// </summary>
@@ -445,6 +495,12 @@ public sealed class MapViewModel : ObservableObject
 
     /// <summary>Même source que <see cref="Towns"/> : la couche labels binde LabelVisible.</summary>
     public IReadOnlyList<MapTownViewModel> TownLabels => Towns;
+
+    public MapViewModel()
+    {
+        (ProductionFilters, ResourceFilters, OtherFilter, _knownIcons) = BuildFilters();
+        LoadFilters();
+    }
 
     public ObservableCollection<MapTownViewModel> SelectedTowns { get; } = new();
     public ObservableCollection<string> SelectedStructureSummary { get; } = new();
@@ -512,20 +568,122 @@ public sealed class MapViewModel : ObservableObject
             RebuildOverlays();
     }
 
-    private bool _showResources = true;
+    // ---------- Filtres d'affichage par type d'icône ----------
 
-    /// <summary>Affiche/masque les champs et mines de ressources sur la carte.</summary>
-    public bool ShowResources
+    /// <summary>Familles de bâtiments de production/logistique.</summary>
+    public IReadOnlyList<MapFilterItemViewModel> ProductionFilters { get; }
+
+    /// <summary>Familles de champs et mines de ressources.</summary>
+    public IReadOnlyList<MapFilterItemViewModel> ResourceFilters { get; }
+
+    /// <summary>Tous les types hors familles connues (safe houses, tours…).</summary>
+    public MapFilterItemViewModel OtherFilter { get; }
+
+    private readonly HashSet<int> _knownIcons;
+    private readonly HashSet<int> _hiddenIcons = new();
+    private bool _hideOthers;
+    private bool _loadingFilters;
+
+    private const int OtherIconsSentinel = -1;
+
+    private (IReadOnlyList<MapFilterItemViewModel> Production, IReadOnlyList<MapFilterItemViewModel> Resources,
+        MapFilterItemViewModel Other, HashSet<int> Known) BuildFilters()
     {
-        get => _showResources;
-        set
+        MapFilterItemViewModel F(string label, params int[] icons) => new(label, icons, OnFilterChanged);
+        var production = new List<MapFilterItemViewModel>
         {
-            if (_showResources == value)
-                return;
-            Set(ref _showResources, value);
-            RebuildOverlays();
-        }
+            F("Usines", 34),
+            F("MPF", 51),
+            F("Raffineries", 17),
+            F("Usines de véhicules", 12),
+            F("Chantiers navals", 18),
+            F("Chantiers de construction", 39),
+            F("Dépôts de stockage", 33),
+            F("Ports", 52),
+            F("Hôpitaux", 11),
+            F("Centres technologiques", 19),
+            F("Fortins", 27),
+            F("Bases reliques", 45, 46, 47),
+            F("Aviation", 88, 89, 91, 92),
+        };
+        var resources = new List<MapFilterItemViewModel>
+        {
+            F("Ferraille", 20, 38),
+            F("Composants", 21, 40),
+            F("Soufre", 23, 32),
+            F("Carburant", 22),
+            F("Charbon", 61),
+            F("Pétrole", 62, 75),
+        };
+        var other = new MapFilterItemViewModel("Autres structures", Array.Empty<int>(), OnFilterChanged);
+        var known = new HashSet<int>(production.Concat(resources).SelectMany(f => f.Icons));
+        return (production, resources, other, known);
     }
+
+    /// <summary>État initial : liste sauvegardée, sinon dérivé du réglage « ressources par défaut ».</summary>
+    private void LoadFilters()
+    {
+        _loadingFilters = true;
+        var settings = _settingsStore.Load();
+        if (settings.MapHiddenIconTypes is { } hidden)
+        {
+            var set = new HashSet<int>(hidden);
+            foreach (var f in ProductionFilters.Concat(ResourceFilters))
+                f.SetSilently(!f.Icons.All(set.Contains));
+            OtherFilter.SetSilently(!set.Contains(OtherIconsSentinel));
+        }
+        else if (!settings.MapShowResourcesDefault)
+        {
+            foreach (var f in ResourceFilters)
+                f.SetSilently(false);
+        }
+        _loadingFilters = false;
+        RefreshHiddenIcons();
+    }
+
+    private void OnFilterChanged()
+    {
+        if (_loadingFilters)
+            return;
+        RefreshHiddenIcons();
+        RebuildOverlays();
+        var hidden = new List<int>(_hiddenIcons);
+        if (_hideOthers)
+            hidden.Add(OtherIconsSentinel);
+        var settings = _settingsStore.Load();
+        settings.MapHiddenIconTypes = hidden;
+        _settingsStore.Save(settings);
+    }
+
+    private void RefreshHiddenIcons()
+    {
+        _hiddenIcons.Clear();
+        foreach (var f in ProductionFilters.Concat(ResourceFilters))
+            if (!f.IsChecked)
+                foreach (int icon in f.Icons)
+                    _hiddenIcons.Add(icon);
+        _hideOthers = !OtherFilter.IsChecked;
+    }
+
+    private bool IsFilteredOut(int icon) =>
+        _hiddenIcons.Contains(icon) || (_hideOthers && !_knownIcons.Contains(icon));
+
+    /// <summary>Coche/décoche un groupe entier (boutons « tout / rien » du panneau de filtres).</summary>
+    public void SetFilterGroup(bool production, bool resources, bool value)
+    {
+        _loadingFilters = true;
+        if (production)
+            foreach (var f in ProductionFilters)
+                f.SetSilently(value);
+        if (resources)
+            foreach (var f in ResourceFilters)
+                f.SetSilently(value);
+        _loadingFilters = false;
+        OnFilterChanged();
+    }
+
+    /// <summary>Raccourci du réglage global « ressources par défaut » (page Paramètres).</summary>
+    public void SetResourceFiltersChecked(bool show) => SetFilterGroup(production: false, resources: true, show);
 
     /// <summary>
     /// Met à jour la visibilité des labels/structures : hexagones visibles en zoom profond, sinon
@@ -559,7 +717,7 @@ public sealed class MapViewModel : ObservableObject
             bool highlighted = _highlightIcons?.Contains(s.Icon) == true;
             s.IsHighlighted = highlighted;
             s.IsVisible = scope.Contains(s.Hex)
-                && (highlighted || _showResources || !MapStructViewModel.IsResourceIcon(s.Icon));
+                && (highlighted || !IsFilteredOut(s.Icon));
         }
     }
 
