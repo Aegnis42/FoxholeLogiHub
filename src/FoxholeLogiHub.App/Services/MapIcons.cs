@@ -6,8 +6,11 @@ using System.Windows.Media.Imaging;
 namespace FoxholeLogiHub.App.Services;
 
 /// <summary>
-/// Icônes officielles de la carte (warapi, converties en PNG dans Data/mapicons) : blanches sur
-/// fond transparent, conçues pour être TEINTÉES par faction (OpacityMask côté XAML).
+/// Icônes de la carte (PNG dans Data/mapicons). Deux familles :
+/// - mod/{iconType}.png : icônes DÉJÀ COLORÉES du mod UI Label (récolte/production), affichées
+///   telles quelles ;
+/// - {iconType}.png : icônes officielles warapi, blanches sur fond transparent, conçues pour
+///   être TEINTÉES par faction (OpacityMask côté XAML) — repli des types non couverts par le mod.
 /// </summary>
 public static class MapIcons
 {
@@ -18,6 +21,9 @@ public static class MapIcons
 
     /// <summary>Icône d'une structure/ressource par iconType War API (null si inconnue → repli emoji).</summary>
     public static ImageSource? ForStruct(int iconType) => Load(iconType.ToString());
+
+    /// <summary>Icône pré-colorée du mod pour ce type, ou null → repli icône teintée.</summary>
+    public static ImageSource? ForStructColored(int iconType) => Load(Path.Combine("mod", iconType.ToString()));
 
     /// <summary>Icône de base de ville par tier (1-3) ; tier hors plage → tier 1.</summary>
     public static ImageSource? ForTown(int tier) => Load($"town{Math.Clamp(tier, 1, 3)}");

@@ -25,6 +25,9 @@ conditions.
   premier affichage de la carte et mises en cache localement.
 - **Icônes de carte** (`Data/mapicons/`) — icônes officielles du dépôt **clapfoot/warapi**,
   assets du jeu © Siege Camp.
+- **Icônes de carte colorées** (`Data/mapicons/mod/`) — icônes recolorées issues des mods
+  client approuvés **UI Label** (Materials/Vehicles/Items) de la communauté Foxhole,
+  assets du jeu © Siege Camp.
 - **Données de guerre en direct** (contrôle des villes, structures, points de victoire) —
   **War API** publique de Foxhole (`war-service-live.foxholeservices.com`).
 

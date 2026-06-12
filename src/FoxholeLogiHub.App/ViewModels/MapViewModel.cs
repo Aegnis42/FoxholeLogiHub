@@ -213,6 +213,7 @@ public sealed class MapStructViewModel
         var (glyph, label) = Types.TryGetValue(s.Icon, out var t) ? t : ("•", $"Structure {s.Icon}");
         Glyph = glyph;
         Label = label;
+        ColorIconImage = Services.MapIcons.ForStructColored(s.Icon);
         IconImage = Services.MapIcons.ForStruct(s.Icon);
         // Point d'ancrage monde exact — le visuel se centre lui-même dans le template
         // (contre-échelle : les marqueurs gardent une taille écran constante).
@@ -232,8 +233,13 @@ public sealed class MapStructViewModel
     public double RelY { get; }
     public string Glyph { get; }
     public string Label { get; }
+    /// <summary>Icône pré-colorée du mod (affichée telle quelle) — prioritaire sur l'icône teintée.</summary>
+    public ImageSource? ColorIconImage { get; }
+    public bool HasColorIcon => ColorIconImage is not null;
     public ImageSource? IconImage { get; }
-    public bool HasIconImage => IconImage is not null;
+    public bool HasIconImage => IconImage is not null && ColorIconImage is null;
+    /// <summary>Aucune icône (ni mod ni warapi) → pastille emoji de repli.</summary>
+    public bool HasAnyIcon => ColorIconImage is not null || IconImage is not null;
     public double X { get; }
     public double Y { get; }
     public Brush TeamBrush { get; }

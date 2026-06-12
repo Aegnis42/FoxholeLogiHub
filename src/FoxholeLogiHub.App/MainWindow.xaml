@@ -1862,8 +1862,15 @@
                                                      Stroke="#FFE7B73C" StrokeThickness="2" Fill="#2EE7B73C"
                                                      IsHitTestVisible="False"
                                                      Visibility="{Binding IsHighlighted, Converter={StaticResource BoolToVis}}"/>
-                                            <!-- Icône officielle du jeu, teintée (faction / ressource) ; repli pastille+emoji si inconnue -->
+                                            <!-- Icône pré-colorée du mod telle quelle ; sinon icône officielle teintée ;
+                                                 repli pastille+emoji si type inconnu -->
                                             <Grid Canvas.Left="-8" Canvas.Top="-8" ToolTip="{Binding Tooltip}" Background="Transparent">
+                                                <Image Width="16" Height="16" Source="{Binding ColorIconImage}" Stretch="Uniform"
+                                                       Visibility="{Binding HasColorIcon, Converter={StaticResource BoolToVis}}">
+                                                    <Image.Effect>
+                                                        <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000" Opacity="0.9"/>
+                                                    </Image.Effect>
+                                                </Image>
                                                 <Rectangle Width="16" Height="16" Fill="{Binding TintBrush}"
                                                            Visibility="{Binding HasIconImage, Converter={StaticResource BoolToVis}}">
                                                     <Rectangle.OpacityMask>
@@ -1878,7 +1885,7 @@
                                                         <Style TargetType="Grid">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding HasIconImage}" Value="False">
+                                                                <DataTrigger Binding="{Binding HasAnyIcon}" Value="False">
                                                                     <Setter Property="Visibility" Value="Visible"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
