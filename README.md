@@ -59,9 +59,10 @@ synchronisé pour tout le régiment en quelques secondes.
 
 ### 🗺️ Une carte de guerre vivante
 
-Les **fonds de carte officiels** du jeu, le **contrôle des villes en temps réel** (zones colorées
-par faction, mises à jour toutes les 5 minutes via l'API officielle), et tout ce qui compte pour
-la logi : dépôts, ports, usines, raffineries, MPF, **champs et mines de ressources**.
+Des **fonds de carte haute résolution** (textures du mod IMM : reliefs, forêts, routes par type),
+le **contrôle des villes en temps réel** (zones colorées par faction, mises à jour toutes les
+5 minutes via l'API officielle), et tout ce qui compte pour la logi : dépôts, ports, usines,
+raffineries, MPF, **champs et mines de ressources**.
 
 - **Vos stockpiles épinglés** sur la carte, avec halo d'alerte si la ville est menacée
 - **Posez un stockpile d'un clic droit** (bunker, base de production) à l'endroit exact
