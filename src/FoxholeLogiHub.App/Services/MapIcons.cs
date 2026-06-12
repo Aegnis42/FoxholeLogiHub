@@ -6,9 +6,11 @@ using System.Windows.Media.Imaging;
 namespace FoxholeLogiHub.App.Services;
 
 /// <summary>
-/// Icônes de la carte (PNG dans Data/mapicons). Deux familles :
+/// Icônes de la carte (PNG dans Data/mapicons). Trois familles :
 /// - mod/{iconType}.png : icônes DÉJÀ COLORÉES du mod UI Label (récolte/production) ;
-/// - {iconType}.png : icônes officielles warapi, blanches sur fond transparent.
+/// - rich/{iconType}.png : icônes détaillées blanc + détails noirs (source foxholestats.com),
+///   teintées en MULTIPLIANT la couleur — le blanc prend la teinte, les détails restent sombres ;
+/// - {iconType}.png : icônes officielles warapi, blanches plates, teintées en remplacement.
 /// Les marqueurs utilisent les versions COMPOSÉES : teinte et contour sombre incrustés dans le
 /// bitmap une seule fois (cache), au lieu d'un OpacityMask + DropShadowEffect par élément —
 /// des milliers de surfaces intermédiaires en moins à chaque frame de zoom/pan.
@@ -30,14 +32,17 @@ public static class MapIcons
     public static ImageSource? ForTown(int tier) => Load($"town{Math.Clamp(tier, 1, 3)}");
 
     /// <summary>
-    /// Marqueur de structure prêt à afficher : icône du mod telle quelle si disponible, sinon
-    /// icône officielle teintée — contour sombre incrusté dans les deux cas.
+    /// Marqueur de structure prêt à afficher : icône du mod telle quelle, sinon icône détaillée
+    /// teintée par multiplication, sinon icône officielle teintée par remplacement — contour
+    /// sombre incrusté dans tous les cas.
     /// </summary>
     public static ImageSource? ComposedStruct(int iconType, Color tint) =>
         Cache.GetOrAdd($"struct:{iconType}:{tint}", _ =>
         {
             if (Load(Path.Combine("mod", iconType.ToString())) is BitmapSource mod)
                 return Compose(mod, null);
+            if (Load(Path.Combine("rich", iconType.ToString())) is BitmapSource rich)
+                return Compose(rich, tint, multiply: true);
             if (Load(iconType.ToString()) is BitmapSource official)
                 return Compose(official, tint);
             return null;
@@ -71,10 +76,11 @@ public static class MapIcons
     });
 
     /// <summary>
-    /// Compose l'icône finale : contour sombre (alpha dilaté) puis l'icône par-dessus —
-    /// teintée si <paramref name="tint"/> est fourni (sources warapi blanches), telle quelle sinon.
+    /// Compose l'icône finale : contour sombre (alpha dilaté) puis l'icône par-dessus.
+    /// Teinte : remplacement (silhouettes blanches plates) ou multiplication
+    /// (<paramref name="multiply"/> — le blanc prend la couleur, les détails sombres restent).
     /// </summary>
-    private static ImageSource? Compose(BitmapSource source, Color? tint)
+    private static ImageSource? Compose(BitmapSource source, Color? tint, bool multiply = false)
     {
         try
         {
@@ -94,9 +100,18 @@ public static class MapIcons
                     continue;
                 if (tint is Color c)
                 {
-                    icon[i + 0] = c.B;
-                    icon[i + 1] = c.G;
-                    icon[i + 2] = c.R;
+                    if (multiply)
+                    {
+                        icon[i + 0] = (byte)(pixels[i + 0] * c.B / 255);
+                        icon[i + 1] = (byte)(pixels[i + 1] * c.G / 255);
+                        icon[i + 2] = (byte)(pixels[i + 2] * c.R / 255);
+                    }
+                    else
+                    {
+                        icon[i + 0] = c.B;
+                        icon[i + 1] = c.G;
+                        icon[i + 2] = c.R;
+                    }
                     icon[i + 3] = a;
                 }
                 else

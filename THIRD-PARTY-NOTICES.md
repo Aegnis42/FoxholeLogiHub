@@ -28,6 +28,9 @@ conditions.
 - **Icônes de carte colorées** (`Data/mapicons/mod/`) — icônes recolorées issues des mods
   client approuvés **UI Label** (Materials/Vehicles/Items) de la communauté Foxhole,
   assets du jeu © Siege Camp.
+- **Icônes de carte détaillées** (`Data/mapicons/rich/`) — icônes haute qualité du jeu
+  obtenues via **FoxholeStats** (<https://foxholestats.com>), assets du jeu © Siege Camp,
+  teintées par l'application.
 - **Données de guerre en direct** (contrôle des villes, structures, points de victoire) —
   **War API** publique de Foxhole (`war-service-live.foxholeservices.com`).
 

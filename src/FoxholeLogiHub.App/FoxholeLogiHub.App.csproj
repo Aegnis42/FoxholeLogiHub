@@ -41,7 +41,7 @@
     <!-- NotifyIcon pour les toasts Windows -->
     <UseWindowsForms>true</UseWindowsForms>
     <!-- Version de l'app (les releases CI la remplacent par le tag v*) -->
-    <Version>1.2.5</Version>
+    <Version>1.2.6</Version>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     <!-- Main custom : Velopack doit s'exécuter avant WPF (hooks install/update) -->
     <StartupObject>FoxholeLogiHub.App.Program</StartupObject>

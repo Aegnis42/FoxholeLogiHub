@@ -33,6 +33,7 @@ app-err.txt
 !src/FoxholeLogiHub.App/Data/icons/*.png
 !src/FoxholeLogiHub.App/Data/mapicons/*.png
 !src/FoxholeLogiHub.App/Data/mapicons/mod/*.png
+!src/FoxholeLogiHub.App/Data/mapicons/rich/*.png
 !src/FoxholeLogiHub.App/Assets/*.png
 !docs/screenshots/*.png
 
