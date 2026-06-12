@@ -141,6 +141,48 @@ public sealed class MapStructViewModel
     public static bool IsResourceIcon(int icon) => icon is 20 or 21 or 22 or 23 or 32 or 38 or 40 or 61 or 62 or 75;
     public bool IsResource => IsResourceIcon(Icon);
 
+    // Une couleur signature PAR TYPE d'icône (repérage immédiat sur la carte — l'appartenance
+    // de faction reste lisible via la couleur des zones ; les tooltips la précisent).
+    private static readonly Dictionary<int, Brush> TypeTints = BuildTypeTints();
+
+    private static Dictionary<int, Brush> BuildTypeTints()
+    {
+        static Brush B(byte r, byte g, byte b)
+        {
+            var br = new SolidColorBrush(Color.FromRgb(r, g, b));
+            br.Freeze();
+            return br;
+        }
+        var copper = B(0xF0, 0xC2, 0x5C);    // composants (champ + mine)
+        var rust = B(0xCC, 0x8A, 0x5C);      // ferraille (champ + mine)
+        var sulfur = B(0xF2, 0xE3, 0x3C);    // soufre (champ + mine)
+        var petrol = B(0x8F, 0xD9, 0xCB);    // pétrole (champ + plateforme)
+        var relic = B(0xE8, 0xA2, 0xC8);     // bases reliques
+        var air = B(0x93, 0xA7, 0xF0);       // famille aérienne
+        return new Dictionary<int, Brush>
+        {
+            [11] = B(0xF2, 0x8B, 0x8B),  // Hôpital — rouge médical
+            [12] = B(0xCC, 0x99, 0x66),  // Usine de véhicules — tan
+            [17] = B(0xB4, 0x8C, 0xEC),  // Raffinerie — violet
+            [18] = B(0x7F, 0xB8, 0xE8),  // Chantier naval — bleu clair
+            [19] = B(0x52, 0xDC, 0xC8),  // Centre technologique — turquoise
+            [27] = B(0xE2, 0xE8, 0xF2),  // Fortin — acier
+            [33] = B(0xF2, 0xD2, 0x4B),  // Dépôt de stockage — or
+            [34] = B(0xFF, 0xA9, 0x4D),  // Usine — orange vif
+            [39] = B(0xC2, 0xCC, 0x6E),  // Chantier de construction — olive
+            [45] = relic, [46] = relic, [47] = relic,
+            [51] = B(0xE8, 0x7B, 0xD0),  // MPF — magenta
+            [52] = B(0x5B, 0xC8, 0xE8),  // Port — cyan
+            [88] = air, [89] = air, [91] = air, [92] = air,
+            [20] = rust, [38] = rust,
+            [21] = copper, [40] = copper,
+            [22] = B(0xB8, 0xE0, 0x5C),  // Champ de carburant — vert lime
+            [23] = sulfur, [32] = sulfur,
+            [61] = B(0xAD, 0xB8, 0xC4),  // Champ de charbon — gris froid
+            [62] = petrol, [75] = petrol,
+        };
+    }
+
     /// <summary>Mis en évidence par « Où produire ? » (anneau doré).</summary>
     public bool IsHighlighted { get; init; }
 
@@ -161,11 +203,8 @@ public sealed class MapStructViewModel
         TeamBrush = s.Team == "WARDENS" ? Palette.Wardens
             : s.Team == "COLONIALS" ? Palette.Colonials
             : Palette.MapTownNeutral;
-        // Teinte de l'icône : structures = couleur de faction ; ressources = blanc cassé neutre.
-        TintBrush = IsResource ? Palette.MapResourceTint
-            : s.Team == "WARDENS" ? Palette.IconWarden
-            : s.Team == "COLONIALS" ? Palette.IconColonial
-            : Palette.IconNeutral;
+        // Teinte de l'icône : une couleur signature PAR TYPE (repli neutre si type inconnu).
+        TintBrush = TypeTints.TryGetValue(s.Icon, out var tint) ? tint : Palette.IconNeutral;
         Tooltip = $"{label} — " + (s.Team == "WARDENS" ? "Wardens" : s.Team == "COLONIALS" ? "Colonials" : "neutre");
     }
 
