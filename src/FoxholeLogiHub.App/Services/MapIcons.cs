@@ -7,10 +7,11 @@ namespace FoxholeLogiHub.App.Services;
 
 /// <summary>
 /// Icônes de la carte (PNG dans Data/mapicons). Deux familles :
-/// - mod/{iconType}.png : icônes DÉJÀ COLORÉES du mod UI Label (récolte/production), affichées
-///   telles quelles ;
-/// - {iconType}.png : icônes officielles warapi, blanches sur fond transparent, conçues pour
-///   être TEINTÉES par faction (OpacityMask côté XAML) — repli des types non couverts par le mod.
+/// - mod/{iconType}.png : icônes DÉJÀ COLORÉES du mod UI Label (récolte/production) ;
+/// - {iconType}.png : icônes officielles warapi, blanches sur fond transparent.
+/// Les marqueurs utilisent les versions COMPOSÉES : teinte et contour sombre incrustés dans le
+/// bitmap une seule fois (cache), au lieu d'un OpacityMask + DropShadowEffect par élément —
+/// des milliers de surfaces intermédiaires en moins à chaque frame de zoom/pan.
 /// </summary>
 public static class MapIcons
 {
@@ -27,6 +28,25 @@ public static class MapIcons
 
     /// <summary>Icône de base de ville par tier (1-3) ; tier hors plage → tier 1.</summary>
     public static ImageSource? ForTown(int tier) => Load($"town{Math.Clamp(tier, 1, 3)}");
+
+    /// <summary>
+    /// Marqueur de structure prêt à afficher : icône du mod telle quelle si disponible, sinon
+    /// icône officielle teintée — contour sombre incrusté dans les deux cas.
+    /// </summary>
+    public static ImageSource? ComposedStruct(int iconType, Color tint) =>
+        Cache.GetOrAdd($"struct:{iconType}:{tint}", _ =>
+        {
+            if (Load(Path.Combine("mod", iconType.ToString())) is BitmapSource mod)
+                return Compose(mod, null);
+            if (Load(iconType.ToString()) is BitmapSource official)
+                return Compose(official, tint);
+            return null;
+        });
+
+    /// <summary>Marqueur de ville prêt à afficher : icône officielle du tier, teinte faction incrustée.</summary>
+    public static ImageSource? ComposedTown(int tier, Color tint) =>
+        Cache.GetOrAdd($"town:{Math.Clamp(tier, 1, 3)}:{tint}", _ =>
+            Load($"town{Math.Clamp(tier, 1, 3)}") is BitmapSource src ? Compose(src, tint) : null);
 
     private static ImageSource? Load(string name) => Cache.GetOrAdd(name, n =>
     {
@@ -49,4 +69,93 @@ public static class MapIcons
             return null;
         }
     });
+
+    /// <summary>
+    /// Compose l'icône finale : contour sombre (alpha dilaté) puis l'icône par-dessus —
+    /// teintée si <paramref name="tint"/> est fourni (sources warapi blanches), telle quelle sinon.
+    /// </summary>
+    private static ImageSource? Compose(BitmapSource source, Color? tint)
+    {
+        try
+        {
+            var src = source.Format == PixelFormats.Bgra32
+                ? source
+                : new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+            int w = src.PixelWidth, h = src.PixelHeight, stride = w * 4;
+            var pixels = new byte[stride * h];
+            src.CopyPixels(pixels, stride, 0);
+
+            // 1. Alpha de l'icône (teinte appliquée aux sources blanches).
+            var icon = new byte[pixels.Length];
+            for (int i = 0; i < pixels.Length; i += 4)
+            {
+                byte a = pixels[i + 3];
+                if (a == 0)
+                    continue;
+                if (tint is Color c)
+                {
+                    icon[i + 0] = c.B;
+                    icon[i + 1] = c.G;
+                    icon[i + 2] = c.R;
+                    icon[i + 3] = a;
+                }
+                else
+                {
+                    icon[i + 0] = pixels[i + 0];
+                    icon[i + 1] = pixels[i + 1];
+                    icon[i + 2] = pixels[i + 2];
+                    icon[i + 3] = a;
+                }
+            }
+
+            // 2. Contour : alpha dilaté (rayon 2 px sur 48 ≈ 0,7 px à l'écran), noir doux.
+            var outline = new byte[pixels.Length];
+            for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                int max = 0;
+                for (int dy = -2; dy <= 2 && max < 255; dy++)
+                for (int dx = -2; dx <= 2 && max < 255; dx++)
+                {
+                    int sx = x + dx, sy = y + dy;
+                    if (sx < 0 || sx >= w || sy < 0 || sy >= h)
+                        continue;
+                    int a = pixels[sy * stride + sx * 4 + 3];
+                    if (a > max)
+                        max = a;
+                }
+                if (max > 0)
+                    outline[(y * stride) + x * 4 + 3] = (byte)(max * 0.85);
+                // RGB = 0 (noir)
+            }
+
+            // 3. Icône PAR-DESSUS le contour (alpha over, non prémultiplié).
+            var final = outline;
+            for (int i = 0; i < pixels.Length; i += 4)
+            {
+                int ia = icon[i + 3];
+                if (ia == 0)
+                    continue;
+                int oa = final[i + 3];
+                int outA = ia + oa * (255 - ia) / 255;
+                if (outA == 0)
+                    continue;
+                for (int ch = 0; ch < 3; ch++)
+                {
+                    int top = icon[i + ch] * ia;
+                    int bottom = final[i + ch] * oa * (255 - ia) / 255;
+                    final[i + ch] = (byte)((top + bottom) / outA);
+                }
+                final[i + 3] = (byte)outA;
+            }
+
+            var result = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, final, stride);
+            result.Freeze();
+            return result;
+        }
+        catch
+        {
+            return source;
+        }
+    }
 }

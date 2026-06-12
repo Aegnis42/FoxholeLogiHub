@@ -450,29 +450,53 @@ public partial class MainWindow : Window
             MapTranslate.X = tx;
             MapTranslate.Y = ty;
             UpdateOverlayScales(scale);
+            UpdateMapViewport(scale, tx, ty);
         }
     }
 
     // Contre-échelle des marqueurs (points, pins, structures, labels) : ils gardent une taille
     // écran constante quel que soit le zoom, dans des bornes pour éviter le fouillis en vue monde.
     private ScaleTransform? _markerScale, _labelScale;
+    private bool _overlayScalePending;
+    private double _pendingMapScale;
 
     private void UpdateOverlayScales(double mapScale, Duration? animated = null)
     {
         _markerScale ??= (ScaleTransform)FindResource("MapMarkerScale");
         _labelScale ??= (ScaleTransform)FindResource("MapLabelScale");
+
+        if (animated is not Duration dur)
+        {
+            // Coalescé à une mise à jour PAR FRAME (priorité Render) : changer ces transforms
+            // partagés invalide tous les marqueurs du monde — inutile à chaque cran de molette.
+            _pendingMapScale = mapScale;
+            if (_overlayScalePending)
+                return;
+            _overlayScalePending = true;
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, () =>
+            {
+                _overlayScalePending = false;
+                double s = _pendingMapScale;
+                // Paliers de ±6 % : re-rasteriser des centaines de labels (glyphes) et d'icônes à
+                // CHAQUE variation d'échelle coûte une frame entière ; à ±6 % près c'est invisible.
+                ApplyStep(_markerScale!, Math.Min(1.0 / s, 3.0));
+                ApplyStep(_labelScale!, Math.Min(1.0 / s, 2.2));
+                _vm.Map.SetViewScale(s);
+
+                static void ApplyStep(ScaleTransform t, double target)
+                {
+                    if (Math.Abs(target / t.ScaleX - 1.0) > 0.06)
+                        t.ScaleX = t.ScaleY = target;
+                }
+            });
+            return;
+        }
+
         // Taille écran CONSTANTE à tout niveau de zoom : seule la vue monde (très dézoomée)
         // est bornée pour éviter des marqueurs géants.
         double marker = Math.Min(1.0 / mapScale, 3.0);
         double label = Math.Min(1.0 / mapScale, 2.2);
         _vm.Map.SetViewScale(mapScale);
-
-        if (animated is not Duration dur)
-        {
-            _markerScale.ScaleX = _markerScale.ScaleY = marker;
-            _labelScale.ScaleX = _labelScale.ScaleY = label;
-            return;
-        }
 
         var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
         Animate(_markerScale, marker);
@@ -528,6 +552,7 @@ public partial class MainWindow : Window
         MapTranslate.BeginAnimation(TranslateTransform.XProperty, A(fromX, tx));
         MapTranslate.BeginAnimation(TranslateTransform.YProperty, A(fromY, ty));
         UpdateOverlayScales(scale, dur); // les marqueurs suivent le zoom en douceur
+        UpdateMapViewport(scale, tx, ty); // valeurs cibles : les transforms renvoient l'animé
     }
 
     private void OnMapWheel(object sender, MouseWheelEventArgs e)
@@ -542,19 +567,37 @@ public partial class MainWindow : Window
         MapTranslate.Y = m.Y - factor * (m.Y - MapTranslate.Y);
         MapScale.ScaleX = MapScale.ScaleY = newScale;
         UpdateOverlayScales(newScale);
-        EnsureCenterHiRes();
+        UpdateMapViewport();
         e.Handled = true;
     }
 
-    /// <summary>En zoom profond, l'hexagone au centre de l'écran reçoit son fond pleine résolution.</summary>
-    private void EnsureCenterHiRes()
+    private bool _viewportPending;
+
+    /// <summary>Version coalescée (une par frame) pour la molette et le déplacement.</summary>
+    private void UpdateMapViewport()
     {
-        if (MapViewport.ActualWidth <= 0 || MapScale.ScaleX <= 0)
+        if (_viewportPending)
             return;
-        var center = new Point(
-            (MapViewport.ActualWidth / 2 - MapTranslate.X) / MapScale.ScaleX,
-            (MapViewport.ActualHeight / 2 - MapTranslate.Y) / MapScale.ScaleY);
-        _vm.Map.EnsureHiResAt(center);
+        _viewportPending = true;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, () =>
+        {
+            _viewportPending = false;
+            UpdateMapViewport(MapScale.ScaleX, MapTranslate.X, MapTranslate.Y);
+        });
+    }
+
+    /// <summary>
+    /// Pousse la zone canvas visible au VM (virtualisation des couches en zoom profond) et
+    /// charge le fond pleine résolution de l'hexagone au centre de l'écran.
+    /// </summary>
+    private void UpdateMapViewport(double scale, double tx, double ty)
+    {
+        if (MapViewport.ActualWidth <= 0 || scale <= 0)
+            return;
+        var rect = new Rect(-tx / scale, -ty / scale,
+                            MapViewport.ActualWidth / scale, MapViewport.ActualHeight / scale);
+        _vm.Map.SetViewport(rect);
+        _vm.Map.EnsureHiResAt(new Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2));
     }
 
     private MapPinViewModel? _dragPin;
@@ -615,7 +658,7 @@ public partial class MainWindow : Window
             _mapUserInteracted = true;
             MapTranslate.X = _mapStartTx + d.X;
             MapTranslate.Y = _mapStartTy + d.Y;
-            EnsureCenterHiRes();
+            UpdateMapViewport();
         }
     }
 

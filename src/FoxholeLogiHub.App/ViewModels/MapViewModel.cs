@@ -97,31 +97,49 @@ public sealed class MapHexViewModel : ObservableObject
 }
 
 /// <summary>Une sous-région : la zone d'influence d'une ville dans son hexagone (coordonnées locales).</summary>
-public sealed class MapCellViewModel
+public sealed class MapCellViewModel : ObservableObject
 {
     public MapCellViewModel(MapHexViewModel hex, WarMapTownDto town, PointCollection points)
     {
         Hex = hex;
         Town = town;
         Points = points;
-        Fill = town.Scorched ? Palette.CellScorched
-            : town.Team == "WARDENS" ? Palette.CellWarden
-            : town.Team == "COLONIALS" ? Palette.CellColonial
-            : Palette.CellNeutral;
+        Fill = FillOf(town);
     }
 
+    /// <summary>Nouvel état de la ville (faction/rasée) sans recréer le polygone.</summary>
+    public void Update(WarMapTownDto town)
+    {
+        Town = town;
+        var fill = FillOf(town);
+        if (ReferenceEquals(fill, Fill))
+            return;
+        Fill = fill;
+        Raise(nameof(Fill));
+        Raise(nameof(Tooltip));
+    }
+
+    private static Brush FillOf(WarMapTownDto town) => town.Scorched ? Palette.CellScorched
+        : town.Team == "WARDENS" ? Palette.CellWarden
+        : town.Team == "COLONIALS" ? Palette.CellColonial
+        : Palette.CellNeutral;
+
     public MapHexViewModel Hex { get; }
-    public WarMapTownDto Town { get; }
+    public WarMapTownDto Town { get; private set; }
     public PointCollection Points { get; }
-    public Brush Fill { get; }
+    public Brush Fill { get; private set; }
     public string Tooltip => (Town.Tier > 0 ? new string('★', Town.Tier) + " " : "")
         + $"{Town.Name} — " + (Town.Scorched ? "rasée 🔥"
         : Town.Team == "WARDENS" ? "Wardens"
         : Town.Team == "COLONIALS" ? "Colonials" : "neutre");
 }
 
-/// <summary>Une structure logistique affichée quand un hexagone est sélectionné (position canvas absolue).</summary>
-public sealed class MapStructViewModel
+/// <summary>
+/// Une structure logistique sur la carte (position canvas absolue). Instanciée UNE fois par
+/// rafraîchissement des données ; l'affichage se pilote par <see cref="IsVisible"/> — basculer
+/// une visibilité coûte une notification, recréer 2 600 conteneurs WPF gèle l'interface.
+/// </summary>
+public sealed class MapStructViewModel : ObservableObject
 {
     private static readonly Dictionary<int, (string Glyph, string Label)> Types = new()
     {
@@ -161,23 +179,18 @@ public sealed class MapStructViewModel
 
     // Une couleur signature PAR TYPE d'icône (repérage immédiat sur la carte — l'appartenance
     // de faction reste lisible via la couleur des zones ; les tooltips la précisent).
-    private static readonly Dictionary<int, Brush> TypeTints = BuildTypeTints();
+    private static readonly Dictionary<int, Color> TypeColors = BuildTypeColors();
 
-    private static Dictionary<int, Brush> BuildTypeTints()
+    private static Dictionary<int, Color> BuildTypeColors()
     {
-        static Brush B(byte r, byte g, byte b)
-        {
-            var br = new SolidColorBrush(Color.FromRgb(r, g, b));
-            br.Freeze();
-            return br;
-        }
+        static Color B(byte r, byte g, byte b) => Color.FromRgb(r, g, b);
         var copper = B(0xF0, 0xC2, 0x5C);    // composants (champ + mine)
         var rust = B(0xCC, 0x8A, 0x5C);      // ferraille (champ + mine)
         var sulfur = B(0xF2, 0xE3, 0x3C);    // soufre (champ + mine)
         var petrol = B(0x8F, 0xD9, 0xCB);    // pétrole (champ + plateforme)
         var relic = B(0xE8, 0xA2, 0xC8);     // bases reliques
         var air = B(0x93, 0xA7, 0xF0);       // famille aérienne
-        return new Dictionary<int, Brush>
+        return new Dictionary<int, Color>
         {
             [11] = B(0xF2, 0x8B, 0x8B),  // Hôpital — rouge médical
             [12] = B(0xCC, 0x99, 0x66),  // Usine de véhicules — tan
@@ -201,8 +214,16 @@ public sealed class MapStructViewModel
         };
     }
 
+    internal static Color BrushColor(Brush b) => ((SolidColorBrush)b).Color;
+
+    private bool _isVisible;
+    private bool _isHighlighted;
+
+    /// <summary>Affichée à l'écran (hexagone visible en zoom profond, ou sélectionné).</summary>
+    public bool IsVisible { get => _isVisible; set => Set(ref _isVisible, value); }
+
     /// <summary>Mis en évidence par « Où produire ? » (anneau doré).</summary>
-    public bool IsHighlighted { get; init; }
+    public bool IsHighlighted { get => _isHighlighted; set => Set(ref _isHighlighted, value); }
 
     public MapStructViewModel(MapHexViewModel hex, WarMapStructDto s)
     {
@@ -213,19 +234,38 @@ public sealed class MapStructViewModel
         var (glyph, label) = Types.TryGetValue(s.Icon, out var t) ? t : ("•", $"Structure {s.Icon}");
         Glyph = glyph;
         Label = label;
-        ColorIconImage = Services.MapIcons.ForStructColored(s.Icon);
-        IconImage = Services.MapIcons.ForStruct(s.Icon);
         // Point d'ancrage monde exact — le visuel se centre lui-même dans le template
         // (contre-échelle : les marqueurs gardent une taille écran constante).
         X = hex.X + s.X * hex.W;
         Y = hex.Y + s.Y * hex.H;
-        TeamBrush = s.Team == "WARDENS" ? Palette.Wardens
-            : s.Team == "COLONIALS" ? Palette.Colonials
-            : Palette.MapTownNeutral;
-        // Teinte de l'icône : une couleur signature PAR TYPE (repli neutre si type inconnu).
-        TintBrush = TypeTints.TryGetValue(s.Icon, out var tint) ? tint : Palette.IconNeutral;
-        Tooltip = $"{label} — " + (s.Team == "WARDENS" ? "Wardens" : s.Team == "COLONIALS" ? "Colonials" : "neutre");
+        _team = s.Team;
+        TeamBrush = TeamBrushOf(s.Team);
+        // Marqueur pré-composé (mod tel quel, sinon icône officielle × couleur signature du type).
+        Color tint = TypeColors.TryGetValue(s.Icon, out var c) ? c : BrushColor(Palette.IconNeutral);
+        MarkerIcon = Services.MapIcons.ComposedStruct(s.Icon, tint);
+        Tooltip = TooltipOf(label, s.Team);
     }
+
+    private string _team;
+
+    /// <summary>Nouvel état (changement de faction) sans recréer le marqueur.</summary>
+    public void Update(WarMapStructDto s)
+    {
+        if (_team == s.Team)
+            return;
+        _team = s.Team;
+        TeamBrush = TeamBrushOf(s.Team);
+        Tooltip = TooltipOf(Label, s.Team);
+        Raise(nameof(TeamBrush));
+        Raise(nameof(Tooltip));
+    }
+
+    private static Brush TeamBrushOf(string team) => team == "WARDENS" ? Palette.Wardens
+        : team == "COLONIALS" ? Palette.Colonials
+        : Palette.MapTownNeutral;
+
+    private static string TooltipOf(string label, string team) =>
+        $"{label} — " + (team == "WARDENS" ? "Wardens" : team == "COLONIALS" ? "Colonials" : "neutre");
 
     public MapHexViewModel Hex { get; }
     public int Icon { get; }
@@ -233,18 +273,13 @@ public sealed class MapStructViewModel
     public double RelY { get; }
     public string Glyph { get; }
     public string Label { get; }
-    /// <summary>Icône pré-colorée du mod (affichée telle quelle) — prioritaire sur l'icône teintée.</summary>
-    public ImageSource? ColorIconImage { get; }
-    public bool HasColorIcon => ColorIconImage is not null;
-    public ImageSource? IconImage { get; }
-    public bool HasIconImage => IconImage is not null && ColorIconImage is null;
-    /// <summary>Aucune icône (ni mod ni warapi) → pastille emoji de repli.</summary>
-    public bool HasAnyIcon => ColorIconImage is not null || IconImage is not null;
+    /// <summary>Marqueur final (teinte + contour incrustés) — null → pastille emoji de repli.</summary>
+    public ImageSource? MarkerIcon { get; }
+    public bool HasMarkerIcon => MarkerIcon is not null;
     public double X { get; }
     public double Y { get; }
-    public Brush TeamBrush { get; }
-    public Brush TintBrush { get; }
-    public string Tooltip { get; }
+    public Brush TeamBrush { get; private set; }
+    public string Tooltip { get; private set; }
 
     /// <summary>Port ou dépôt de stockage : on peut y rattacher un stockpile d'un clic.</summary>
     public bool CanHostStockpile => Icon is 33 or 52;
@@ -252,39 +287,77 @@ public sealed class MapStructViewModel
 }
 
 /// <summary>Un point « ville » sur la carte (position canvas absolue).</summary>
-public sealed class MapTownViewModel
+public sealed class MapTownViewModel : ObservableObject
 {
+    private bool _labelVisible;
+
+    /// <summary>Nom affiché à côté du point (hexagone visible en zoom profond, ou sélectionné).</summary>
+    public bool LabelVisible { get => _labelVisible; set => Set(ref _labelVisible, value); }
+
     public MapTownViewModel(MapHexViewModel hex, WarMapTownDto t)
     {
         Hex = hex;
         Name = t.Name;
+        RelX = t.X;
+        RelY = t.Y;
+        X = hex.X + t.X * hex.W;
+        Y = hex.Y + t.Y * hex.H;
         Team = t.Team;
         Scorched = t.Scorched;
         Tier = t.Tier;
-        X = hex.X + t.X * hex.W;
-        Y = hex.Y + t.Y * hex.H;
-        Fill = t.Scorched ? Palette.Critical
-            : t.Team == "WARDENS" ? Palette.Wardens
-            : t.Team == "COLONIALS" ? Palette.Colonials
+        RefreshAppearance();
+    }
+
+    /// <summary>
+    /// Applique un nouvel état (faction, rasée, tier) SANS recréer le marqueur : entre deux
+    /// rafraîchissements de données, les conteneurs WPF restent en place.
+    /// </summary>
+    public void Update(WarMapTownDto t)
+    {
+        if (Team == t.Team && Scorched == t.Scorched && Tier == t.Tier)
+            return;
+        Team = t.Team;
+        Scorched = t.Scorched;
+        Tier = t.Tier;
+        RefreshAppearance();
+        Raise(nameof(Fill));
+        Raise(nameof(MarkerIcon));
+        Raise(nameof(HasMarkerIcon));
+        Raise(nameof(TierStars));
+        Raise(nameof(TeamLabel));
+        Raise(nameof(Tooltip));
+        Raise(nameof(PanelName));
+    }
+
+    private void RefreshAppearance()
+    {
+        Fill = Scorched ? Palette.Critical
+            : Team == "WARDENS" ? Palette.Wardens
+            : Team == "COLONIALS" ? Palette.Colonials
             : Palette.MapTownNeutral;
+        // Marqueur pré-composé (icône du tier × teinte faction, contour incrusté).
+        Color tint = MapStructViewModel.BrushColor(
+            Scorched ? Palette.Critical
+            : Team == "WARDENS" ? Palette.IconWarden
+            : Team == "COLONIALS" ? Palette.IconColonial
+            : Palette.IconNeutral);
+        MarkerIcon = Services.MapIcons.ComposedTown(Tier, tint);
     }
 
     public MapHexViewModel Hex { get; }
     public string Name { get; }
-    public string Team { get; }
-    public bool Scorched { get; }
-    public int Tier { get; }
+    public string Team { get; private set; }
+    public bool Scorched { get; private set; }
+    public int Tier { get; private set; }
+    public double RelX { get; }
+    public double RelY { get; }
     public double X { get; }
     public double Y { get; }
-    public Brush Fill { get; }
+    public Brush Fill { get; private set; } = Palette.MapTownNeutral;
 
-    /// <summary>Icône officielle de base de ville (tier 1-3), teintée par faction dans le template.</summary>
-    public ImageSource? IconImage => Services.MapIcons.ForTown(Tier);
-    public bool HasIconImage => IconImage is not null;
-    public Brush TintBrush => Scorched ? Palette.Critical
-        : Team == "WARDENS" ? Palette.IconWarden
-        : Team == "COLONIALS" ? Palette.IconColonial
-        : Palette.IconNeutral;
+    /// <summary>Marqueur final (teinte faction incrustée) — null → point coloré de repli.</summary>
+    public ImageSource? MarkerIcon { get; private set; }
+    public bool HasMarkerIcon => MarkerIcon is not null;
 
     public string TierStars => Tier > 0 ? new string('★', Tier) : "";
 
@@ -362,13 +435,16 @@ public sealed class MapViewModel : ObservableObject
     private MapHexViewModel? _selected;
 
     public ObservableCollection<MapHexViewModel> Hexes { get; } = new();
-    public ObservableCollection<MapTownViewModel> Towns { get; } = new();
     public ObservableCollection<MapPinViewModel> Pins { get; } = new();
 
-    // Couches d'habillage de la carte : en zoom profond elles couvrent TOUS les hexagones
-    // visibles, sinon seulement l'hexagone sélectionné.
-    public ObservableCollection<MapTownViewModel> TownLabels { get; } = new();
-    public ObservableCollection<MapStructViewModel> MapStructures { get; } = new();
+    // Listes remplacées d'un bloc à chaque rafraîchissement des données (5 min) — une seule
+    // notification. Entre deux rafraîchissements, RIEN n'est recréé : les couches labels et
+    // structures contiennent TOUT le monde et l'affichage se pilote par visibilité (delta).
+    public IReadOnlyList<MapTownViewModel> Towns { get; private set; } = Array.Empty<MapTownViewModel>();
+    public IReadOnlyList<MapStructViewModel> MapStructures { get; private set; } = Array.Empty<MapStructViewModel>();
+
+    /// <summary>Même source que <see cref="Towns"/> : la couche labels binde LabelVisible.</summary>
+    public IReadOnlyList<MapTownViewModel> TownLabels => Towns;
 
     public ObservableCollection<MapTownViewModel> SelectedTowns { get; } = new();
     public ObservableCollection<string> SelectedStructureSummary { get; } = new();
@@ -422,6 +498,20 @@ public sealed class MapViewModel : ObservableObject
         }
     }
 
+    private Rect _viewport = Rect.Empty;
+    private readonly HashSet<MapHexViewModel> _scope = new();
+
+    /// <summary>
+    /// Zone canvas visible, poussée par la vue à chaque zoom/déplacement : en zoom profond seuls
+    /// les hexagones à l'écran montrent leurs marqueurs.
+    /// </summary>
+    public void SetViewport(Rect viewport)
+    {
+        _viewport = viewport;
+        if (_deepZoom)
+            RebuildOverlays();
+    }
+
     private bool _showResources = true;
 
     /// <summary>Affiche/masque les champs et mines de ressources sur la carte.</summary>
@@ -437,34 +527,39 @@ public sealed class MapViewModel : ObservableObject
         }
     }
 
-    /// <summary>Labels de villes + structures : tout le monde en zoom profond, sinon l'hexagone sélectionné.</summary>
+    /// <summary>
+    /// Met à jour la visibilité des labels/structures : hexagones visibles en zoom profond, sinon
+    /// l'hexagone sélectionné. AUCUNE création : Set() ne notifie que les marqueurs dont l'état
+    /// change réellement (delta) — un déplacement ne touche que les hexagones entrants/sortants.
+    /// </summary>
     private void RebuildOverlays()
     {
-        TownLabels.Clear();
-        MapStructures.Clear();
+        var scope = _scope;
+        scope.Clear();
         if (_deepZoom)
         {
-            foreach (var t in Towns)
-                TownLabels.Add(t);
-            foreach (var hex in Hexes)
-                AddStructures(hex);
+            Rect r = _viewport;
+            if (r.IsEmpty || r.Width <= 0)
+                r = new Rect(0, 0, CanvasWidth, CanvasHeight);
+            else
+                r.Inflate(r.Width * 0.2, r.Height * 0.2); // marge : les voisins immédiats sont prêts
+            foreach (var h in Hexes)
+                if (r.IntersectsWith(new Rect(h.X, h.Y, h.W, h.H)))
+                    scope.Add(h);
         }
         else if (_selected is not null)
         {
-            foreach (var t in Towns.Where(t => t.Hex == _selected))
-                TownLabels.Add(t);
-            AddStructures(_selected);
+            scope.Add(_selected);
         }
-    }
 
-    private void AddStructures(MapHexViewModel hex)
-    {
-        foreach (var s in hex.Structures)
+        foreach (var t in Towns)
+            t.LabelVisible = scope.Contains(t.Hex);
+        foreach (var s in MapStructures)
         {
             bool highlighted = _highlightIcons?.Contains(s.Icon) == true;
-            if (!highlighted && !_showResources && MapStructViewModel.IsResourceIcon(s.Icon))
-                continue;
-            MapStructures.Add(new MapStructViewModel(hex, s) { IsHighlighted = highlighted });
+            s.IsHighlighted = highlighted;
+            s.IsVisible = scope.Contains(s.Hex)
+                && (highlighted || _showResources || !MapStructViewModel.IsResourceIcon(s.Icon));
         }
     }
 
@@ -589,7 +684,8 @@ public sealed class MapViewModel : ObservableObject
         _client?.Dispose(); _client = null;
         _clientKey = "";
         Authed = false;
-        Towns.Clear();
+        Towns = Array.Empty<MapTownViewModel>();
+        Raise(nameof(Towns));
         Pins.Clear();
         CancelPlacement();
         CancelPick();
@@ -738,35 +834,123 @@ public sealed class MapViewModel : ObservableObject
 
     private void ApplyControl(WarMapDto? map)
     {
-        Towns.Clear();
-        foreach (var hex in Hexes)
-        {
-            hex.Towns.Clear();
-            hex.Structures.Clear();
-            hex.Cells.Clear();
-        }
         if (map is not { Available: true })
         {
             foreach (var hex in Hexes)
-                hex.RaiseFill();
+            {
+                hex.Towns.Clear();
+                hex.Structures.Clear();
+                hex.Cells.Clear();
+            }
+            PublishWorld(new List<MapTownViewModel>(), new List<MapStructViewModel>());
             return;
         }
+
+        // Appariement par position : si le monde a la même composition qu'au rafraîchissement
+        // précédent (cas ultra-majoritaire toutes les 5 min), les marqueurs existants sont mis à
+        // jour SUR PLACE — zéro conteneur WPF recréé, donc zéro gel périodique.
+        var oldTowns = new Dictionary<(MapHexViewModel, double, double), MapTownViewModel>();
+        foreach (var t in Towns)
+            oldTowns[(t.Hex, t.RelX, t.RelY)] = t;
+        var oldStructs = new Dictionary<(MapHexViewModel, double, double, int), MapStructViewModel>();
+        foreach (var s in MapStructures)
+            oldStructs[(s.Hex, s.RelX, s.RelY, s.Icon)] = s;
+
+        var towns = new List<MapTownViewModel>(Math.Max(16, Towns.Count));
+        var structs = new List<MapStructViewModel>(Math.Max(16, MapStructures.Count));
+        bool changed = false;
 
         // Clé normalisée (suffixe « Hex » ignoré) : l'API du jeu et la table de positions ne
         // s'accordent pas toujours sur le suffixe (cas Marban Hollow).
         var byMap = Hexes.ToDictionary(h => NormMap(h.Map));
+        var seen = new HashSet<MapHexViewModel>();
         foreach (var h in map.Hexes)
         {
             if (!byMap.TryGetValue(NormMap(h.Map), out var hex))
                 continue;
+            seen.Add(hex);
+            bool sameTownLayout = SameTownLayout(hex, h.Towns);
+            hex.Towns.Clear();
             hex.Towns.AddRange(h.Towns);
+            hex.Structures.Clear();
             hex.Structures.AddRange(h.Structures);
-            BuildCells(hex);
+            if (sameTownLayout)
+                UpdateCells(hex);  // mêmes polygones, seules les couleurs bougent
+            else
+                BuildCells(hex);
+
             foreach (var t in h.Towns)
-                Towns.Add(new MapTownViewModel(hex, t));
+            {
+                if (oldTowns.TryGetValue((hex, t.X, t.Y), out var vm))
+                {
+                    vm.Update(t);
+                    towns.Add(vm);
+                }
+                else
+                {
+                    towns.Add(new MapTownViewModel(hex, t));
+                    changed = true;
+                }
+            }
+            foreach (var s in h.Structures)
+            {
+                if (oldStructs.TryGetValue((hex, s.X, s.Y, s.Icon), out var vm))
+                {
+                    vm.Update(s);
+                    structs.Add(vm);
+                }
+                else
+                {
+                    structs.Add(new MapStructViewModel(hex, s));
+                    changed = true;
+                }
+            }
         }
         foreach (var hex in Hexes)
+        {
+            if (seen.Contains(hex))
+                continue;
+            hex.Towns.Clear();
+            hex.Structures.Clear();
+            hex.Cells.Clear();
+        }
+
+        if (changed || towns.Count != Towns.Count || structs.Count != MapStructures.Count)
+            PublishWorld(towns, structs);
+        else
+            RebuildOverlays(); // états mis à jour in-place, visibilités à jour
+    }
+
+    /// <summary>Mêmes villes aux mêmes positions qu'au rafraîchissement précédent ?</summary>
+    private static bool SameTownLayout(MapHexViewModel hex, IReadOnlyList<WarMapTownDto> towns)
+    {
+        if (hex.Towns.Count != towns.Count)
+            return false;
+        for (int i = 0; i < towns.Count; i++)
+            if (hex.Towns[i].X != towns[i].X || hex.Towns[i].Y != towns[i].Y)
+                return false;
+        return true;
+    }
+
+    /// <summary>Met à jour l'état des cellules existantes (les polygones ne changent pas).</summary>
+    private static void UpdateCells(MapHexViewModel hex)
+    {
+        var byPos = hex.Towns.ToDictionary(t => (t.X, t.Y));
+        foreach (var cell in hex.Cells)
+            if (byPos.TryGetValue((cell.Town.X, cell.Town.Y), out var town))
+                cell.Update(town);
+    }
+
+    private void PublishWorld(List<MapTownViewModel> towns, List<MapStructViewModel> structs)
+    {
+        Towns = towns;
+        MapStructures = structs;
+        Raise(nameof(Towns));
+        Raise(nameof(TownLabels));
+        Raise(nameof(MapStructures));
+        foreach (var hex in Hexes)
             hex.RaiseFill();
+        RebuildOverlays(); // les visibilités suivent les nouvelles données
     }
 
     /// <summary>

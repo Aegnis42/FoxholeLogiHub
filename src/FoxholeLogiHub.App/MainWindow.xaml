@@ -1764,9 +1764,10 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Width="{Binding W}" Height="{Binding H}">
-                                            <!-- Fond de carte officiel (terrain), découpé en hexagone -->
+                                            <!-- Fond de carte (terrain), découpé en hexagone. Linear : le filtre HighQuality
+                                                 (Fant) re-échantillonne 53 tuiles à chaque frame de zoom, pour un gain invisible. -->
                                             <Image Source="{Binding Tile}" Stretch="Fill" Clip="{Binding HexClip}"
-                                                   IsHitTestVisible="False" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                   IsHitTestVisible="False" RenderOptions.BitmapScalingMode="Linear"/>
                                             <!-- Sous-régions : zone d'influence de chaque ville (Voronoï) -->
                                             <ItemsControl ItemsSource="{Binding Cells}">
                                                 <ItemsControl.ItemsPanel>
@@ -1784,15 +1785,13 @@
                                             <!-- Bord de l'hexagone (rempli seulement s'il n'a pas de sous-régions) -->
                                             <Polygon Points="{Binding Points}" Fill="{Binding Fill}"
                                                      Stroke="{Binding Stroke}" StrokeThickness="{Binding StrokeThickness}"/>
-                                            <TextBlock Text="{Binding Display}" Foreground="#B8FFFFFF" FontSize="11"
+                                            <!-- Sans DropShadowEffect (surface intermédiaire par hexagone) : un fond doux suffit. -->
+                                            <TextBlock Text="{Binding Display}" Foreground="#D8FFFFFF" FontSize="11"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                        TextAlignment="Center" TextWrapping="Wrap" MaxWidth="92"
+                                                       Background="#3D000000" Padding="3,0"
                                                        IsHitTestVisible="False" RenderTransformOrigin="0.5,0.5"
-                                                       RenderTransform="{StaticResource MapLabelScale}">
-                                                <TextBlock.Effect>
-                                                    <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000"/>
-                                                </TextBlock.Effect>
-                                            </TextBlock>
+                                                       RenderTransform="{StaticResource MapLabelScale}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -1812,25 +1811,20 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <!-- Ancre 0×0 au point monde : la contre-échelle garde le point à taille écran constante.
-                                             Icône officielle de base de ville (tier 1-3), teintée par faction. -->
+                                             Marqueur pré-composé (teinte faction + contour incrustés) : une seule Image,
+                                             zéro OpacityMask/DropShadowEffect — des centaines de surfaces en moins par frame. -->
                                         <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}">
                                             <Grid Canvas.Left="-8" Canvas.Top="-8" ToolTip="{Binding Tooltip}" Background="Transparent">
-                                                <Rectangle Width="16" Height="16" Fill="{Binding TintBrush}"
-                                                           Visibility="{Binding HasIconImage, Converter={StaticResource BoolToVis}}">
-                                                    <Rectangle.OpacityMask>
-                                                        <ImageBrush ImageSource="{Binding IconImage}" Stretch="Uniform"/>
-                                                    </Rectangle.OpacityMask>
-                                                    <Rectangle.Effect>
-                                                        <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000" Opacity="0.9"/>
-                                                    </Rectangle.Effect>
-                                                </Rectangle>
+                                                <Image Width="16" Height="16" Source="{Binding MarkerIcon}" Stretch="Uniform"
+                                                       RenderOptions.BitmapScalingMode="Linear"
+                                                       Visibility="{Binding HasMarkerIcon, Converter={StaticResource BoolToVis}}"/>
                                                 <Ellipse Width="8" Height="8" Fill="{Binding Fill}"
                                                          Stroke="#FF10131A" StrokeThickness="1">
                                                     <Ellipse.Style>
                                                         <Style TargetType="Ellipse">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding HasIconImage}" Value="False">
+                                                                <DataTrigger Binding="{Binding HasMarkerIcon}" Value="False">
                                                                     <Setter Property="Visibility" Value="Visible"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
@@ -1856,36 +1850,27 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}">
+                                        <!-- Tous les marqueurs du monde sont instanciés UNE fois ; l'affichage se pilote
+                                             par IsVisible (basculer une visibilité est gratuit, recréer 2 600 conteneurs gèle). -->
+                                        <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}"
+                                                Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
                                             <!-- Anneau doré : structure utile au plan de production (« Où produire ? ») -->
                                             <Ellipse Canvas.Left="-13" Canvas.Top="-13" Width="26" Height="26"
                                                      Stroke="#FFE7B73C" StrokeThickness="2" Fill="#2EE7B73C"
                                                      IsHitTestVisible="False"
                                                      Visibility="{Binding IsHighlighted, Converter={StaticResource BoolToVis}}"/>
-                                            <!-- Icône pré-colorée du mod telle quelle ; sinon icône officielle teintée ;
+                                            <!-- Marqueur pré-composé (mod tel quel ou icône officielle teintée, contour incrusté) ;
                                                  repli pastille+emoji si type inconnu -->
                                             <Grid Canvas.Left="-8" Canvas.Top="-8" ToolTip="{Binding Tooltip}" Background="Transparent">
-                                                <Image Width="16" Height="16" Source="{Binding ColorIconImage}" Stretch="Uniform"
-                                                       Visibility="{Binding HasColorIcon, Converter={StaticResource BoolToVis}}">
-                                                    <Image.Effect>
-                                                        <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000" Opacity="0.9"/>
-                                                    </Image.Effect>
-                                                </Image>
-                                                <Rectangle Width="16" Height="16" Fill="{Binding TintBrush}"
-                                                           Visibility="{Binding HasIconImage, Converter={StaticResource BoolToVis}}">
-                                                    <Rectangle.OpacityMask>
-                                                        <ImageBrush ImageSource="{Binding IconImage}" Stretch="Uniform"/>
-                                                    </Rectangle.OpacityMask>
-                                                    <Rectangle.Effect>
-                                                        <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000" Opacity="0.9"/>
-                                                    </Rectangle.Effect>
-                                                </Rectangle>
+                                                <Image Width="16" Height="16" Source="{Binding MarkerIcon}" Stretch="Uniform"
+                                                       RenderOptions.BitmapScalingMode="Linear"
+                                                       Visibility="{Binding HasMarkerIcon, Converter={StaticResource BoolToVis}}"/>
                                                 <Grid>
                                                     <Grid.Style>
                                                         <Style TargetType="Grid">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding HasAnyIcon}" Value="False">
+                                                                <DataTrigger Binding="{Binding HasMarkerIcon}" Value="False">
                                                                     <Setter Property="Visibility" Value="Visible"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
@@ -1902,8 +1887,9 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <!-- Couche 4 : noms des villes (hexagone sélectionné, ou tous en zoom profond) -->
-                            <ItemsControl ItemsSource="{Binding Map.TownLabels}">
+                            <!-- Couche 4 : noms des villes (hexagones visibles en zoom profond, sinon sélection).
+                                 Décorative : exclue du hit-test (la souris la traverse sans la parcourir). -->
+                            <ItemsControl ItemsSource="{Binding Map.TownLabels}" IsHitTestVisible="False">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
@@ -1915,14 +1901,14 @@
                                 </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}">
+                                        <!-- Fond doux plutôt qu'un DropShadowEffect : une surface intermédiaire
+                                             par ville en moins à chaque frame de zoom/déplacement. -->
+                                        <Canvas Width="0" Height="0" RenderTransform="{StaticResource MapMarkerScale}"
+                                                Visibility="{Binding LabelVisible, Converter={StaticResource BoolToVis}}">
                                             <TextBlock Canvas.Left="7" Canvas.Top="-7" Text="{Binding Name}"
-                                                       Foreground="White" FontSize="9.5"
-                                                       FontWeight="SemiBold" IsHitTestVisible="False">
-                                                <TextBlock.Effect>
-                                                    <DropShadowEffect BlurRadius="3" ShadowDepth="0" Color="#FF000000"/>
-                                                </TextBlock.Effect>
-                                            </TextBlock>
+                                                       Foreground="White" FontSize="9.5" Padding="3,0"
+                                                       Background="#59000000"
+                                                       FontWeight="SemiBold" IsHitTestVisible="False"/>
                                         </Canvas>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
