@@ -20,7 +20,7 @@ public sealed class MapTileService
     // Release dédiée aux assets, marquée « prerelease » : invisible des mises à jour Velopack
     // (GithubSource ignore les préversions) et du badge « latest » du README.
     private const string HdPackUrl =
-        "https://github.com/Aegnis42/foxhole-app--logistique/releases/download/assets-maptiles-hd-v1/maptiles-hd.zip";
+        "https://github.com/Aegnis42/FoxholeLogiHub/releases/download/assets-maptiles-hd-v1/maptiles-hd.zip";
 
     private static readonly HttpClient Http = CreateHttp();
     private readonly string _dir = Path.Combine(AppPaths.DataDirectory, "maptiles");

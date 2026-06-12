@@ -9,7 +9,7 @@ namespace FoxholeLogiHub.App.Services;
 /// </summary>
 public sealed class UpdateService
 {
-    private const string RepoUrl = "https://github.com/Aegnis42/foxhole-app--logistique";
+    private const string RepoUrl = "https://github.com/Aegnis42/FoxholeLogiHub";
 
     private readonly UpdateManager _manager = new(new GithubSource(RepoUrl, null, false));
     private UpdateInfo? _pending;

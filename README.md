@@ -10,15 +10,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Aegnis42/foxhole-app--logistique/releases/latest"><img src="https://img.shields.io/github/v/release/Aegnis42/foxhole-app--logistique?label=version&color=2f6b3a" alt="Version"/></a>
-  <a href="https://github.com/Aegnis42/foxhole-app--logistique/releases"><img src="https://img.shields.io/github/downloads/Aegnis42/foxhole-app--logistique/total?label=t%C3%A9l%C3%A9chargements&color=2a475e" alt="Téléchargements"/></a>
-  <a href="https://github.com/Aegnis42/foxhole-app--logistique/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/Aegnis42/foxhole-app--logistique/build.yml?label=build" alt="Build"/></a>
+  <a href="https://github.com/Aegnis42/FoxholeLogiHub/releases/latest"><img src="https://img.shields.io/github/v/release/Aegnis42/FoxholeLogiHub?label=version&color=2f6b3a" alt="Version"/></a>
+  <a href="https://github.com/Aegnis42/FoxholeLogiHub/releases"><img src="https://img.shields.io/github/downloads/Aegnis42/FoxholeLogiHub/total?label=t%C3%A9l%C3%A9chargements&color=2a475e" alt="Téléchargements"/></a>
+  <a href="https://github.com/Aegnis42/FoxholeLogiHub/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/Aegnis42/FoxholeLogiHub/build.yml?label=build" alt="Build"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-green" alt="Licence MIT"/></a>
   <img src="https://img.shields.io/badge/plateforme-Windows%2010%2F11-0078D6" alt="Windows 10/11"/>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Aegnis42/foxhole-app--logistique/releases/latest/download/FoxholeLogiHub-win-Setup.exe">
+  <a href="https://github.com/Aegnis42/FoxholeLogiHub/releases/latest/download/FoxholeLogiHub-win-Setup.exe">
     <b>⬇️ &nbsp;Télécharger pour Windows</b>
   </a>
   &nbsp;·&nbsp;
@@ -118,7 +118,7 @@ quelles ressources récolter, et combien de camions prévoir.
 
 ## ⬇️ Installation
 
-1. Téléchargez **[FoxholeLogiHub-win-Setup.exe](https://github.com/Aegnis42/foxhole-app--logistique/releases/latest/download/FoxholeLogiHub-win-Setup.exe)**
+1. Téléchargez **[FoxholeLogiHub-win-Setup.exe](https://github.com/Aegnis42/FoxholeLogiHub/releases/latest/download/FoxholeLogiHub-win-Setup.exe)**
    (~95 Mo, runtime .NET inclus — aucun prérequis).
 2. Lancez-le. Windows SmartScreen peut afficher « éditeur inconnu » : cliquez
    **« Informations complémentaires » → « Exécuter quand même »**. C'est la seule fois — la
@@ -129,7 +129,7 @@ quelles ressources récolter, et combien de camions prévoir.
    incrémentales d'environ 1 Mo).
 
 > 💼 Une version **portable** (zip, sans installation) est disponible sur la
-> [page des releases](https://github.com/Aegnis42/foxhole-app--logistique/releases/latest).
+> [page des releases](https://github.com/Aegnis42/FoxholeLogiHub/releases/latest).
 
 ## 🚀 Bien démarrer (en 5 minutes)
 
@@ -166,8 +166,8 @@ quelles ressources récolter, et combien de camions prévoir.
 
 ```bash
 # Cloner et compiler
-git clone https://github.com/Aegnis42/foxhole-app--logistique.git
-cd foxhole-app--logistique
+git clone https://github.com/Aegnis42/FoxholeLogiHub.git
+cd FoxholeLogiHub
 dotnet build
 
 # Lancer l'API locale (SQLite) puis l'application

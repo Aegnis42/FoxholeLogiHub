@@ -22,7 +22,7 @@ Every release is built **from the public source code** of this repository by Git
 2. GitHub Actions restores, builds and tests the solution, then packages the application with
    Velopack (installer + delta updates).
 3. The resulting artifacts are published on the
-   [GitHub Releases](https://github.com/Aegnis42/foxhole-app--logistique/releases) page.
+   [GitHub Releases](https://github.com/Aegnis42/FoxholeLogiHub/releases) page.
 
 No binary is ever published from a developer machine. The product name (`FoxholeLogiHub`) and
 the product version (matching the release tag) are embedded in every signed binary.
